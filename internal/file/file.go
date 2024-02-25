@@ -63,7 +63,7 @@ func (p *Page) SetStr(offset int32, s string) {
 	copy(p.bb[offset:offset+4], s)
 }
 
-type FileManager struct {
+type Manager struct {
 	dbDirPath string
 	blockSize int32
 	isNew     bool
@@ -71,7 +71,7 @@ type FileManager struct {
 	kmu       keyedMutex
 }
 
-func NewFileManager(dbDirPath string, blockSize int32) (*FileManager, error) {
+func NewManager(dbDirPath string, blockSize int32) (*Manager, error) {
 	isNew := false
 	fi, err := os.Stat(dbDirPath)
 	if err != nil {
@@ -84,7 +84,7 @@ func NewFileManager(dbDirPath string, blockSize int32) (*FileManager, error) {
 			return nil, fmt.Errorf("%s is not a directory", dbDirPath)
 		}
 	}
-	return &FileManager{
+	return &Manager{
 		dbDirPath: dbDirPath,
 		blockSize: blockSize,
 		isNew:     isNew,
@@ -93,7 +93,7 @@ func NewFileManager(dbDirPath string, blockSize int32) (*FileManager, error) {
 	}, nil
 }
 
-func (m *FileManager) getFile(filename string) (*os.File, func(), error) {
+func (m *Manager) getFile(filename string) (*os.File, func(), error) {
 	unlock := m.kmu.lock(filename)
 	if f, ok := m.openFiles[filename]; ok {
 		return f, unlock, nil
@@ -106,7 +106,7 @@ func (m *FileManager) getFile(filename string) (*os.File, func(), error) {
 	return f, unlock, nil
 }
 
-func (m *FileManager) Read(blk BlockID, p *Page) error {
+func (m *Manager) Read(blk BlockID, p *Page) error {
 	f, unlock, err := m.getFile(blk.filename)
 	defer unlock()
 	if err != nil {
@@ -119,7 +119,7 @@ func (m *FileManager) Read(blk BlockID, p *Page) error {
 	return nil
 }
 
-func (m *FileManager) Write(blk BlockID, p *Page) error {
+func (m *Manager) Write(blk BlockID, p *Page) error {
 	f, unlock, err := m.getFile(blk.filename)
 	defer unlock()
 	if err != nil {
@@ -132,7 +132,7 @@ func (m *FileManager) Write(blk BlockID, p *Page) error {
 	return nil
 }
 
-func (m *FileManager) Append(filename string) (BlockID, error) {
+func (m *Manager) Append(filename string) (BlockID, error) {
 	f, unlock, err := m.getFile(filename)
 	defer unlock()
 	if err != nil {
@@ -155,7 +155,7 @@ func (m *FileManager) Append(filename string) (BlockID, error) {
 	return blkID, nil
 }
 
-func (m *FileManager) Length(filename string) (int64, error) {
+func (m *Manager) Length(filename string) (int64, error) {
 	return 0, nil
 }
 

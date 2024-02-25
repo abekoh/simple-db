@@ -65,7 +65,7 @@ func TestFileManager(t *testing.T) {
 	t.Parallel()
 	t.Run("Read and write", func(t *testing.T) {
 		t.Parallel()
-		fm, err := NewFileManager(t.TempDir(), 128)
+		fm, err := NewManager(t.TempDir(), 128)
 		if err != nil {
 			t.Fatal(err)
 		}
