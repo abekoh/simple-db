@@ -60,3 +60,32 @@ func TestPage(t *testing.T) {
 		}
 	})
 }
+
+func TestFileManager(t *testing.T) {
+	t.Parallel()
+	t.Run("Read and write", func(t *testing.T) {
+		t.Parallel()
+		fm, err := NewFileManager(t.TempDir(), 128)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		blockID := NewBlockID("testfile", 0)
+		writeP := NewPageBlocksize(128)
+		writeP.SetStr(0, "abcd")
+		readP := NewPageBlocksize(128)
+
+		err = fm.Write(blockID, writeP)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = fm.Read(blockID, readP)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if string(readP.Str(0)) != "abcd" {
+			t.Errorf("expected abcd, got %s", readP.Str(0))
+		}
+	})
+}
