@@ -1,6 +1,7 @@
 package log
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/file"
@@ -25,8 +26,12 @@ func TestManager(t *testing.T) {
 		if lsn != 1 {
 			t.Errorf("expected 0, got %d", lsn)
 		}
+		var logs []string
 		for r := range lm.Iterator() {
-			t.Logf("%s\n", string(r))
+			logs = append(logs, string(r))
+		}
+		if !reflect.DeepEqual(logs, []string{"abcd"}) {
+			t.Errorf("expected [abcd], got %v", logs)
 		}
 	})
 }
