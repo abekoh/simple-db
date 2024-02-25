@@ -10,7 +10,7 @@ func TestManager(t *testing.T) {
 	t.Parallel()
 	t.Run("Append", func(t *testing.T) {
 		t.Parallel()
-		fm, err := file.NewManager(t.TempDir(), 400)
+		fm, err := file.NewManager(t.TempDir(), 128)
 		if err != nil {
 			t.Fatal(err)
 		}
