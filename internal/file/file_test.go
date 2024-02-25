@@ -91,6 +91,31 @@ func TestFileManager(t *testing.T) {
 			t.Errorf("expected abcd, got %s", readP.Str(0))
 		}
 	})
+	t.Run("Read and write with offset", func(t *testing.T) {
+		t.Parallel()
+		fm, err := NewManager(t.TempDir(), 128)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		blockID := NewBlockID("testfile", 0)
+		writeP := NewPage(128)
+		writeP.SetStr(4, "abcd")
+		readP := NewPage(128)
+
+		err = fm.Write(blockID, writeP)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = fm.Read(blockID, readP)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if string(readP.Str(4)) != "abcd" {
+			t.Errorf("expected abcd, got %s", readP.Str(0))
+		}
+	})
 	t.Run("Append", func(t *testing.T) {
 		t.Parallel()
 		fm, err := NewManager(t.TempDir(), 128)
