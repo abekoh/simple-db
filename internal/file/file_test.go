@@ -115,4 +115,36 @@ func TestFileManager(t *testing.T) {
 			t.Errorf("expected empty blockID, got %v", newBlockID)
 		}
 	})
+	t.Run("Length", func(t *testing.T) {
+		t.Parallel()
+		fm, err := NewManager(t.TempDir(), 128)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		length, err := fm.Length("testfile")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if length != 0 {
+			t.Errorf("expected 0, got %d", length)
+		}
+
+		blockID := NewBlockID("testfile", 0)
+		writeP := NewPage(128)
+		writeP.SetStr(0, "abcd")
+
+		err = fm.Write(blockID, writeP)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		length, err = fm.Length("testfile")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if length != 1 {
+			t.Errorf("expected 1, got %d", length)
+		}
+	})
 }
