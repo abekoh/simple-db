@@ -1,6 +1,9 @@
 package file
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestPage(t *testing.T) {
 	t.Parallel()
@@ -86,6 +89,30 @@ func TestFileManager(t *testing.T) {
 
 		if string(readP.Str(0)) != "abcd" {
 			t.Errorf("expected abcd, got %s", readP.Str(0))
+		}
+	})
+	t.Run("Append", func(t *testing.T) {
+		t.Parallel()
+		fm, err := NewManager(t.TempDir(), 128)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		blockID := NewBlockID("testfile", 0)
+		writeP := NewPage(128)
+		writeP.SetStr(0, "abcd")
+
+		err = fm.Write(blockID, writeP)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		newBlockID, err := fm.Append("testfile")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(newBlockID, NewBlockID("testfile", 1)) {
+			t.Errorf("expected empty blockID, got %v", newBlockID)
 		}
 	})
 }
