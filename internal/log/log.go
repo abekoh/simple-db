@@ -75,24 +75,25 @@ func (m *Manager) Append(rec []byte) (lsn int32, err error) {
 }
 
 func (m *Manager) Iterator() func(func([]byte) bool) {
+	m.flush()
 	p := file.NewPage(m.fm.BlockSize())
 	blockID := m.currentBlockID
-	var currentPos, boundary int32
+	var currentPos int32
 	moveToBlock := func(blkID file.BlockID) bool {
-		err := m.fm.Read(blkID, m.page)
+		err := m.fm.Read(blkID, p)
 		if err != nil {
 			return false
 		}
-		boundary = p.Int32(0)
-		currentPos = boundary
+		currentPos = p.Int32(0) // boundary
 		return true
 	}
+	moveToBlock(blockID)
 	return func(yield func([]byte) bool) {
 		for {
 			if currentPos >= m.fm.BlockSize() && blockID.Num() <= 0 {
 				return
 			}
-			if currentPos == boundary {
+			if currentPos == m.fm.BlockSize() {
 				blockID = file.NewBlockID(blockID.Filename(), blockID.Num()-1)
 				if !moveToBlock(blockID) {
 					return
@@ -113,7 +114,9 @@ func (m *Manager) appendNewBlock() (file.BlockID, error) {
 		return file.BlockID{}, fmt.Errorf("could not append: %w", err)
 	}
 	m.page.SetInt32(0, m.fm.BlockSize())
-	m.fm.Write(blockID, m.page)
+	if err := m.fm.Write(blockID, m.page); err != nil {
+		return file.BlockID{}, fmt.Errorf("could not write: %w", err)
+	}
 	return blockID, nil
 }
 
