@@ -138,11 +138,10 @@ func (m *Manager) Append(filename string) (BlockID, error) {
 	if err != nil {
 		return BlockID{}, fmt.Errorf("could not get file: %w", err)
 	}
-	fi, err := f.Stat()
+	blkNum, err := m.lengthFromFile(f)
 	if err != nil {
-		return BlockID{}, fmt.Errorf("could not stat file: %w", err)
+		return BlockID{}, fmt.Errorf("could not get lengthFromFile: %w", err)
 	}
-	blkNum := int32(fi.Size() / int64(m.blockSize))
 	blkID := NewBlockID(filename, blkNum)
 	b := make([]byte, m.blockSize)
 	if _, err := f.Write(b); err != nil {
@@ -155,8 +154,26 @@ func (m *Manager) Append(filename string) (BlockID, error) {
 	return blkID, nil
 }
 
-func (m *Manager) Length(filename string) (int64, error) {
-	return 0, nil
+func (m *Manager) Length(filename string) (int32, error) {
+	f, unlock, err := m.getFile(filename)
+	defer unlock()
+	if err != nil {
+		return 0, fmt.Errorf("could not get file: %w", err)
+
+	}
+	return m.lengthFromFile(f)
+}
+
+func (m *Manager) lengthFromFile(f *os.File) (int32, error) {
+	fi, err := f.Stat()
+	if err != nil {
+		return 0, fmt.Errorf("could not stat file: %w", err)
+	}
+	return int32(fi.Size() / int64(m.blockSize)), nil
+}
+
+func (m *Manager) BlockSize() int32 {
+	return m.blockSize
 }
 
 type keyedMutex struct {
