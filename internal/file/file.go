@@ -19,6 +19,14 @@ func NewBlockID(filename string, blkNum int32) BlockID {
 	}
 }
 
+func (b BlockID) Filename() string {
+	return b.filename
+}
+
+func (b BlockID) Num() int32 {
+	return b.blkNum
+}
+
 type Page struct {
 	bb []byte
 }

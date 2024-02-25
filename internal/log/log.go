@@ -74,6 +74,39 @@ func (m *Manager) Append(rec []byte) (lsn int32, err error) {
 	return m.latestLSN, nil
 }
 
+func (m *Manager) Iterator() func(func([]byte) bool) {
+	p := file.NewPage(m.fm.BlockSize())
+	blockID := m.currentBlockID
+	var currentPos, boundary int32
+	moveToBlock := func(blkID file.BlockID) bool {
+		err := m.fm.Read(blkID, m.page)
+		if err != nil {
+			return false
+		}
+		boundary = p.Int32(0)
+		currentPos = boundary
+		return true
+	}
+	return func(yield func([]byte) bool) {
+		for {
+			if currentPos >= m.fm.BlockSize() && blockID.Num() <= 0 {
+				return
+			}
+			if currentPos == boundary {
+				blockID = file.NewBlockID(blockID.Filename(), blockID.Num()-1)
+				if !moveToBlock(blockID) {
+					return
+				}
+			}
+			rec := p.Bytes(currentPos)
+			currentPos += 4 + int32(len(rec))
+			if !yield(rec) {
+				return
+			}
+		}
+	}
+}
+
 func (m *Manager) appendNewBlock() (file.BlockID, error) {
 	blockID, err := m.fm.Append(m.filename)
 	if err != nil {
