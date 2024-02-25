@@ -6,7 +6,7 @@ func TestPage(t *testing.T) {
 	t.Parallel()
 	t.Run("Int32 with offset 0", func(t *testing.T) {
 		t.Parallel()
-		p := NewPageBlocksize(128)
+		p := NewPage(128)
 		p.SetInt32(0, 123)
 		if p.Int32(0) != 123 {
 			t.Errorf("expected 123, got %d", p.Int32(0))
@@ -14,7 +14,7 @@ func TestPage(t *testing.T) {
 	})
 	t.Run("Int32 with offset 4", func(t *testing.T) {
 		t.Parallel()
-		p := NewPageBlocksize(128)
+		p := NewPage(128)
 		p.SetInt32(4, 123)
 		if p.Int32(4) != 123 {
 			t.Errorf("expected 123, got %d", p.Int32(4))
@@ -22,7 +22,7 @@ func TestPage(t *testing.T) {
 	})
 	t.Run("Bytes with offset 0", func(t *testing.T) {
 		t.Parallel()
-		p := NewPageBlocksize(128)
+		p := NewPage(128)
 		p.SetBytes(0, []byte{1, 2, 3, 4})
 		if string(p.Bytes(0)) != "\x01\x02\x03\x04" {
 			t.Errorf("expected \\x01\\x02\\x03\\x04, got %q", p.Bytes(0))
@@ -30,7 +30,7 @@ func TestPage(t *testing.T) {
 	})
 	t.Run("Bytes with offset 4", func(t *testing.T) {
 		t.Parallel()
-		p := NewPageBlocksize(128)
+		p := NewPage(128)
 		p.SetBytes(4, []byte{1, 2, 3, 4})
 		if string(p.Bytes(4)) != "\x01\x02\x03\x04" {
 			t.Errorf("expected \\x01\\x02\\x03\\x04, got %q", p.Bytes(4))
@@ -38,7 +38,7 @@ func TestPage(t *testing.T) {
 	})
 	t.Run("Str with offset 0", func(t *testing.T) {
 		t.Parallel()
-		p := NewPageBlocksize(128)
+		p := NewPage(128)
 		p.SetStr(0, "abcd")
 		if p.Str(0) != "abcd" {
 			t.Errorf("expected abcd, got %s", p.Str(0))
@@ -46,7 +46,7 @@ func TestPage(t *testing.T) {
 	})
 	t.Run("Str with offset 4", func(t *testing.T) {
 		t.Parallel()
-		p := NewPageBlocksize(128)
+		p := NewPage(128)
 		p.SetStr(4, "abcd")
 		if p.Str(4) != "abcd" {
 			t.Errorf("expected abcd, got %s", p.Str(4))
@@ -71,9 +71,9 @@ func TestFileManager(t *testing.T) {
 		}
 
 		blockID := NewBlockID("testfile", 0)
-		writeP := NewPageBlocksize(128)
+		writeP := NewPage(128)
 		writeP.SetStr(0, "abcd")
-		readP := NewPageBlocksize(128)
+		readP := NewPage(128)
 
 		err = fm.Write(blockID, writeP)
 		if err != nil {

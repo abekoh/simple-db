@@ -23,7 +23,7 @@ type Page struct {
 	bb []byte
 }
 
-func NewPageBlocksize(blockSize int32) *Page {
+func NewPage(blockSize int32) *Page {
 	return &Page{
 		bb: make([]byte, blockSize),
 	}
