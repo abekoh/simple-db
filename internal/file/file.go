@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"os"
+	"sync"
 )
 
 type BlockID struct {
@@ -66,6 +67,7 @@ type FileManager struct {
 	blockSize int32
 	isNew     bool
 	openFiles map[string]*os.File
+	kmu       keyedMutex
 }
 
 func NewFileManager(dbDirPath string, blockSize int32) (*FileManager, error) {
@@ -85,23 +87,27 @@ func NewFileManager(dbDirPath string, blockSize int32) (*FileManager, error) {
 		dbDirPath: dbDirPath,
 		blockSize: blockSize,
 		isNew:     isNew,
+		openFiles: make(map[string]*os.File),
+		kmu:       keyedMutex{},
 	}, nil
 }
 
-func (m *FileManager) getFile(filename string) (*os.File, error) {
+func (m *FileManager) getFile(filename string) (*os.File, func(), error) {
+	unlock := m.kmu.lock(filename)
 	if f, ok := m.openFiles[filename]; ok {
-		return f, nil
+		return f, unlock, nil
 	}
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("could not open %s: %w", filename, err)
+		return nil, unlock, fmt.Errorf("could not open %s: %w", filename, err)
 	}
 	m.openFiles[filename] = f
-	return f, nil
+	return f, unlock, nil
 }
 
 func (m *FileManager) Read(blk BlockID, p *Page) error {
-	f, err := m.getFile(blk.filename)
+	f, unlock, err := m.getFile(blk.filename)
+	defer unlock()
 	if err != nil {
 		return fmt.Errorf("could not get file: %w", err)
 	}
@@ -113,7 +119,8 @@ func (m *FileManager) Read(blk BlockID, p *Page) error {
 }
 
 func (m *FileManager) Write(blk BlockID, p *Page) error {
-	f, err := m.getFile(blk.filename)
+	f, unlock, err := m.getFile(blk.filename)
+	defer unlock()
 	if err != nil {
 		return fmt.Errorf("could not get file: %w", err)
 	}
@@ -125,7 +132,8 @@ func (m *FileManager) Write(blk BlockID, p *Page) error {
 }
 
 func (m *FileManager) Append(filename string) (BlockID, error) {
-	f, err := m.getFile(filename)
+	f, unlock, err := m.getFile(filename)
+	defer unlock()
 	if err != nil {
 		return BlockID{}, fmt.Errorf("could not get file: %w", err)
 	}
@@ -148,4 +156,16 @@ func (m *FileManager) Append(filename string) (BlockID, error) {
 
 func (m *FileManager) Length(filename string) (int64, error) {
 	return 0, nil
+}
+
+type keyedMutex struct {
+	mutexes sync.Map
+}
+
+func (m *keyedMutex) lock(key string) func() {
+	mu, _ := m.mutexes.LoadOrStore(key, &sync.Mutex{})
+	mu.(*sync.Mutex).Lock()
+	return func() {
+		mu.(*sync.Mutex).Unlock()
+	}
 }
