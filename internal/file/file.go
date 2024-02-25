@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"os"
+	"path"
 	"sync"
 )
 
@@ -97,7 +98,7 @@ func (m *FileManager) getFile(filename string) (*os.File, func(), error) {
 	if f, ok := m.openFiles[filename]; ok {
 		return f, unlock, nil
 	}
-	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(path.Join(m.dbDirPath, filename), os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return nil, unlock, fmt.Errorf("could not open %s: %w", filename, err)
 	}
