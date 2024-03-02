@@ -45,7 +45,7 @@ func TestManager(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for i := 0; i < 10000; i++ {
+		for i := 0; i < 100000; i++ {
 			_, err := lm.Append([]byte(fmt.Sprintf("%04d", i)))
 			if err != nil {
 				t.Fatal(err)
@@ -53,13 +53,13 @@ func TestManager(t *testing.T) {
 		}
 		count := 0
 		for r := range lm.Iterator() {
-			if string(r) != fmt.Sprintf("%04d", 10000-count-1) {
-				t.Errorf("expected %04d, got %s", 10000-count-1, r)
+			if string(r) != fmt.Sprintf("%04d", 100000-count-1) {
+				t.Errorf("expected %04d, got %s", 100000-count-1, r)
 			}
 			count++
 		}
-		if count != 10000 {
-			t.Errorf("expected 10000, got %d", count)
+		if count != 100000 {
+			t.Errorf("expected 100000, got %d", count)
 		}
 	})
 }
