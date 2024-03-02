@@ -199,3 +199,16 @@ func (m *keyedMutex) lock(key string) func() {
 		mu.(*sync.Mutex).Unlock()
 	}
 }
+
+func NeedSize(target any) int32 {
+	switch impl := target.(type) {
+	case int32:
+		return int32Size
+	case string:
+		return int32Size + int32(len(impl))
+	case []byte:
+		return int32Size + int32(len(impl))
+	default:
+		return 0
+	}
+}

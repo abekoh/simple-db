@@ -57,9 +57,8 @@ func (m *Manager) Append(rec []byte) (lsn SequenceNumber, err error) {
 	m.appendMu.Lock()
 	defer m.appendMu.Unlock()
 	boundary := m.page.Int32(0)
-	recSize := int32(len(rec))
-	needBytes := recSize + 4
-	if boundary-needBytes < 4 {
+	recNeedSize := file.NeedSize(rec)
+	if boundary-recNeedSize < 4 {
 		if err := m.flush(); err != nil {
 			return 0, fmt.Errorf("could not flush: %w", err)
 		}
@@ -69,7 +68,7 @@ func (m *Manager) Append(rec []byte) (lsn SequenceNumber, err error) {
 		}
 		boundary = m.page.Int32(0)
 	}
-	recPos := boundary - needBytes
+	recPos := boundary - recNeedSize
 	m.page.SetBytes(recPos, rec)
 	m.page.SetInt32(0, recPos)
 	m.latestLSN += 1
