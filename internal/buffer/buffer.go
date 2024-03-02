@@ -5,8 +5,20 @@ import (
 
 	"github.com/abekoh/simple-db/internal/file"
 	"github.com/abekoh/simple-db/internal/log"
-	"github.com/abekoh/simple-db/internal/util"
 )
+
+type TransactionNumber struct {
+	Value int32
+	Valid bool
+}
+
+func NewNullTransactionNumber() TransactionNumber {
+	return TransactionNumber{Valid: false}
+}
+
+func NewNotNullTransactionNumber(v int32) TransactionNumber {
+	return TransactionNumber{Value: v, Valid: true}
+}
 
 type Buffer struct {
 	fm        *file.Manager
@@ -14,7 +26,7 @@ type Buffer struct {
 	page      *file.Page
 	blockID   file.BlockID
 	pinsCount int32
-	txNum     util.Nullable[int32]
+	txNum     TransactionNumber
 	lsn       log.SequenceNumber
 }
 
@@ -23,7 +35,7 @@ func NewBuffer(fm *file.Manager, lm *log.Manager) *Buffer {
 		fm:    fm,
 		lm:    lm,
 		page:  file.NewPage(fm.BlockSize()),
-		txNum: util.NewNull[int32](),
+		txNum: NewNullTransactionNumber(),
 		lsn:   -1,
 	}
 }
@@ -41,7 +53,7 @@ func (b *Buffer) TxNum() (int32, bool) {
 }
 
 func (b *Buffer) SetModified(txNum int32, lsn log.SequenceNumber) {
-	b.txNum = util.NewNotNull(txNum)
+	b.txNum = NewNotNullTransactionNumber(txNum)
 	if lsn >= 0 {
 		b.lsn = lsn
 	}
@@ -73,7 +85,7 @@ func (b *Buffer) flush() error {
 	if err := b.fm.Write(b.blockID, b.page); err != nil {
 		return fmt.Errorf("could not write: %w", err)
 	}
-	b.txNum = util.NewNull[int32]()
+	b.txNum = NewNullTransactionNumber()
 	return nil
 }
 
