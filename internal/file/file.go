@@ -56,19 +56,21 @@ func (p *Page) SetInt32(offset int32, n int32) {
 }
 
 func (p *Page) Bytes(offset int32) []byte {
-	return p.bb[offset : offset+4]
+	n := p.Int32(offset)
+	return p.bb[offset+4 : offset+4+n]
 }
 
 func (p *Page) SetBytes(offset int32, b []byte) {
-	copy(p.bb[offset:offset+4], b)
+	p.SetInt32(offset, int32(len(b)))
+	copy(p.bb[offset+4:offset+4+int32(len(b))], b)
 }
 
 func (p *Page) Str(offset int32) string {
-	return string(p.bb[offset : offset+4])
+	return string(p.Bytes(offset))
 }
 
 func (p *Page) SetStr(offset int32, s string) {
-	copy(p.bb[offset:offset+4], s)
+	p.SetBytes(offset, []byte(s))
 }
 
 type Manager struct {
