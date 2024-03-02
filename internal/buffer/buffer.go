@@ -96,6 +96,9 @@ func (b *Buffer) pin() {
 }
 
 func (b *Buffer) unpin() {
+	if b.pinsCount <= 0 {
+		panic("unpin: pinsCount is already 0")
+	}
 	b.pinsCount--
 }
 
@@ -133,8 +136,9 @@ func (m *Manager) loop() {
 	for {
 		select {
 		case b := <-m.unpinCh:
-			if b.IsPinned() {
-				b.unpin()
+			b.unpin()
+			if !b.IsPinned() {
+				m.availableNum.Add(1)
 			}
 			if len(waitMap[b.blockID]) > 0 {
 				b.pin()
@@ -152,6 +156,7 @@ func (m *Manager) loop() {
 					if !b.IsPinned() {
 						b.assignedToBlock(pinReq.BlockID)
 						b.pin()
+						m.availableNum.Add(-1)
 						pinReq.ReceiveCh <- b
 						received = true
 						break
