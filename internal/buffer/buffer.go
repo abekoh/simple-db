@@ -103,6 +103,7 @@ type Manager struct {
 	pool         map[file.BlockID]*Buffer
 	availableNum atomic.Int32
 	pinRequestCh chan pinRequest
+	unpinCh      chan *Buffer
 }
 
 type pinRequest struct {
@@ -131,6 +132,15 @@ func (m *Manager) loop() {
 	waitMap := make(map[file.BlockID][]chan *Buffer)
 	for {
 		select {
+		case b := <-m.unpinCh:
+			if b.IsPinned() {
+				b.unpin()
+			}
+			if len(waitMap[b.blockID]) > 0 {
+				b.pin()
+				waitMap[b.blockID][0] <- b
+				waitMap[b.blockID] = waitMap[b.blockID][1:]
+			}
 		case pinReq := <-m.pinRequestCh:
 			b, ok := m.pool[pinReq.BlockID]
 			if ok {
@@ -179,4 +189,8 @@ func (m *Manager) Pin(blockID file.BlockID) (*Buffer, error) {
 	case <-time.After(maxWaitTime):
 		return nil, fmt.Errorf("could not pin %s", blockID)
 	}
+}
+
+func (m *Manager) Unpin(b *Buffer) {
+	m.unpinCh <- b
 }
