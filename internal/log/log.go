@@ -7,13 +7,15 @@ import (
 	"github.com/abekoh/simple-db/internal/file"
 )
 
+type SequenceNumber int32
+
 type Manager struct {
 	fm             *file.Manager
 	filename       string
 	page           *file.Page
 	currentBlockID file.BlockID
-	latestLSN      int32
-	lastSavedLSN   int32
+	latestLSN      SequenceNumber
+	lastSavedLSN   SequenceNumber
 	appendMu       sync.Mutex
 }
 
@@ -44,14 +46,14 @@ func NewManager(fm *file.Manager, filename string) (*Manager, error) {
 	return m, nil
 }
 
-func (m *Manager) Flush(lsn int32) error {
+func (m *Manager) Flush(lsn SequenceNumber) error {
 	if lsn >= m.latestLSN {
 		return m.flush()
 	}
 	return nil
 }
 
-func (m *Manager) Append(rec []byte) (lsn int32, err error) {
+func (m *Manager) Append(rec []byte) (lsn SequenceNumber, err error) {
 	m.appendMu.Lock()
 	defer m.appendMu.Unlock()
 	boundary := m.page.Int32(0)
