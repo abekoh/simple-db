@@ -140,7 +140,11 @@ func (m *Manager) loop() {
 			if len(waitMap[b.blockID]) > 0 {
 				b.pin()
 				waitMap[b.blockID][0] <- b
-				waitMap[b.blockID] = waitMap[b.blockID][1:]
+				if len(waitMap[b.blockID]) > 1 {
+					waitMap[b.blockID] = waitMap[b.blockID][1:]
+				} else {
+					delete(waitMap, b.blockID)
+				}
 			} else if !b.IsPinned() {
 				m.availableNum.Add(1)
 			}
