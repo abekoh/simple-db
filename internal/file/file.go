@@ -7,6 +7,8 @@ import (
 	"sync"
 )
 
+const int32Size = 4
+
 type BlockID struct {
 	filename string
 	blkNum   int32
@@ -57,12 +59,12 @@ func (p *Page) SetInt32(offset int32, n int32) {
 
 func (p *Page) Bytes(offset int32) []byte {
 	n := p.Int32(offset)
-	return p.bb[offset+4 : offset+4+n]
+	return p.bb[offset+int32Size : offset+int32Size+n]
 }
 
 func (p *Page) SetBytes(offset int32, b []byte) {
 	p.SetInt32(offset, int32(len(b)))
-	copy(p.bb[offset+4:offset+4+int32(len(b))], b)
+	copy(p.bb[offset+int32Size:offset+int32Size+int32(len(b))], b)
 }
 
 func (p *Page) Str(offset int32) string {
