@@ -48,8 +48,8 @@ func (b *Buffer) BlockID() file.BlockID {
 	return b.blockID
 }
 
-func (b *Buffer) TxNum() (int32, bool) {
-	return b.txNum.Value, b.txNum.Valid
+func (b *Buffer) TxNum() TransactionNumber {
+	return b.txNum
 }
 
 func (b *Buffer) SetModified(txNum TransactionNumber, lsn log.SequenceNumber) {
@@ -95,4 +95,36 @@ func (b *Buffer) pin() {
 
 func (b *Buffer) unpin() {
 	b.pinsCount--
+}
+
+type Manager struct {
+	pool []*Buffer
+}
+
+func NewManager(fm *file.Manager, lm *log.Manager, buffNum int32) *Manager {
+	pool := make([]*Buffer, buffNum)
+	for i := range pool {
+		pool[i] = NewBuffer(fm, lm)
+	}
+	return &Manager{
+		pool: pool,
+	}
+}
+
+func (m *Manager) AvailableNum() int {
+	return len(m.pool)
+}
+
+func (m *Manager) FlushAll(txNum TransactionNumber) error {
+	if !txNum.Valid {
+		return fmt.Errorf("invalid txNum")
+	}
+	for _, buff := range m.pool {
+		if buff.TxNum() == txNum {
+			if err := buff.flush(); err != nil {
+				return fmt.Errorf("could not flush: %w", err)
+			}
+		}
+	}
+	return nil
 }
