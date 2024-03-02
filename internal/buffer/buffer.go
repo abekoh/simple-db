@@ -155,6 +155,9 @@ func (m *Manager) loop() {
 		case pinReq := <-m.pinRequestCh:
 			b, ok := m.pool[pinReq.BlockID]
 			if ok {
+				if !b.IsPinned() {
+					m.availableNum.Add(-1)
+				}
 				b.pin()
 				pinReq.ReceiveCh <- b
 			} else {
