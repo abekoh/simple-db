@@ -42,23 +42,23 @@ func TestPage(t *testing.T) {
 	t.Run("Str with offset 0", func(t *testing.T) {
 		t.Parallel()
 		p := NewPage(128)
-		p.SetStr(0, "abcd")
-		if p.Str(0) != "abcd" {
+		p.SetStr(0, "abcdefghijklmn")
+		if p.Str(0) != "abcdefghijklmn" {
 			t.Errorf("expected abcd, got %s", p.Str(0))
 		}
 	})
 	t.Run("Str with offset 4", func(t *testing.T) {
 		t.Parallel()
 		p := NewPage(128)
-		p.SetStr(4, "abcd")
-		if p.Str(4) != "abcd" {
+		p.SetStr(4, "abcdghijklmn")
+		if p.Str(4) != "abcdghijklmn" {
 			t.Errorf("expected abcd, got %s", p.Str(4))
 		}
 	})
 	t.Run("NewPageBytes", func(t *testing.T) {
 		t.Parallel()
-		p := NewPageBytes([]byte("abcd"))
-		if string(p.bb) != "abcd" {
+		p := NewPageBytes([]byte("abcdefghijklmn"))
+		if string(p.bb) != "abcdefghijklmn" {
 			t.Errorf("expected abcd, got %s", p.bb)
 		}
 	})
