@@ -2,6 +2,7 @@ package buffer
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/abekoh/simple-db/internal/file"
@@ -100,80 +101,82 @@ func (b *Buffer) unpin() {
 
 type Manager struct {
 	pool         map[file.BlockID]*Buffer
-	availableNum int
+	availableNum atomic.Int32
+	pinRequestCh chan pinRequest
+}
+
+type pinRequest struct {
+	BlockID   file.BlockID
+	ReceiveCh chan *Buffer
 }
 
 func NewManager(fm *file.Manager, lm *log.Manager, buffNum int) *Manager {
 	pool := make(map[file.BlockID]*Buffer, buffNum)
 	for i := 0; i < buffNum; i++ {
-		buf := NewBuffer(fm, lm)
-		pool[buf.BlockID()] = buf
+		b := NewBuffer(fm, lm)
+		pool[b.blockID] = b
 	}
-	return &Manager{
-		pool: pool,
+	availableNum := atomic.Int32{}
+	availableNum.Store(int32(buffNum))
+	m := &Manager{
+		pool:         pool,
+		availableNum: availableNum,
+		pinRequestCh: make(chan pinRequest),
+	}
+	go m.loop()
+	return m
+}
+
+func (m *Manager) loop() {
+	waitMap := make(map[file.BlockID][]chan *Buffer)
+	for {
+		select {
+		case pinReq := <-m.pinRequestCh:
+			b, ok := m.pool[pinReq.BlockID]
+			if ok {
+				b.pin()
+				pinReq.ReceiveCh <- b
+			} else {
+				received := false
+				for _, b := range m.pool {
+					if !b.IsPinned() {
+						b.assignedToBlock(pinReq.BlockID)
+						b.pin()
+						pinReq.ReceiveCh <- b
+						received = true
+						break
+					}
+				}
+				if !received {
+					if _, ok := waitMap[pinReq.BlockID]; !ok {
+						waitMap[pinReq.BlockID] = []chan *Buffer{}
+					} else {
+						waitMap[pinReq.BlockID] = append(waitMap[pinReq.BlockID], pinReq.ReceiveCh)
+					}
+				}
+			}
+		}
 	}
 }
 
 func (m *Manager) AvailableNum() int {
-	return m.availableNum
+	return int(m.availableNum.Load())
 }
 
 func (m *Manager) FlushAll(txNum TransactionNumber) error {
-	if !txNum.Valid {
-		return fmt.Errorf("invalid txNum")
-	}
-	for _, buff := range m.pool {
-		if buff.TxNum() == txNum {
-			if err := buff.flush(); err != nil {
-				return fmt.Errorf("could not flush: %w", err)
-			}
-		}
-	}
+	// TODO: Implement this
 	return nil
 }
 
 const maxWaitTime = 10 * time.Second
 
 func (m *Manager) Pin(blockID file.BlockID) (*Buffer, error) {
-	startedAt := time.Now()
-	buf, err := m.tryToPin(blockID)
-	if err != nil {
-		return nil, fmt.Errorf("could not tryToPin: %w", err)
-	}
-	for buf == nil && time.Since(startedAt) < maxWaitTime {
-		time.Sleep(maxWaitTime)
-		buf, err = m.tryToPin(blockID)
-		if err != nil {
-			return nil, fmt.Errorf("could not tryToPin: %w", err)
-		}
-	}
-	if buf == nil {
-		return nil, fmt.Errorf("could not pin")
-	}
-	return buf, nil
-}
-
-func (m *Manager) tryToPin(blockID file.BlockID) (*Buffer, error) {
-	buf, ok := m.pool[blockID]
-	if ok {
-		if !buf.IsPinned() {
-			buf.pin()
-		}
-		return buf, nil
-	} else {
-		var foundBuf *Buffer
-		for _, bf := range m.pool {
-			if !bf.IsPinned() {
-				foundBuf = bf
-				break
-			}
-		}
-		if foundBuf == nil {
-			return nil, nil
-		}
-		if err := foundBuf.assignedToBlock(blockID); err != nil {
-			return nil, fmt.Errorf("could not assign: %w", err)
-		}
-		return foundBuf, nil
+	ch := make(chan *Buffer)
+	m.pinRequestCh <- pinRequest{BlockID: blockID, ReceiveCh: ch}
+	select {
+	case b := <-ch:
+		return b, nil
+	case <-time.After(maxWaitTime):
+		return nil, fmt.Errorf("could not pin %s", blockID)
 	}
 }
