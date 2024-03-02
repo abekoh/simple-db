@@ -112,6 +112,7 @@ type Manager struct {
 type pinRequest struct {
 	BlockID   file.BlockID
 	ReceiveCh chan *Buffer
+	CancelCh  chan struct{}
 }
 
 func NewManager(fm *file.Manager, lm *log.Manager, buffNum int) *Manager {
@@ -132,14 +133,17 @@ func NewManager(fm *file.Manager, lm *log.Manager, buffNum int) *Manager {
 }
 
 func (m *Manager) loop() {
-	waitMap := make(map[file.BlockID][]chan *Buffer)
+	waitMap := make(map[file.BlockID][]pinRequest)
 	for {
 		select {
 		case b := <-m.unpinCh:
 			b.unpin()
 			if len(waitMap[b.blockID]) > 0 {
 				b.pin()
-				waitMap[b.blockID][0] <- b
+				req := waitMap[b.blockID][0]
+				if req.CancelCh != nil {
+					req.ReceiveCh <- nil
+				}
 				if len(waitMap[b.blockID]) > 1 {
 					waitMap[b.blockID] = waitMap[b.blockID][1:]
 				} else {
@@ -167,9 +171,9 @@ func (m *Manager) loop() {
 				}
 				if !received {
 					if _, ok := waitMap[pinReq.BlockID]; !ok {
-						waitMap[pinReq.BlockID] = []chan *Buffer{}
+						waitMap[pinReq.BlockID] = []pinRequest{pinReq}
 					} else {
-						waitMap[pinReq.BlockID] = append(waitMap[pinReq.BlockID], pinReq.ReceiveCh)
+						waitMap[pinReq.BlockID] = append(waitMap[pinReq.BlockID], pinReq)
 					}
 				}
 			}
@@ -190,12 +194,14 @@ const maxWaitTime = 10 * time.Second
 
 func (m *Manager) Pin(blockID file.BlockID) (*Buffer, error) {
 	ch := make(chan *Buffer)
-	m.pinRequestCh <- pinRequest{BlockID: blockID, ReceiveCh: ch}
+	cancelCh := make(chan struct{}, 1)
+	m.pinRequestCh <- pinRequest{BlockID: blockID, ReceiveCh: ch, CancelCh: cancelCh}
 	select {
 	case b := <-ch:
 		return b, nil
 	case <-time.After(maxWaitTime):
-		return nil, fmt.Errorf("could not pin %s", blockID)
+		cancelCh <- struct{}{}
+		return nil, fmt.Errorf("could not pin %v", blockID)
 	}
 }
 
