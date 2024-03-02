@@ -52,8 +52,8 @@ func (b *Buffer) TxNum() (int32, bool) {
 	return b.txNum.Value, b.txNum.Valid
 }
 
-func (b *Buffer) SetModified(txNum int32, lsn log.SequenceNumber) {
-	b.txNum = NewNotNullTransactionNumber(txNum)
+func (b *Buffer) SetModified(txNum TransactionNumber, lsn log.SequenceNumber) {
+	b.txNum = txNum
 	if lsn >= 0 {
 		b.lsn = lsn
 	}
