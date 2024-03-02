@@ -2,6 +2,7 @@ package buffer
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/abekoh/simple-db/internal/file"
 	"github.com/abekoh/simple-db/internal/log"
@@ -98,13 +99,15 @@ func (b *Buffer) unpin() {
 }
 
 type Manager struct {
-	pool []*Buffer
+	pool         map[file.BlockID]*Buffer
+	availableNum int
 }
 
-func NewManager(fm *file.Manager, lm *log.Manager, buffNum int32) *Manager {
-	pool := make([]*Buffer, buffNum)
-	for i := range pool {
-		pool[i] = NewBuffer(fm, lm)
+func NewManager(fm *file.Manager, lm *log.Manager, buffNum int) *Manager {
+	pool := make(map[file.BlockID]*Buffer, buffNum)
+	for i := 0; i < buffNum; i++ {
+		buf := NewBuffer(fm, lm)
+		pool[buf.BlockID()] = buf
 	}
 	return &Manager{
 		pool: pool,
@@ -112,7 +115,7 @@ func NewManager(fm *file.Manager, lm *log.Manager, buffNum int32) *Manager {
 }
 
 func (m *Manager) AvailableNum() int {
-	return len(m.pool)
+	return m.availableNum
 }
 
 func (m *Manager) FlushAll(txNum TransactionNumber) error {
@@ -127,4 +130,50 @@ func (m *Manager) FlushAll(txNum TransactionNumber) error {
 		}
 	}
 	return nil
+}
+
+const maxWaitTime = 10 * time.Second
+
+func (m *Manager) Pin(blockID file.BlockID) (*Buffer, error) {
+	startedAt := time.Now()
+	buf, err := m.tryToPin(blockID)
+	if err != nil {
+		return nil, fmt.Errorf("could not tryToPin: %w", err)
+	}
+	for buf == nil && time.Since(startedAt) < maxWaitTime {
+		time.Sleep(maxWaitTime)
+		buf, err = m.tryToPin(blockID)
+		if err != nil {
+			return nil, fmt.Errorf("could not tryToPin: %w", err)
+		}
+	}
+	if buf == nil {
+		return nil, fmt.Errorf("could not pin")
+	}
+	return buf, nil
+}
+
+func (m *Manager) tryToPin(blockID file.BlockID) (*Buffer, error) {
+	buf, ok := m.pool[blockID]
+	if ok {
+		if !buf.IsPinned() {
+			buf.pin()
+		}
+		return buf, nil
+	} else {
+		var foundBuf *Buffer
+		for _, bf := range m.pool {
+			if !bf.IsPinned() {
+				foundBuf = bf
+				break
+			}
+		}
+		if foundBuf == nil {
+			return nil, nil
+		}
+		if err := foundBuf.assignedToBlock(blockID); err != nil {
+			return nil, fmt.Errorf("could not assign: %w", err)
+		}
+		return foundBuf, nil
+	}
 }
