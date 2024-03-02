@@ -111,8 +111,8 @@ type Manager struct {
 
 type pinRequest struct {
 	BlockID   file.BlockID
-	ReceiveCh chan *Buffer
-	CancelCh  chan struct{}
+	ReceiveCh chan<- *Buffer
+	CancelCh  <-chan struct{}
 }
 
 func NewManager(fm *file.Manager, lm *log.Manager, buffNum int) *Manager {
@@ -141,8 +141,8 @@ func (m *Manager) loop() {
 			if len(waitMap[b.blockID]) > 0 {
 				b.pin()
 				req := waitMap[b.blockID][0]
-				if req.CancelCh != nil {
-					req.ReceiveCh <- nil
+				if len(req.CancelCh) != 0 {
+					req.ReceiveCh <- b
 				}
 				if len(waitMap[b.blockID]) > 1 {
 					waitMap[b.blockID] = waitMap[b.blockID][1:]
