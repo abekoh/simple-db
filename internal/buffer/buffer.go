@@ -14,7 +14,7 @@ type Buffer struct {
 	blockID   file.BlockID
 	pinsCount int32
 	txNum     int32
-	lsn       int32
+	lsn       log.SequenceNumber
 }
 
 func NewBuffer(fm *file.Manager, lm *log.Manager) *Buffer {
@@ -39,7 +39,7 @@ func (b *Buffer) TxNum() int32 {
 	return b.txNum
 }
 
-func (b *Buffer) SetModified(txNum, lsn int32) {
+func (b *Buffer) SetModified(txNum int32, lsn log.SequenceNumber) {
 	b.txNum = txNum
 	if lsn >= 0 {
 		b.lsn = lsn
