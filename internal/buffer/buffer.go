@@ -110,9 +110,14 @@ type Manager struct {
 	flushAllCh   chan chan<- error
 }
 
+type bufferResult struct {
+	buf *Buffer
+	err error
+}
+
 type pinRequest struct {
 	BlockID   file.BlockID
-	ReceiveCh chan<- *Buffer
+	ReceiveCh chan<- bufferResult
 	CancelCh  <-chan struct{}
 }
 
@@ -152,7 +157,7 @@ func (m *Manager) loop() {
 				b.pin()
 				req := waitMap[b.blockID][0]
 				if len(req.CancelCh) != 0 {
-					req.ReceiveCh <- b
+					req.ReceiveCh <- bufferResult{buf: b}
 				}
 				if len(waitMap[b.blockID]) > 1 {
 					waitMap[b.blockID] = waitMap[b.blockID][1:]
@@ -169,15 +174,20 @@ func (m *Manager) loop() {
 					m.availableNum.Add(-1)
 				}
 				b.pin()
-				pinReq.ReceiveCh <- b
+				pinReq.ReceiveCh <- bufferResult{buf: b}
 			} else {
 				received := false
 				for _, b := range m.pool {
 					if !b.IsPinned() {
-						b.assignedToBlock(pinReq.BlockID)
+						err := b.assignedToBlock(pinReq.BlockID)
+						if err != nil {
+							pinReq.ReceiveCh <- bufferResult{err: err}
+							received = true
+							break
+						}
 						b.pin()
 						m.availableNum.Add(-1)
-						pinReq.ReceiveCh <- b
+						pinReq.ReceiveCh <- bufferResult{buf: b}
 						received = true
 						break
 					}
@@ -207,12 +217,12 @@ func (m *Manager) FlushAll(txNum TransactionNumber) error {
 const maxWaitTime = 10 * time.Second
 
 func (m *Manager) Pin(blockID file.BlockID) (*Buffer, error) {
-	ch := make(chan *Buffer)
+	ch := make(chan bufferResult)
 	cancelCh := make(chan struct{}, 1)
 	m.pinRequestCh <- pinRequest{BlockID: blockID, ReceiveCh: ch, CancelCh: cancelCh}
 	select {
-	case b := <-ch:
-		return b, nil
+	case res := <-ch:
+		return res.buf, res.err
 	case <-time.After(maxWaitTime):
 		cancelCh <- struct{}{}
 		return nil, fmt.Errorf("could not pin %v", blockID)
