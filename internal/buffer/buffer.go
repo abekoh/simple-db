@@ -137,13 +137,12 @@ func (m *Manager) loop() {
 		select {
 		case b := <-m.unpinCh:
 			b.unpin()
-			if !b.IsPinned() {
-				m.availableNum.Add(1)
-			}
 			if len(waitMap[b.blockID]) > 0 {
 				b.pin()
 				waitMap[b.blockID][0] <- b
 				waitMap[b.blockID] = waitMap[b.blockID][1:]
+			} else if !b.IsPinned() {
+				m.availableNum.Add(1)
 			}
 		case pinReq := <-m.pinRequestCh:
 			b, ok := m.pool[pinReq.BlockID]
