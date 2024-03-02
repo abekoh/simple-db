@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -45,17 +46,17 @@ func TestManager(t *testing.T) {
 			t.Fatal(err)
 		}
 		for i := 0; i < 10000; i++ {
-			_, err := lm.Append([]byte("abcd"))
+			_, err := lm.Append([]byte(fmt.Sprintf("%04d", i)))
 			if err != nil {
 				t.Fatal(err)
 			}
 		}
 		count := 0
 		for r := range lm.Iterator() {
-			count++
-			if string(r) != "abcd" {
-				t.Errorf("expected abcd, got %s", string(r))
+			if string(r) != fmt.Sprintf("%04d", 10000-count-1) {
+				t.Errorf("expected %04d, got %s", 10000-count-1, r)
 			}
+			count++
 		}
 		if count != 10000 {
 			t.Errorf("expected 10000, got %d", count)
