@@ -107,6 +107,7 @@ type Manager struct {
 	availableNum atomic.Int32
 	pinRequestCh chan pinRequest
 	unpinCh      chan *Buffer
+	flushAllCh   chan chan<- error
 }
 
 type pinRequest struct {
@@ -136,6 +137,15 @@ func (m *Manager) loop() {
 	waitMap := make(map[file.BlockID][]pinRequest)
 	for {
 		select {
+		case errCh := <-m.flushAllCh:
+			var err error
+			for _, b := range m.pool {
+				if err := b.flush(); err != nil {
+					err = fmt.Errorf("could not flush: %w", err)
+					break
+				}
+			}
+			errCh <- err
 		case b := <-m.unpinCh:
 			b.unpin()
 			if len(waitMap[b.blockID]) > 0 {
@@ -189,8 +199,9 @@ func (m *Manager) AvailableNum() int {
 }
 
 func (m *Manager) FlushAll(txNum TransactionNumber) error {
-	// TODO: Implement this
-	return nil
+	ch := make(chan error)
+	m.flushAllCh <- ch
+	return <-ch
 }
 
 const maxWaitTime = 10 * time.Second
