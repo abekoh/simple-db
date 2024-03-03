@@ -95,7 +95,7 @@ type (
 		availableNum atomic.Int32
 		pinRequestCh chan pinRequest
 		unpinCh      chan unpinRequest
-		flushAllCh   chan chan<- error
+		flushAllCh   chan flushAllRequest
 		maxWaitTime  time.Duration
 	}
 	ManagerOption func(*Manager)
@@ -114,6 +114,10 @@ type (
 	unpinRequest struct {
 		buf        *Buffer
 		completeCh chan<- struct{}
+	}
+	flushAllRequest struct {
+		txNum int32
+		errCh chan<- error
 	}
 )
 
@@ -136,7 +140,7 @@ func NewManager(
 		availableNum: availableNum,
 		pinRequestCh: make(chan pinRequest),
 		unpinCh:      make(chan unpinRequest),
-		flushAllCh:   make(chan chan<- error),
+		flushAllCh:   make(chan flushAllRequest),
 		maxWaitTime:  defaultMaxWaitTime,
 	}
 	for _, opt := range opts {
@@ -156,15 +160,18 @@ func (m *Manager) loop() {
 	waitMap := make(map[file.BlockID][]pinRequest)
 	for {
 		select {
-		case errCh := <-m.flushAllCh:
+		case flushAllReq := <-m.flushAllCh:
 			var err error
 			for _, b := range m.pool {
+				if b.txNum != flushAllReq.txNum {
+					continue
+				}
 				if err := b.flush(); err != nil {
 					err = fmt.Errorf("could not flush: %w", err)
 					break
 				}
 			}
-			errCh <- err
+			flushAllReq.errCh <- err
 		case unpinReq := <-m.unpinCh:
 			unpinReq.buf.unpin()
 			if len(waitMap[unpinReq.buf.blockID]) > 0 {
@@ -238,7 +245,7 @@ func (m *Manager) AvailableNum() int {
 
 func (m *Manager) FlushAll(txNum int32) error {
 	ch := make(chan error)
-	m.flushAllCh <- ch
+	m.flushAllCh <- flushAllRequest{txNum: txNum, errCh: ch}
 	return <-ch
 }
 

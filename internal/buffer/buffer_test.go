@@ -96,9 +96,9 @@ func TestBufferManager(t *testing.T) {
 
 		buf1 := mustPin(t, bm, file.NewBlockID("testfile", 0))
 		buf1.Page().SetStr(0, "abcdefgh")
-		buf1.SetModified(NewTransactionNumber(1), 1)
+		buf1.SetModified(1, 1)
 
-		if err := bm.FlushAll(NewTransactionNumber(1)); err != nil {
+		if err := bm.FlushAll(1); err != nil {
 			t.Fatal(err)
 		}
 	})
