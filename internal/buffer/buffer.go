@@ -106,7 +106,7 @@ type Manager struct {
 	pool         []*Buffer
 	availableNum atomic.Int32
 	pinRequestCh chan pinRequest
-	unpinCh      chan *Buffer
+	unpinCh      chan unpinRequest
 	flushAllCh   chan chan<- error
 }
 
@@ -121,6 +121,11 @@ type pinRequest struct {
 	cancelCh  <-chan struct{}
 }
 
+type unpinRequest struct {
+	buf        *Buffer
+	completeCh chan<- struct{}
+}
+
 func NewManager(fm *file.Manager, lm *log.Manager, buffNum int) *Manager {
 	pool := make([]*Buffer, buffNum)
 	for i := range pool {
@@ -132,6 +137,8 @@ func NewManager(fm *file.Manager, lm *log.Manager, buffNum int) *Manager {
 		pool:         pool,
 		availableNum: availableNum,
 		pinRequestCh: make(chan pinRequest),
+		unpinCh:      make(chan unpinRequest),
+		flushAllCh:   make(chan chan<- error),
 	}
 	go m.loop()
 	return m
@@ -150,22 +157,23 @@ func (m *Manager) loop() {
 				}
 			}
 			errCh <- err
-		case b := <-m.unpinCh:
-			b.unpin()
-			if len(waitMap[b.blockID]) > 0 {
-				b.pin()
-				req := waitMap[b.blockID][0]
+		case unpinReq := <-m.unpinCh:
+			unpinReq.buf.unpin()
+			if len(waitMap[unpinReq.buf.blockID]) > 0 {
+				unpinReq.buf.pin()
+				req := waitMap[unpinReq.buf.blockID][0]
 				if len(req.cancelCh) != 0 {
-					req.receiveCh <- bufferResult{buf: b}
+					req.receiveCh <- bufferResult{buf: unpinReq.buf}
 				}
-				if len(waitMap[b.blockID]) > 1 {
-					waitMap[b.blockID] = waitMap[b.blockID][1:]
+				if len(waitMap[unpinReq.buf.blockID]) > 1 {
+					waitMap[unpinReq.buf.blockID] = waitMap[unpinReq.buf.blockID][1:]
 				} else {
-					delete(waitMap, b.blockID)
+					delete(waitMap, unpinReq.buf.blockID)
 				}
-			} else if !b.IsPinned() {
+			} else if !unpinReq.buf.IsPinned() {
 				m.availableNum.Add(1)
 			}
+			unpinReq.completeCh <- struct{}{}
 		case pinReq := <-m.pinRequestCh:
 			var b *Buffer
 			for _, buf := range m.pool {
@@ -235,5 +243,7 @@ func (m *Manager) Pin(blockID file.BlockID) (*Buffer, error) {
 }
 
 func (m *Manager) Unpin(b *Buffer) {
-	m.unpinCh <- b
+	ch := make(chan struct{})
+	m.unpinCh <- unpinRequest{buf: b, completeCh: ch}
+	<-ch
 }

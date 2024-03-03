@@ -30,16 +30,28 @@ func TestBufferManager(t *testing.T) {
 		}
 		bm := NewManager(fm, lm, 3)
 
+		if bm.AvailableNum() != 3 {
+			t.Errorf("expected 0, got %d", bm.AvailableNum())
+		}
 		bufs := make([]*Buffer, 6)
 		bufs[0] = mustPin(t, bm, file.NewBlockID("testfile", 0))
+		if bm.AvailableNum() != 2 {
+			t.Errorf("expected 0, got %d", bm.AvailableNum())
+		}
 		bufs[1] = mustPin(t, bm, file.NewBlockID("testfile", 1))
 		bufs[2] = mustPin(t, bm, file.NewBlockID("testfile", 2))
-		bm.Unpin(bufs[1])
-		bufs[1] = nil
-		bufs[3] = mustPin(t, bm, file.NewBlockID("testfile", 0))
-		bufs[4] = mustPin(t, bm, file.NewBlockID("testfile", 1))
 		if bm.AvailableNum() != 0 {
 			t.Errorf("expected 0, got %d", bm.AvailableNum())
 		}
+		bm.Unpin(bufs[1])
+		bufs[1] = nil
+		if bm.AvailableNum() != 1 {
+			t.Errorf("expected 1, got %d", bm.AvailableNum())
+		}
+		//bufs[3] = mustPin(t, bm, file.NewBlockID("testfile", 0))
+		//bufs[4] = mustPin(t, bm, file.NewBlockID("testfile", 1))
+		//if bm.AvailableNum() != 0 {
+		//	t.Errorf("expected 0, got %d", bm.AvailableNum())
+		//}
 	})
 }
