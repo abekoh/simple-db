@@ -2,6 +2,7 @@ package buffer
 
 import (
 	"testing"
+	"time"
 
 	"github.com/abekoh/simple-db/internal/file"
 	"github.com/abekoh/simple-db/internal/log"
@@ -16,6 +17,13 @@ func mustPin(t *testing.T, bm *Manager, blockID file.BlockID) *Buffer {
 	return buf
 }
 
+func assertAvailableNum(t *testing.T, bm *Manager, expected int) {
+	t.Helper()
+	if bm.AvailableNum() != expected {
+		t.Errorf("expected %d, got %d", expected, bm.AvailableNum())
+	}
+}
+
 func TestBufferManager(t *testing.T) {
 	t.Parallel()
 	t.Run("Pin", func(t *testing.T) {
@@ -28,30 +36,28 @@ func TestBufferManager(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bm := NewManager(fm, lm, 3)
+		bm := NewManager(fm, lm, 3, WithMaxWaitTime(10*time.Millisecond))
 
-		if bm.AvailableNum() != 3 {
-			t.Errorf("expected 0, got %d", bm.AvailableNum())
-		}
+		assertAvailableNum(t, bm, 3)
+
 		bufs := make([]*Buffer, 6)
 		bufs[0] = mustPin(t, bm, file.NewBlockID("testfile", 0))
-		if bm.AvailableNum() != 2 {
-			t.Errorf("expected 0, got %d", bm.AvailableNum())
-		}
+		assertAvailableNum(t, bm, 2)
+
 		bufs[1] = mustPin(t, bm, file.NewBlockID("testfile", 1))
 		bufs[2] = mustPin(t, bm, file.NewBlockID("testfile", 2))
-		if bm.AvailableNum() != 0 {
-			t.Errorf("expected 0, got %d", bm.AvailableNum())
-		}
+		assertAvailableNum(t, bm, 0)
+
+		bufs[3] = mustPin(t, bm, file.NewBlockID("testfile", 0))
 		bm.Unpin(bufs[1])
 		bufs[1] = nil
-		if bm.AvailableNum() != 1 {
-			t.Errorf("expected 1, got %d", bm.AvailableNum())
-		}
-		//bufs[3] = mustPin(t, bm, file.NewBlockID("testfile", 0))
-		//bufs[4] = mustPin(t, bm, file.NewBlockID("testfile", 1))
-		//if bm.AvailableNum() != 0 {
-		//	t.Errorf("expected 0, got %d", bm.AvailableNum())
-		//}
+		assertAvailableNum(t, bm, 1)
+
+		bufs[3] = mustPin(t, bm, file.NewBlockID("testfile", 0))
+		bufs[4] = mustPin(t, bm, file.NewBlockID("testfile", 1))
+		assertAvailableNum(t, bm, 0)
+
+		bufs[5] = mustPin(t, bm, file.NewBlockID("testfile", 3))
+
 	})
 }

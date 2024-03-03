@@ -108,7 +108,10 @@ type Manager struct {
 	pinRequestCh chan pinRequest
 	unpinCh      chan unpinRequest
 	flushAllCh   chan chan<- error
+	maxWaitTime  time.Duration
 }
+
+type ManagerOption func(*Manager)
 
 type bufferResult struct {
 	buf *Buffer
@@ -126,7 +129,14 @@ type unpinRequest struct {
 	completeCh chan<- struct{}
 }
 
-func NewManager(fm *file.Manager, lm *log.Manager, buffNum int) *Manager {
+const defaultMaxWaitTime = 10 * time.Second
+
+func NewManager(
+	fm *file.Manager,
+	lm *log.Manager,
+	buffNum int,
+	opts ...ManagerOption,
+) *Manager {
 	pool := make([]*Buffer, buffNum)
 	for i := range pool {
 		pool[i] = NewBuffer(fm, lm)
@@ -139,9 +149,19 @@ func NewManager(fm *file.Manager, lm *log.Manager, buffNum int) *Manager {
 		pinRequestCh: make(chan pinRequest),
 		unpinCh:      make(chan unpinRequest),
 		flushAllCh:   make(chan chan<- error),
+		maxWaitTime:  defaultMaxWaitTime,
+	}
+	for _, opt := range opts {
+		opt(m)
 	}
 	go m.loop()
 	return m
+}
+
+func WithMaxWaitTime(d time.Duration) ManagerOption {
+	return func(m *Manager) {
+		m.maxWaitTime = d
+	}
 }
 
 func (m *Manager) loop() {
@@ -227,8 +247,6 @@ func (m *Manager) FlushAll(txNum TransactionNumber) error {
 	return <-ch
 }
 
-const maxWaitTime = 10 * time.Second
-
 func (m *Manager) Pin(blockID file.BlockID) (*Buffer, error) {
 	ch := make(chan bufferResult)
 	cancelCh := make(chan struct{}, 1)
@@ -236,7 +254,7 @@ func (m *Manager) Pin(blockID file.BlockID) (*Buffer, error) {
 	select {
 	case res := <-ch:
 		return res.buf, res.err
-	case <-time.After(maxWaitTime):
+	case <-time.After(m.maxWaitTime):
 		cancelCh <- struct{}{}
 		return nil, fmt.Errorf("could not pin %v", blockID)
 	}
