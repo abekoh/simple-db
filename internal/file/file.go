@@ -61,6 +61,10 @@ func (p *Page) SetInt32(offset int32, n int32) {
 	p.bb[offset+3] = byte(n >> 24)
 }
 
+func (p *Page) RawBytes() []byte {
+	return p.bb
+}
+
 func (p *Page) Bytes(offset int32) []byte {
 	n := p.Int32(offset)
 	return p.bb[offset+int32Size : offset+int32Size+n]
