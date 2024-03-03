@@ -82,4 +82,24 @@ func TestBufferManager(t *testing.T) {
 			t.Errorf("expected testfile:3, got %s", bufs[5].BlockID())
 		}
 	})
+	t.Run("FlushAll", func(t *testing.T) {
+		t.Parallel()
+		fm, err := file.NewManager(t.TempDir(), 128)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lm, err := log.NewManager(fm, "logfile")
+		if err != nil {
+			t.Fatal(err)
+		}
+		bm := NewManager(fm, lm, 3, WithMaxWaitTime(10*time.Millisecond))
+
+		buf1 := mustPin(t, bm, file.NewBlockID("testfile", 0))
+		buf1.Page().SetStr(0, "abcdefgh")
+		buf1.SetModified(NewTransactionNumber(1), 1)
+
+		if err := bm.FlushAll(NewTransactionNumber(1)); err != nil {
+			t.Fatal(err)
+		}
+	})
 }

@@ -14,12 +14,12 @@ type TransactionNumber struct {
 	Valid bool
 }
 
-func NewNullTransactionNumber() TransactionNumber {
-	return TransactionNumber{Valid: false}
+func NewTransactionNumber(v int32) TransactionNumber {
+	return TransactionNumber{Value: v, Valid: true}
 }
 
-func NewNotNullTransactionNumber(v int32) TransactionNumber {
-	return TransactionNumber{Value: v, Valid: true}
+func NewNullTransactionNumber() TransactionNumber {
+	return TransactionNumber{Valid: false}
 }
 
 type Buffer struct {
