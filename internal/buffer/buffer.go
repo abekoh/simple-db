@@ -102,32 +102,33 @@ func (b *Buffer) unpin() {
 	b.pinsCount--
 }
 
-type Manager struct {
-	pool         []*Buffer
-	availableNum atomic.Int32
-	pinRequestCh chan pinRequest
-	unpinCh      chan unpinRequest
-	flushAllCh   chan chan<- error
-	maxWaitTime  time.Duration
-}
+type (
+	Manager struct {
+		pool         []*Buffer
+		availableNum atomic.Int32
+		pinRequestCh chan pinRequest
+		unpinCh      chan unpinRequest
+		flushAllCh   chan chan<- error
+		maxWaitTime  time.Duration
+	}
+	ManagerOption func(*Manager)
+)
 
-type ManagerOption func(*Manager)
-
-type bufferResult struct {
-	buf *Buffer
-	err error
-}
-
-type pinRequest struct {
-	blockID   file.BlockID
-	receiveCh chan<- bufferResult
-	cancelCh  <-chan struct{}
-}
-
-type unpinRequest struct {
-	buf        *Buffer
-	completeCh chan<- struct{}
-}
+type (
+	bufferResult struct {
+		buf *Buffer
+		err error
+	}
+	pinRequest struct {
+		blockID   file.BlockID
+		receiveCh chan<- bufferResult
+		cancelCh  <-chan struct{}
+	}
+	unpinRequest struct {
+		buf        *Buffer
+		completeCh chan<- struct{}
+	}
+)
 
 const defaultMaxWaitTime = 10 * time.Second
 
