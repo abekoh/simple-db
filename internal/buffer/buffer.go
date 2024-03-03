@@ -226,6 +226,9 @@ func (m *Manager) loop() {
 					}
 				}
 				if !received {
+					if len(pinReq.cancelCh) != 0 {
+						continue
+					}
 					if _, ok := waitMap[pinReq.blockID]; !ok {
 						waitMap[pinReq.blockID] = []pinRequest{pinReq}
 					} else {
@@ -248,11 +251,11 @@ func (m *Manager) FlushAll(txNum TransactionNumber) error {
 }
 
 func (m *Manager) Pin(blockID file.BlockID) (*Buffer, error) {
-	ch := make(chan bufferResult)
+	resCh := make(chan bufferResult)
 	cancelCh := make(chan struct{}, 1)
-	m.pinRequestCh <- pinRequest{blockID: blockID, receiveCh: ch, cancelCh: cancelCh}
+	m.pinRequestCh <- pinRequest{blockID: blockID, receiveCh: resCh, cancelCh: cancelCh}
 	select {
-	case res := <-ch:
+	case res := <-resCh:
 		return res.buf, res.err
 	case <-time.After(m.maxWaitTime):
 		cancelCh <- struct{}{}
