@@ -26,7 +26,7 @@ func assertAvailableNum(t *testing.T, bm *Manager, expected int) {
 
 func TestBufferManager(t *testing.T) {
 	t.Parallel()
-	t.Run("Pin", func(t *testing.T) {
+	t.Run("Pin and Unpin", func(t *testing.T) {
 		t.Parallel()
 		fm, err := file.NewManager(t.TempDir(), 128)
 		if err != nil {
