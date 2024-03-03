@@ -9,26 +9,13 @@ import (
 	"github.com/abekoh/simple-db/internal/log"
 )
 
-type TransactionNumber struct {
-	Value int32
-	Valid bool
-}
-
-func NewTransactionNumber(v int32) TransactionNumber {
-	return TransactionNumber{Value: v, Valid: true}
-}
-
-func NewNullTransactionNumber() TransactionNumber {
-	return TransactionNumber{Valid: false}
-}
-
 type Buffer struct {
 	fm        *file.Manager
 	lm        *log.Manager
 	page      *file.Page
 	blockID   file.BlockID
 	pinsCount int32
-	txNum     TransactionNumber
+	txNum     int32
 	lsn       log.SequenceNumber
 }
 
@@ -37,7 +24,7 @@ func NewBuffer(fm *file.Manager, lm *log.Manager) *Buffer {
 		fm:    fm,
 		lm:    lm,
 		page:  file.NewPage(fm.BlockSize()),
-		txNum: NewNullTransactionNumber(),
+		txNum: -1,
 		lsn:   -1,
 	}
 }
@@ -50,11 +37,11 @@ func (b *Buffer) BlockID() file.BlockID {
 	return b.blockID
 }
 
-func (b *Buffer) TxNum() TransactionNumber {
+func (b *Buffer) TxNum() int32 {
 	return b.txNum
 }
 
-func (b *Buffer) SetModified(txNum TransactionNumber, lsn log.SequenceNumber) {
+func (b *Buffer) SetModified(txNum int32, lsn log.SequenceNumber) {
 	b.txNum = txNum
 	if lsn >= 0 {
 		b.lsn = lsn
@@ -78,7 +65,7 @@ func (b *Buffer) assignedToBlock(blockID file.BlockID) error {
 }
 
 func (b *Buffer) flush() error {
-	if !b.txNum.Valid {
+	if b.txNum < 0 {
 		return nil
 	}
 	if err := b.lm.Flush(b.lsn); err != nil {
@@ -87,7 +74,7 @@ func (b *Buffer) flush() error {
 	if err := b.fm.Write(b.blockID, b.page); err != nil {
 		return fmt.Errorf("could not write: %w", err)
 	}
-	b.txNum = NewNullTransactionNumber()
+	b.txNum = -1
 	return nil
 }
 
@@ -249,7 +236,7 @@ func (m *Manager) AvailableNum() int {
 	return int(m.availableNum.Load())
 }
 
-func (m *Manager) FlushAll(txNum TransactionNumber) error {
+func (m *Manager) FlushAll(txNum int32) error {
 	ch := make(chan error)
 	m.flushAllCh <- ch
 	return <-ch
