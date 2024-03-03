@@ -57,7 +57,10 @@ func TestBufferManager(t *testing.T) {
 		bufs[4] = mustPin(t, bm, file.NewBlockID("testfile", 1))
 		assertAvailableNum(t, bm, 0)
 
-		bufs[5] = mustPin(t, bm, file.NewBlockID("testfile", 3))
+		_, err = bm.Pin(file.NewBlockID("testfile", 3))
+		if err != nil && err.Error() != "could not pin testfile:3" {
+			t.Errorf("expected could not pin testfile:3, got %s", err)
+		}
 
 	})
 }

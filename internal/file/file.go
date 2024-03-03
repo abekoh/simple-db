@@ -21,6 +21,10 @@ func NewBlockID(filename string, blkNum int32) BlockID {
 	}
 }
 
+func (b BlockID) String() string {
+	return fmt.Sprintf("%s:%d", b.filename, b.blkNum)
+}
+
 func (b BlockID) Filename() string {
 	return b.filename
 }
