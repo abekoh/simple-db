@@ -125,7 +125,7 @@ func (m *Manager) Read(blk BlockID, p *Page) error {
 		return fmt.Errorf("could not get file: %w", err)
 	}
 	_, err = f.ReadAt(p.bb, int64(blk.blkNum*m.blockSize))
-	if err != nil {
+	if err != nil && err.Error() != "EOF" {
 		return fmt.Errorf("could not read at %d: %w", blk.blkNum*m.blockSize, err)
 	}
 	return nil
