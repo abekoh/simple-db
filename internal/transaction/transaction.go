@@ -49,6 +49,7 @@ func (t *Transaction) Commit() error {
 		return fmt.Errorf("could not flush: %w", err)
 	}
 	t.unpinAll()
+	// todo: release locks
 	return nil
 }
 
