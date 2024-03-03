@@ -103,7 +103,7 @@ func (b *Buffer) unpin() {
 }
 
 type Manager struct {
-	pool         map[file.BlockID]*Buffer
+	pool         []*Buffer
 	availableNum atomic.Int32
 	pinRequestCh chan pinRequest
 	unpinCh      chan *Buffer
@@ -122,10 +122,9 @@ type pinRequest struct {
 }
 
 func NewManager(fm *file.Manager, lm *log.Manager, buffNum int) *Manager {
-	pool := make(map[file.BlockID]*Buffer, buffNum)
-	for i := 0; i < buffNum; i++ {
-		b := NewBuffer(fm, lm)
-		pool[b.blockID] = b
+	pool := make([]*Buffer, buffNum)
+	for i := range pool {
+		pool[i] = NewBuffer(fm, lm)
 	}
 	availableNum := atomic.Int32{}
 	availableNum.Store(int32(buffNum))
@@ -168,8 +167,14 @@ func (m *Manager) loop() {
 				m.availableNum.Add(1)
 			}
 		case pinReq := <-m.pinRequestCh:
-			b, ok := m.pool[pinReq.blockID]
-			if ok {
+			var b *Buffer
+			for _, buf := range m.pool {
+				if buf.blockID == pinReq.blockID {
+					b = buf
+					break
+				}
+			}
+			if b != nil {
 				if !b.IsPinned() {
 					m.availableNum.Add(-1)
 				}
