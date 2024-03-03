@@ -62,5 +62,24 @@ func TestBufferManager(t *testing.T) {
 			t.Errorf("expected could not pin testfile:3, got %s", err)
 		}
 
+		bm.Unpin(bufs[2])
+		bufs[2] = nil
+		assertAvailableNum(t, bm, 1)
+
+		bufs[5] = mustPin(t, bm, file.NewBlockID("testfile", 3))
+		assertAvailableNum(t, bm, 0)
+
+		if bufs[0].BlockID() != file.NewBlockID("testfile", 0) {
+			t.Errorf("expected testfile:0, got %s", bufs[0].BlockID())
+		}
+		if bufs[3].BlockID() != file.NewBlockID("testfile", 0) {
+			t.Errorf("expected testfile:0, got %s", bufs[3].BlockID())
+		}
+		if bufs[4].BlockID() != file.NewBlockID("testfile", 1) {
+			t.Errorf("expected testfile:1, got %s", bufs[4].BlockID())
+		}
+		if bufs[5].BlockID() != file.NewBlockID("testfile", 3) {
+			t.Errorf("expected testfile:3, got %s", bufs[5].BlockID())
+		}
 	})
 }
