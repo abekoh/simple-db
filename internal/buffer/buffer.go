@@ -182,7 +182,9 @@ func (m *Manager) loop() {
 			if len(waitMap[unpinReq.buf.blockID]) > 0 {
 				unpinReq.buf.pin()
 				req := waitMap[unpinReq.buf.blockID][0]
-				if len(req.cancelCh) != 0 {
+				select {
+				case <-req.cancelCh:
+				default:
 					req.receiveCh <- bufferResult{buf: unpinReq.buf}
 				}
 				if len(waitMap[unpinReq.buf.blockID]) > 1 {
@@ -226,8 +228,10 @@ func (m *Manager) loop() {
 					}
 				}
 				if !received {
-					if len(pinReq.cancelCh) != 0 {
+					select {
+					case <-pinReq.cancelCh:
 						continue
+					default:
 					}
 					if _, ok := waitMap[pinReq.blockID]; !ok {
 						waitMap[pinReq.blockID] = []pinRequest{pinReq}
