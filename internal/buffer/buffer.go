@@ -179,8 +179,7 @@ func (m *Manager) loop() {
 				req := waitMap[unpinReq.buf.blockID][0]
 				select {
 				case <-req.cancelCh:
-				default:
-					req.receiveCh <- bufferResult{buf: unpinReq.buf}
+				case req.receiveCh <- bufferResult{buf: unpinReq.buf}:
 				}
 				if len(waitMap[unpinReq.buf.blockID]) > 1 {
 					waitMap[unpinReq.buf.blockID] = waitMap[unpinReq.buf.blockID][1:]
