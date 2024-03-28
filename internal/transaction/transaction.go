@@ -193,6 +193,48 @@ func (r StartLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
 	return lsn, nil
 }
 
+type RollbackLogRecord struct {
+	txNum int32
+}
+
+func NewRollbackLogRecord(txNum int32) RollbackLogRecord {
+	return RollbackLogRecord{
+		txNum: txNum,
+	}
+}
+
+func NewRollbackLogRecordPage(p *file.Page) RollbackLogRecord {
+	return RollbackLogRecord{
+		txNum: p.Int32(4),
+	}
+}
+
+func (r RollbackLogRecord) String() string {
+	return fmt.Sprintf("<ROLLBACK %d >", r.txNum)
+}
+
+func (r RollbackLogRecord) TxNum() int32 {
+	return r.txNum
+}
+
+func (r RollbackLogRecord) Type() LogRecordType {
+	return Rollback
+}
+
+func (r RollbackLogRecord) Undo() {
+}
+
+func (r RollbackLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	p := file.NewPageBytes(make([]byte, 8))
+	p.SetInt32(0, int32(Rollback))
+	p.SetInt32(4, r.txNum)
+	lsn, err := lm.Append(p.RawBytes())
+	if err != nil {
+		return 0, fmt.Errorf("could not append: %w", err)
+	}
+	return lsn, nil
+}
+
 type CommitLogRecord struct {
 	txNum int32
 }
