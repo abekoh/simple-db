@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"fmt"
+	"slices"
 	"sync/atomic"
 
 	"github.com/abekoh/simple-db/internal/buffer"
@@ -16,11 +17,12 @@ func nextTxNumber() int32 {
 }
 
 type Transaction struct {
-	bm     *buffer.Manager
-	fm     *file.Manager
-	lm     *log.Manager
-	txNum  int32
-	bufMap map[file.BlockID]*buffer.Buffer
+	bm      *buffer.Manager
+	fm      *file.Manager
+	lm      *log.Manager
+	txNum   int32
+	bufMap  map[file.BlockID]*buffer.Buffer
+	bufPins []file.BlockID
 }
 
 func NewTransaction(
@@ -29,11 +31,12 @@ func NewTransaction(
 	lm *log.Manager,
 ) *Transaction {
 	return &Transaction{
-		bm:     bm,
-		fm:     fm,
-		lm:     lm,
-		txNum:  nextTxNumber(),
-		bufMap: make(map[file.BlockID]*buffer.Buffer),
+		bm:      bm,
+		fm:      fm,
+		lm:      lm,
+		txNum:   nextTxNumber(),
+		bufMap:  make(map[file.BlockID]*buffer.Buffer),
+		bufPins: make([]file.BlockID, 0),
 	}
 }
 
@@ -77,12 +80,18 @@ func (t *Transaction) Pin(blockID file.BlockID) (*buffer.Buffer, error) {
 		return nil, fmt.Errorf("could not pin: %w", err)
 	}
 	t.bufMap[blockID] = buf
+	t.bufPins = append(t.bufPins, blockID)
 	return buf, nil
 }
 
 func (t *Transaction) Unpin(buf *buffer.Buffer) {
 	t.bm.Unpin(buf)
-	delete(t.bufMap, buf.BlockID())
+	if idx := slices.Index(t.bufPins, buf.BlockID()); idx != -1 {
+		t.bufPins = append(t.bufPins[:idx], t.bufPins[idx+1:]...)
+	}
+	if !slices.Contains(t.bufPins, buf.BlockID()) {
+		delete(t.bufMap, buf.BlockID())
+	}
 }
 
 func (t *Transaction) unpinAll() {
