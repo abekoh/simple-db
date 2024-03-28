@@ -191,7 +191,7 @@ type LogRecord interface {
 	fmt.Stringer
 	Type() LogRecordType
 	TxNum() int32
-	Undo(tx *Transaction)
+	Undo(tx *Transaction) error
 	WriteTo(lm *log.Manager) (log.SequenceNumber, error)
 }
 
@@ -224,7 +224,8 @@ func (r CheckpointLogRecord) TxNum() int32 {
 	return -1
 }
 
-func (r CheckpointLogRecord) Undo(tx *Transaction) {
+func (r CheckpointLogRecord) Undo(tx *Transaction) error {
+	return nil
 }
 
 func (r CheckpointLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
@@ -265,7 +266,8 @@ func (r StartLogRecord) Type() LogRecordType {
 	return Start
 }
 
-func (r StartLogRecord) Undo(tx *Transaction) {
+func (r StartLogRecord) Undo(tx *Transaction) error {
+	return nil
 }
 
 func (r StartLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
@@ -307,7 +309,8 @@ func (r CommitLogRecord) Type() LogRecordType {
 	return Commit
 }
 
-func (r CommitLogRecord) Undo(tx *Transaction) {
+func (r CommitLogRecord) Undo(tx *Transaction) error {
+	return nil
 }
 
 func (r CommitLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
@@ -349,7 +352,8 @@ func (r RollbackLogRecord) Type() LogRecordType {
 	return Rollback
 }
 
-func (r RollbackLogRecord) Undo(tx *Transaction) {
+func (r RollbackLogRecord) Undo(tx *Transaction) error {
+	return nil
 }
 
 func (r RollbackLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
@@ -410,8 +414,16 @@ func (r SetInt32LogRecord) Type() LogRecordType {
 	return SetInt
 }
 
-func (r SetInt32LogRecord) Undo(tx *Transaction) {
-	// TODO: implement
+func (r SetInt32LogRecord) Undo(tx *Transaction) error {
+	buf, err := tx.Pin(r.blockID)
+	if err != nil {
+		return fmt.Errorf("could not pin: %w", err)
+	}
+	if err := tx.SetInt32(r.blockID, r.offset, r.val, false); err != nil {
+		return fmt.Errorf("could not set int32: %w", err)
+	}
+	tx.Unpin(buf)
+	return nil
 }
 
 func (r SetInt32LogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
@@ -480,8 +492,16 @@ func (r SetStringLogRecord) Type() LogRecordType {
 	return SetString
 }
 
-func (r SetStringLogRecord) Undo(tx *Transaction) {
-	// TODO: implement
+func (r SetStringLogRecord) Undo(tx *Transaction) error {
+	buf, err := tx.Pin(r.blockID)
+	if err != nil {
+		return fmt.Errorf("could not pin: %w", err)
+	}
+	if err := tx.SetStr(r.blockID, r.offset, r.val, false); err != nil {
+		return fmt.Errorf("could not set string: %w", err)
+	}
+	tx.Unpin(buf)
+	return nil
 }
 
 func (r SetStringLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
