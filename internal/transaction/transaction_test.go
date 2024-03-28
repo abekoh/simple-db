@@ -79,8 +79,14 @@ func TestTransaction(t *testing.T) {
 	must(t, err)
 	beforeTx4IntVal, err := tx4.Int32(blockID, 80)
 	must(t, err)
+	beforeTx4StrVal, err := tx4.Str(blockID, 40)
+	must(t, err)
 	if beforeTx4IntVal != 2 {
 		t.Errorf("expected 2, got %d", beforeTx4IntVal)
+	}
+	if beforeTx4StrVal != "one!" {
+		t.Errorf("expected one!, got %s", beforeTx4StrVal)
+
 	}
 	must(t, tx4.Commit())
 }
