@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 	"sync/atomic"
 
@@ -66,6 +67,7 @@ func (t *Transaction) Rollback() error {
 		if lr == nil {
 			return fmt.Errorf("could not create log record")
 		}
+		slog.Info(lr.String())
 		if lr.TxNum() == t.txNum {
 			if lr.Type() == Start {
 				return nil
@@ -75,6 +77,16 @@ func (t *Transaction) Rollback() error {
 			}
 		}
 	}
+	t.bm.FlushAll(t.txNum)
+	lsn, err := NewRollbackLogRecord(t.txNum).WriteTo(t.lm)
+	if err != nil {
+		return fmt.Errorf("could not write log: %w", err)
+	}
+	if err := t.lm.Flush(lsn); err != nil {
+		return fmt.Errorf("could not flush: %w", err)
+	}
+	// TODO: release locks
+	t.unpinAll()
 	return nil
 }
 
@@ -297,6 +309,7 @@ func (r StartLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r StartLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Info(r.String())
 	p := file.NewPageBytes(make([]byte, 8))
 	p.SetInt32(0, int32(Start))
 	p.SetInt32(4, r.txNum)
@@ -340,6 +353,7 @@ func (r CommitLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r CommitLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Info(r.String())
 	p := file.NewPageBytes(make([]byte, 8))
 	p.SetInt32(0, int32(Commit))
 	p.SetInt32(4, r.txNum)
@@ -383,6 +397,7 @@ func (r RollbackLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r RollbackLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Info(r.String())
 	p := file.NewPageBytes(make([]byte, 8))
 	p.SetInt32(0, int32(Rollback))
 	p.SetInt32(4, r.txNum)
@@ -453,6 +468,7 @@ func (r SetInt32LogRecord) Undo(tx *Transaction) error {
 }
 
 func (r SetInt32LogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Info(r.String())
 	const tpos = 4
 	const fpos = tpos + 4
 	bpos := fpos + file.PageStrMaxLength(r.blockID.Filename())
@@ -531,6 +547,7 @@ func (r SetStringLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r SetStringLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Info(r.String())
 	const tpos = 4
 	const fpos = tpos + 4
 	bpos := fpos + file.PageStrMaxLength(r.blockID.Filename())
