@@ -105,7 +105,7 @@ type LogRecord interface {
 	fmt.Stringer
 	Type() LogRecordType
 	TxNum() int32
-	Undo() error
+	Undo()
 	WriteTo(lm *log.Manager) (log.SequenceNumber, error)
 }
 
@@ -119,27 +119,93 @@ func CreateLogRecord(bytes []byte) LogRecord {
 	}
 }
 
-type logRecord struct {
+type CheckpointLogRecord struct {
+}
+
+func NewCheckpointLogRecord() CheckpointLogRecord {
+	return CheckpointLogRecord{}
+}
+
+func (r CheckpointLogRecord) String() string {
+	return "<CHECKPOINT>"
+}
+
+func (r CheckpointLogRecord) Type() LogRecordType {
+	return Checkpoint
+}
+
+func (r CheckpointLogRecord) TxNum() int32 {
+	return -1
+}
+
+func (r CheckpointLogRecord) Undo() {
+}
+
+func (r CheckpointLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	p := file.NewPageBytes(make([]byte, 4))
+	p.SetInt32(0, int32(Checkpoint))
+	lsn, err := lm.Append(p.RawBytes())
+	if err != nil {
+		return 0, fmt.Errorf("could not append: %w", err)
+	}
+	return lsn, nil
+}
+
+type StartLogRecord struct {
 	txNum int32
 }
 
-func (r logRecord) TxNum() int32 {
+func NewStartLogRecord(txNum int32) StartLogRecord {
+	return StartLogRecord{
+		txNum: txNum,
+	}
+}
+
+func NewStartLogRecordPage(p *file.Page) StartLogRecord {
+	return StartLogRecord{
+		txNum: p.Int32(4),
+	}
+}
+
+func (r StartLogRecord) String() string {
+	return fmt.Sprintf("<START %d >", r.txNum)
+}
+
+func (r StartLogRecord) TxNum() int32 {
 	return r.txNum
 }
 
+func (r StartLogRecord) Type() LogRecordType {
+	return Start
+}
+
+func (r StartLogRecord) Undo() {
+}
+
+func (r StartLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	p := file.NewPageBytes(make([]byte, 8))
+	p.SetInt32(0, int32(Start))
+	p.SetInt32(4, r.txNum)
+	lsn, err := lm.Append(p.RawBytes())
+	if err != nil {
+		return 0, fmt.Errorf("could not append: %w", err)
+	}
+	return lsn, nil
+}
+
 type CommitLogRecord struct {
-	logRecord
+	txNum int32
 }
 
 func NewCommitLogRecord(txNum int32) CommitLogRecord {
 	return CommitLogRecord{
-		logRecord: logRecord{txNum: txNum},
+		txNum: txNum,
 	}
 }
 
 func NewCommitLogRecordPage(p *file.Page) CommitLogRecord {
 	return CommitLogRecord{
-		logRecord: logRecord{txNum: p.Int32(4)},
+		txNum: p.Int32(4),
 	}
 }
 
@@ -147,12 +213,15 @@ func (r CommitLogRecord) String() string {
 	return fmt.Sprintf("<COMMIT %d >", r.txNum)
 }
 
+func (r CommitLogRecord) TxNum() int32 {
+	return r.txNum
+}
+
 func (r CommitLogRecord) Type() LogRecordType {
 	return Commit
 }
 
-func (r CommitLogRecord) Undo() error {
-	return nil
+func (r CommitLogRecord) Undo() {
 }
 
 func (r CommitLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
