@@ -41,15 +41,31 @@ func (t *Transaction) Commit() error {
 	if err := t.bm.FlushAll(t.txNum); err != nil {
 		return fmt.Errorf("could not flush: %w", err)
 	}
-	lsn, err := t.writeLog(t.txNum)
+	lsn, err := NewCommitLogRecord(t.txNum).WriteTo(t.lm)
 	if err != nil {
 		return fmt.Errorf("could not write log: %w", err)
 	}
 	if err := t.lm.Flush(lsn); err != nil {
 		return fmt.Errorf("could not flush: %w", err)
 	}
+	// TODO: release locks
 	t.unpinAll()
-	// todo: release locks
+	return nil
+}
+
+func (t *Transaction) Rollback() error {
+	for r := range t.lm.Iterator() {
+		lr := CreateLogRecord(r)
+		if lr == nil {
+			return fmt.Errorf("could not create log record")
+		}
+		if lr.TxNum() == t.txNum {
+			if lr.Type() == Start {
+				return nil
+			}
+			lr.Undo()
+		}
+	}
 	return nil
 }
 
@@ -74,22 +90,78 @@ func (t *Transaction) unpinAll() {
 	t.bufMap = make(map[file.BlockID]*buffer.Buffer)
 }
 
-func (t *Transaction) writeLog(txNum int32) (log.SequenceNumber, error) {
-	p := file.NewPageBytes(make([]byte, 2))
-	p.SetInt32(0, Commit)
-	p.SetInt32(4, txNum)
-	lsn, err := t.lm.Append(p.RawBytes())
-	if err != nil {
-		return 0, fmt.Errorf("could not append: %w", err)
-	}
-	return lsn, nil
-}
+type LogRecordType int32
 
 const (
-	Checkpoint int32 = iota
+	Checkpoint LogRecordType = iota
 	Start
 	Commit
 	Rollback
 	SetInt
 	SetString
 )
+
+type LogRecord interface {
+	fmt.Stringer
+	Type() LogRecordType
+	TxNum() int32
+	Undo() error
+	WriteTo(lm *log.Manager) (log.SequenceNumber, error)
+}
+
+func CreateLogRecord(bytes []byte) LogRecord {
+	p := file.NewPageBytes(bytes)
+	switch LogRecordType(p.Int32(0)) {
+	case Commit:
+		return NewCommitLogRecordPage(p)
+	default:
+		return nil
+	}
+}
+
+type logRecord struct {
+	txNum int32
+}
+
+func (r logRecord) TxNum() int32 {
+	return r.txNum
+}
+
+type CommitLogRecord struct {
+	logRecord
+}
+
+func NewCommitLogRecord(txNum int32) CommitLogRecord {
+	return CommitLogRecord{
+		logRecord: logRecord{txNum: txNum},
+	}
+}
+
+func NewCommitLogRecordPage(p *file.Page) CommitLogRecord {
+	return CommitLogRecord{
+		logRecord: logRecord{txNum: p.Int32(4)},
+	}
+}
+
+func (r CommitLogRecord) String() string {
+	return fmt.Sprintf("<COMMIT %d >", r.txNum)
+}
+
+func (r CommitLogRecord) Type() LogRecordType {
+	return Commit
+}
+
+func (r CommitLogRecord) Undo() error {
+	return nil
+}
+
+func (r CommitLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	p := file.NewPageBytes(make([]byte, 2))
+	p.SetInt32(0, int32(Commit))
+	p.SetInt32(4, r.txNum)
+	lsn, err := lm.Append(p.RawBytes())
+	if err != nil {
+		return 0, fmt.Errorf("could not append: %w", err)
+	}
+	return lsn, nil
+}
