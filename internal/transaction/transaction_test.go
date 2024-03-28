@@ -79,6 +79,12 @@ func TestTransaction(t *testing.T) {
 
 	}
 	must(t, tx4.Commit())
+
+	for raw := range lm.Iterator() {
+		// TODO: assert
+		r := CreateLogRecord(raw)
+		t.Logf("%s", r)
+	}
 }
 
 func must(t *testing.T, err error) {
