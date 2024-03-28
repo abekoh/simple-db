@@ -90,6 +90,66 @@ func (t *Transaction) unpinAll() {
 	t.bufMap = make(map[file.BlockID]*buffer.Buffer)
 }
 
+func (t *Transaction) Int32(blockID file.BlockID, offset int32) (int32, error) {
+	// TODO: sLock
+	buf, ok := t.bufMap[blockID]
+	if !ok {
+		return 0, fmt.Errorf("block not pinned")
+	}
+	return buf.Page().Int32(offset), nil
+}
+
+func (t *Transaction) Str(blockID file.BlockID, offset int32) (string, error) {
+	// TODO: sLock
+	buf, ok := t.bufMap[blockID]
+	if !ok {
+		return "", fmt.Errorf("block not pinned")
+	}
+	return buf.Page().Str(offset), nil
+}
+
+func (t *Transaction) SetInt32(blockID file.BlockID, offset, val int32, okToLog bool) error {
+	// TODO: xLock
+	buf, ok := t.bufMap[blockID]
+	if !ok {
+		return fmt.Errorf("block not pinned")
+	}
+	lsn := log.SequenceNumber(-1)
+	if okToLog {
+		oldVal := buf.Page().Int32(offset)
+		blockID := buf.BlockID()
+		newLsn, err := NewSetInt32LogRecord(t.txNum, blockID, offset, oldVal).WriteTo(t.lm)
+		if err != nil {
+			return fmt.Errorf("could not write log: %w", err)
+		}
+		lsn = newLsn
+	}
+	buf.Page().SetInt32(offset, val)
+	buf.SetModified(t.txNum, lsn)
+	return nil
+}
+
+func (t *Transaction) SetStr(blockID file.BlockID, offset int32, val string, okToLog bool) error {
+	// TODO: xLock
+	buf, ok := t.bufMap[blockID]
+	if !ok {
+		return fmt.Errorf("block not pinned")
+	}
+	lsn := log.SequenceNumber(-1)
+	if okToLog {
+		oldVal := buf.Page().Str(offset)
+		blockID := buf.BlockID()
+		newLsn, err := NewSetStringLogRecord(t.txNum, blockID, offset, oldVal).WriteTo(t.lm)
+		if err != nil {
+			return fmt.Errorf("could not write log: %w", err)
+		}
+		lsn = newLsn
+	}
+	buf.Page().SetStr(offset, val)
+	buf.SetModified(t.txNum, lsn)
+	return nil
+}
+
 type LogRecordType int32
 
 const (
