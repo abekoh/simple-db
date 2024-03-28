@@ -200,8 +200,18 @@ type LogRecord interface {
 func CreateLogRecord(bytes []byte) LogRecord {
 	p := file.NewPageBytes(bytes)
 	switch LogRecordType(p.Int32(0)) {
+	case Checkpoint:
+		return NewCheckpointLogRecord()
+	case Start:
+		return NewStartLogRecordPage(p)
 	case Commit:
 		return NewCommitLogRecordPage(p)
+	case Rollback:
+		return NewRollbackLogRecordPage(p)
+	case SetInt:
+		return NewSetInt32LogRecordPage(p)
+	case SetString:
+		return NewSetStringLogRecordPage(p)
 	default:
 		return nil
 	}
