@@ -63,7 +63,7 @@ func (t *Transaction) Rollback() error {
 			if lr.Type() == Start {
 				return nil
 			}
-			lr.Undo()
+			lr.Undo(t)
 		}
 	}
 	return nil
@@ -313,7 +313,7 @@ func NewSetInt32LogRecordPage(p *file.Page) SetInt32LogRecord {
 }
 
 func (r SetInt32LogRecord) String() string {
-	return fmt.Sprintf("<SET %d %s %d %d>", r.txNum, r.blockID, r.offset, r.val)
+	return fmt.Sprintf("<SETINT %d %s %d %d>", r.txNum, r.blockID, r.offset, r.val)
 }
 
 func (r SetInt32LogRecord) TxNum() int32 {
@@ -340,6 +340,77 @@ func (r SetInt32LogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) 
 	p.SetStr(fpos, r.blockID.Filename())
 	p.SetInt32(opos, r.offset)
 	p.SetInt32(vpos, r.val)
+	lsn, err := lm.Append(p.RawBytes())
+	if err != nil {
+		return 0, fmt.Errorf("could not append: %w", err)
+	}
+	return lsn, nil
+}
+
+type SetStringLogRecord struct {
+	txNum   int32
+	offset  int32
+	val     string
+	blockID file.BlockID
+}
+
+func NewSetStringLogRecord(txNum int32, blockID file.BlockID, offset int32, val string) SetStringLogRecord {
+	return SetStringLogRecord{
+		txNum:   txNum,
+		blockID: blockID,
+		offset:  offset,
+		val:     val,
+	}
+}
+
+func NewSetStringLogRecordPage(p *file.Page) SetStringLogRecord {
+	const tpos = 4
+	txNum := p.Int32(tpos)
+	const fpos = tpos + 4
+	filename := p.Str(fpos)
+	bpos := fpos + file.PageStrMaxLength(filename)
+	blockID := file.NewBlockID(filename, p.Int32(bpos))
+	opos := bpos + 4
+	offset := p.Int32(opos)
+	vpos := opos + 4
+	val := p.Str(vpos)
+	return SetStringLogRecord{
+		txNum:   txNum,
+		blockID: blockID,
+		offset:  offset,
+		val:     val,
+	}
+}
+
+func (r SetStringLogRecord) String() string {
+	return fmt.Sprintf("<SETSTRING %d %s %d %s>", r.txNum, r.blockID, r.offset, r.val)
+}
+
+func (r SetStringLogRecord) TxNum() int32 {
+	return r.txNum
+}
+
+func (r SetStringLogRecord) Type() LogRecordType {
+	return SetString
+}
+
+func (r SetStringLogRecord) Undo(tx *Transaction) {
+	// TODO: implement
+}
+
+func (r SetStringLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	const tpos = 4
+	const fpos = tpos + 4
+	bpos := fpos + file.PageStrMaxLength(r.blockID.Filename())
+	opos := bpos + 4
+	vpos := opos + 4
+	p := file.NewPageBytes(make([]byte, vpos+file.PageStrMaxLength(r.val)))
+	p.SetInt32(0, int32(SetString))
+	p.SetInt32(tpos, r.txNum)
+	p.SetStr(fpos, r.blockID.Filename())
+	p.SetInt32(bpos, r.blockID.Num())
+	p.SetInt32(opos, r.offset)
+	p.SetStr(vpos, r.val)
 	lsn, err := lm.Append(p.RawBytes())
 	if err != nil {
 		return 0, fmt.Errorf("could not append: %w", err)
