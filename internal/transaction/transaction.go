@@ -150,6 +150,32 @@ func (t *Transaction) SetStr(blockID file.BlockID, offset int32, val string, okT
 	return nil
 }
 
+func (t *Transaction) Size(filename string) (int32, error) {
+	// sLock
+	l, err := t.fm.Length(filename)
+	if err != nil {
+		return 0, fmt.Errorf("could not get length: %w", err)
+	}
+	return l, nil
+}
+
+func (t *Transaction) Append(filename string) (file.BlockID, error) {
+	// xLock
+	blockID, err := t.fm.Append(filename)
+	if err != nil {
+		return file.BlockID{}, fmt.Errorf("could not append: %w", err)
+	}
+	return blockID, nil
+}
+
+func (t *Transaction) BlockSize() int32 {
+	return t.fm.BlockSize()
+}
+
+func (t *Transaction) AvailableBuffersNum() int {
+	return t.bm.AvailableNum()
+}
+
 type LogRecordType int32
 
 const (
