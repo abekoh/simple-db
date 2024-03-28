@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"fmt"
-	"log/slog"
 	"slices"
 	"sync/atomic"
 
@@ -67,7 +66,6 @@ func (t *Transaction) Rollback() error {
 		if lr == nil {
 			return fmt.Errorf("could not create log record")
 		}
-		slog.Info(lr.String())
 		if lr.TxNum() == t.txNum {
 			if lr.Type() == Start {
 				break
@@ -146,11 +144,11 @@ func (t *Transaction) SetInt32(blockID file.BlockID, offset, val int32, okToLog 
 	if okToLog {
 		oldVal := buf.Page().Int32(offset)
 		blockID := buf.BlockID()
-		newLsn, err := NewSetInt32LogRecord(t.txNum, blockID, offset, oldVal).WriteTo(t.lm)
+		newLSN, err := NewSetInt32LogRecord(t.txNum, blockID, offset, oldVal).WriteTo(t.lm)
 		if err != nil {
 			return fmt.Errorf("could not write log: %w", err)
 		}
-		lsn = newLsn
+		lsn = newLSN
 	}
 	buf.Page().SetInt32(offset, val)
 	buf.SetModified(t.txNum, lsn)
@@ -167,11 +165,11 @@ func (t *Transaction) SetStr(blockID file.BlockID, offset int32, val string, okT
 	if okToLog {
 		oldVal := buf.Page().Str(offset)
 		blockID := buf.BlockID()
-		newLsn, err := NewSetStringLogRecord(t.txNum, blockID, offset, oldVal).WriteTo(t.lm)
+		newLSN, err := NewSetStringLogRecord(t.txNum, blockID, offset, oldVal).WriteTo(t.lm)
 		if err != nil {
 			return fmt.Errorf("could not write log: %w", err)
 		}
-		lsn = newLsn
+		lsn = newLSN
 	}
 	buf.Page().SetStr(offset, val)
 	buf.SetModified(t.txNum, lsn)
@@ -309,7 +307,6 @@ func (r StartLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r StartLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
-	slog.Info(r.String())
 	p := file.NewPageBytes(make([]byte, 8))
 	p.SetInt32(0, int32(Start))
 	p.SetInt32(4, r.txNum)
@@ -353,7 +350,6 @@ func (r CommitLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r CommitLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
-	slog.Info(r.String())
 	p := file.NewPageBytes(make([]byte, 8))
 	p.SetInt32(0, int32(Commit))
 	p.SetInt32(4, r.txNum)
@@ -397,7 +393,6 @@ func (r RollbackLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r RollbackLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
-	slog.Info(r.String())
 	p := file.NewPageBytes(make([]byte, 8))
 	p.SetInt32(0, int32(Rollback))
 	p.SetInt32(4, r.txNum)
@@ -468,7 +463,6 @@ func (r SetInt32LogRecord) Undo(tx *Transaction) error {
 }
 
 func (r SetInt32LogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
-	slog.Info(r.String())
 	const tpos = 4
 	const fpos = tpos + 4
 	bpos := fpos + file.PageStrMaxLength(r.blockID.Filename())
@@ -478,6 +472,7 @@ func (r SetInt32LogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) 
 	p.SetInt32(0, int32(SetInt))
 	p.SetInt32(tpos, r.txNum)
 	p.SetStr(fpos, r.blockID.Filename())
+	p.SetInt32(bpos, r.blockID.Num())
 	p.SetInt32(opos, r.offset)
 	p.SetInt32(vpos, r.val)
 	lsn, err := lm.Append(p.RawBytes())
@@ -547,7 +542,6 @@ func (r SetStringLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r SetStringLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
-	slog.Info(r.String())
 	const tpos = 4
 	const fpos = tpos + 4
 	bpos := fpos + file.PageStrMaxLength(r.blockID.Filename())
