@@ -63,7 +63,9 @@ func (t *Transaction) Rollback() error {
 			if lr.Type() == Start {
 				return nil
 			}
-			lr.Undo(t)
+			if err := lr.Undo(t); err != nil {
+				return fmt.Errorf("could not undo: %w", err)
+			}
 		}
 	}
 	return nil
