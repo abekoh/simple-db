@@ -99,6 +99,7 @@ func (t *Transaction) unpinAll() {
 		t.bm.Unpin(buf)
 	}
 	t.bufMap = make(map[file.BlockID]*buffer.Buffer)
+	t.bufPins = make([]file.BlockID, 0)
 }
 
 func (t *Transaction) Int32(blockID file.BlockID, offset int32) (int32, error) {
