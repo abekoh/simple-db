@@ -57,11 +57,17 @@ func TestTransaction(t *testing.T) {
 		t.Errorf("expected one!, got %s", beforeTx3StrVal)
 	}
 	must(t, tx3.SetInt32(blockID, 80, 9999, false))
+	must(t, tx3.SetStr(blockID, 40, "two", false))
 	must(t, tx3.Rollback())
 	afterTx3IntVal, err := tx3.Int32(blockID, 80)
 	must(t, err)
+	afterTx3StrVal, err := tx3.Str(blockID, 40)
+	must(t, err)
 	if afterTx3IntVal != 2 {
 		t.Errorf("expected 2, got %d", afterTx3IntVal)
+	}
+	if afterTx3StrVal != "one!" {
+		t.Errorf("expected one!, got %s", afterTx3StrVal)
 	}
 
 	tx4 := NewTransaction(bm, fm, lm)
