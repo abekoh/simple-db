@@ -105,7 +105,7 @@ type LogRecord interface {
 	fmt.Stringer
 	Type() LogRecordType
 	TxNum() int32
-	Undo()
+	Undo(tx *Transaction)
 	WriteTo(lm *log.Manager) (log.SequenceNumber, error)
 }
 
@@ -138,7 +138,7 @@ func (r CheckpointLogRecord) TxNum() int32 {
 	return -1
 }
 
-func (r CheckpointLogRecord) Undo() {
+func (r CheckpointLogRecord) Undo(tx *Transaction) {
 }
 
 func (r CheckpointLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
@@ -179,7 +179,7 @@ func (r StartLogRecord) Type() LogRecordType {
 	return Start
 }
 
-func (r StartLogRecord) Undo() {
+func (r StartLogRecord) Undo(tx *Transaction) {
 }
 
 func (r StartLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
@@ -221,7 +221,7 @@ func (r CommitLogRecord) Type() LogRecordType {
 	return Commit
 }
 
-func (r CommitLogRecord) Undo() {
+func (r CommitLogRecord) Undo(tx *Transaction) {
 }
 
 func (r CommitLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
@@ -263,7 +263,7 @@ func (r RollbackLogRecord) Type() LogRecordType {
 	return Rollback
 }
 
-func (r RollbackLogRecord) Undo() {
+func (r RollbackLogRecord) Undo(tx *Transaction) {
 }
 
 func (r RollbackLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
@@ -310,6 +310,22 @@ func NewSetInt32LogRecordPage(p *file.Page) SetInt32LogRecord {
 		offset:  offset,
 		val:     val,
 	}
+}
+
+func (r SetInt32LogRecord) String() string {
+	return fmt.Sprintf("<SET %d %s %d %d>", r.txNum, r.blockID, r.offset, r.val)
+}
+
+func (r SetInt32LogRecord) TxNum() int32 {
+	return r.txNum
+}
+
+func (r SetInt32LogRecord) Type() LogRecordType {
+	return SetInt
+}
+
+func (r SetInt32LogRecord) Undo(tx *Transaction) {
+	// TODO: implement
 }
 
 func (r SetInt32LogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
