@@ -29,15 +29,19 @@ func NewTransaction(
 	bm *buffer.Manager,
 	fm *file.Manager,
 	lm *log.Manager,
-) *Transaction {
+) (*Transaction, error) {
+	txNum := nextTxNumber()
+	if _, err := NewStartLogRecord(txNum).WriteTo(lm); err != nil {
+		return nil, fmt.Errorf("could not write log: %w", err)
+	}
 	return &Transaction{
 		bm:      bm,
 		fm:      fm,
 		lm:      lm,
-		txNum:   nextTxNumber(),
+		txNum:   txNum,
 		bufMap:  make(map[file.BlockID]*buffer.Buffer),
 		bufPins: make([]file.BlockID, 0),
-	}
+	}, nil
 }
 
 func (t *Transaction) Commit() error {

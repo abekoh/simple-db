@@ -19,7 +19,8 @@ func TestTransaction(t *testing.T) {
 	}
 	bm := buffer.NewManager(fm, lm, 8)
 
-	tx1 := NewTransaction(bm, fm, lm)
+	tx1, err := NewTransaction(bm, fm, lm)
+	must(t, err)
 	blockID := file.NewBlockID("testfile", 1)
 	_, err = tx1.Pin(blockID)
 	must(t, err)
@@ -27,7 +28,8 @@ func TestTransaction(t *testing.T) {
 	must(t, tx1.SetStr(blockID, 40, "one", false))
 	must(t, tx1.Commit())
 
-	tx2 := NewTransaction(bm, fm, lm)
+	tx2, err := NewTransaction(bm, fm, lm)
+	must(t, err)
 	_, err = tx2.Pin(blockID)
 	beforeTx2IntVal, err := tx2.Int32(blockID, 80)
 	must(t, err)
@@ -43,7 +45,8 @@ func TestTransaction(t *testing.T) {
 	must(t, tx2.SetStr(blockID, 40, beforeTx2StrVal+"!", true))
 	must(t, tx2.Commit())
 
-	tx3 := NewTransaction(bm, fm, lm)
+	tx3, err := NewTransaction(bm, fm, lm)
+	must(t, err)
 	_, err = tx3.Pin(blockID)
 	must(t, err)
 	beforeTx3IntVal, err := tx3.Int32(blockID, 80)
@@ -70,7 +73,8 @@ func TestTransaction(t *testing.T) {
 		t.Errorf("expected one!, got %s", afterTx3StrVal)
 	}
 
-	tx4 := NewTransaction(bm, fm, lm)
+	tx4, err := NewTransaction(bm, fm, lm)
+	must(t, err)
 	_, err = tx4.Pin(blockID)
 	must(t, err)
 	beforeTx4IntVal, err := tx4.Int32(blockID, 80)
