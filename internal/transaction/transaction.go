@@ -193,6 +193,48 @@ func (r StartLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
 	return lsn, nil
 }
 
+type CommitLogRecord struct {
+	txNum int32
+}
+
+func NewCommitLogRecord(txNum int32) CommitLogRecord {
+	return CommitLogRecord{
+		txNum: txNum,
+	}
+}
+
+func NewCommitLogRecordPage(p *file.Page) CommitLogRecord {
+	return CommitLogRecord{
+		txNum: p.Int32(4),
+	}
+}
+
+func (r CommitLogRecord) String() string {
+	return fmt.Sprintf("<COMMIT %d >", r.txNum)
+}
+
+func (r CommitLogRecord) TxNum() int32 {
+	return r.txNum
+}
+
+func (r CommitLogRecord) Type() LogRecordType {
+	return Commit
+}
+
+func (r CommitLogRecord) Undo() {
+}
+
+func (r CommitLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	p := file.NewPageBytes(make([]byte, 2))
+	p.SetInt32(0, int32(Commit))
+	p.SetInt32(4, r.txNum)
+	lsn, err := lm.Append(p.RawBytes())
+	if err != nil {
+		return 0, fmt.Errorf("could not append: %w", err)
+	}
+	return lsn, nil
+}
+
 type RollbackLogRecord struct {
 	txNum int32
 }
@@ -235,41 +277,53 @@ func (r RollbackLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) 
 	return lsn, nil
 }
 
-type CommitLogRecord struct {
-	txNum int32
+type SetInt32LogRecord struct {
+	txNum   int32
+	offset  int32
+	val     int32
+	blockID file.BlockID
 }
 
-func NewCommitLogRecord(txNum int32) CommitLogRecord {
-	return CommitLogRecord{
-		txNum: txNum,
+func NewSetInt32LogRecord(txNum int32, blockID file.BlockID, offset, val int32) SetInt32LogRecord {
+	return SetInt32LogRecord{
+		txNum:   txNum,
+		blockID: blockID,
+		offset:  offset,
+		val:     val,
 	}
 }
 
-func NewCommitLogRecordPage(p *file.Page) CommitLogRecord {
-	return CommitLogRecord{
-		txNum: p.Int32(4),
+func NewSetInt32LogRecordPage(p *file.Page) SetInt32LogRecord {
+	const tpos = 4
+	txNum := p.Int32(tpos)
+	const fpos = tpos + 4
+	filename := p.Str(fpos)
+	bpos := fpos + file.PageStrMaxLength(filename)
+	blockID := file.NewBlockID(filename, p.Int32(bpos))
+	opos := bpos + 4
+	offset := p.Int32(opos)
+	vpos := opos + 4
+	val := p.Int32(vpos)
+	return SetInt32LogRecord{
+		txNum:   txNum,
+		blockID: blockID,
+		offset:  offset,
+		val:     val,
 	}
 }
 
-func (r CommitLogRecord) String() string {
-	return fmt.Sprintf("<COMMIT %d >", r.txNum)
-}
-
-func (r CommitLogRecord) TxNum() int32 {
-	return r.txNum
-}
-
-func (r CommitLogRecord) Type() LogRecordType {
-	return Commit
-}
-
-func (r CommitLogRecord) Undo() {
-}
-
-func (r CommitLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
-	p := file.NewPageBytes(make([]byte, 2))
-	p.SetInt32(0, int32(Commit))
-	p.SetInt32(4, r.txNum)
+func (r SetInt32LogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	const tpos = 4
+	const fpos = tpos + 4
+	bpos := fpos + file.PageStrMaxLength(r.blockID.Filename())
+	opos := bpos + 4
+	vpos := opos + 4
+	p := file.NewPageBytes(make([]byte, vpos+4))
+	p.SetInt32(0, int32(SetInt))
+	p.SetInt32(tpos, r.txNum)
+	p.SetStr(fpos, r.blockID.Filename())
+	p.SetInt32(opos, r.offset)
+	p.SetInt32(vpos, r.val)
 	lsn, err := lm.Append(p.RawBytes())
 	if err != nil {
 		return 0, fmt.Errorf("could not append: %w", err)

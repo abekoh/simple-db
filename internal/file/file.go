@@ -83,6 +83,10 @@ func (p *Page) SetStr(offset int32, s string) {
 	p.SetBytes(offset, []byte(s))
 }
 
+func PageStrMaxLength(s string) int32 {
+	return int32Size + int32(len(s))
+}
+
 type Manager struct {
 	dbDirPath string
 	blockSize int32
