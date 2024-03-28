@@ -70,7 +70,7 @@ func (t *Transaction) Rollback() error {
 		slog.Info(lr.String())
 		if lr.TxNum() == t.txNum {
 			if lr.Type() == Start {
-				return nil
+				break
 			}
 			if err := lr.Undo(t); err != nil {
 				return fmt.Errorf("could not undo: %w", err)
