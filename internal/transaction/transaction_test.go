@@ -29,16 +29,50 @@ func TestTransaction(t *testing.T) {
 
 	tx2 := NewTransaction(bm, fm, lm)
 	_, err = tx2.Pin(blockID)
-	beforeIntVal, err := tx2.Int32(blockID, 80)
+	beforeTx2IntVal, err := tx2.Int32(blockID, 80)
 	must(t, err)
-	beforeStrVal, err := tx2.Str(blockID, 40)
+	beforeTx2StrVal, err := tx2.Str(blockID, 40)
 	must(t, err)
-	if beforeIntVal != 1 {
-		t.Errorf("expected 1, got %d", beforeIntVal)
+	if beforeTx2IntVal != 1 {
+		t.Errorf("expected 1, got %d", beforeTx2IntVal)
 	}
-	if beforeStrVal != "one" {
-		t.Errorf("expected one, got %s", beforeStrVal)
+	if beforeTx2StrVal != "one" {
+		t.Errorf("expected one, got %s", beforeTx2StrVal)
 	}
+	must(t, tx2.SetInt32(blockID, 80, beforeTx2IntVal+1, false))
+	must(t, tx2.SetStr(blockID, 40, beforeTx2StrVal+"!", false))
+	must(t, tx2.Commit())
+
+	tx3 := NewTransaction(bm, fm, lm)
+	_, err = tx3.Pin(blockID)
+	must(t, err)
+	beforeTx3IntVal, err := tx3.Int32(blockID, 80)
+	must(t, err)
+	beforeTx3StrVal, err := tx3.Str(blockID, 40)
+	must(t, err)
+	if beforeTx3IntVal != 2 {
+		t.Errorf("expected 2, got %d", beforeTx3IntVal)
+	}
+	if beforeTx3StrVal != "one!" {
+		t.Errorf("expected one!, got %s", beforeTx3StrVal)
+	}
+	must(t, tx3.SetInt32(blockID, 80, 9999, false))
+	must(t, tx3.Rollback())
+	afterTx3IntVal, err := tx3.Int32(blockID, 80)
+	must(t, err)
+	if afterTx3IntVal != 2 {
+		t.Errorf("expected 2, got %d", afterTx3IntVal)
+	}
+
+	tx4 := NewTransaction(bm, fm, lm)
+	_, err = tx4.Pin(blockID)
+	must(t, err)
+	beforeTx4IntVal, err := tx4.Int32(blockID, 80)
+	must(t, err)
+	if beforeTx4IntVal != 2 {
+		t.Errorf("expected 2, got %d", beforeTx4IntVal)
+	}
+	must(t, tx4.Commit())
 }
 
 func must(t *testing.T, err error) {
