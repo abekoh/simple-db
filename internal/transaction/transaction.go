@@ -311,7 +311,7 @@ func (r CommitLogRecord) Undo(tx *Transaction) {
 }
 
 func (r CommitLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
-	p := file.NewPageBytes(make([]byte, 2))
+	p := file.NewPageBytes(make([]byte, 8))
 	p.SetInt32(0, int32(Commit))
 	p.SetInt32(4, r.txNum)
 	lsn, err := lm.Append(p.RawBytes())
