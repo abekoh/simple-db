@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"log/slog"
+	"reflect"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/buffer"
@@ -86,10 +87,26 @@ func TestTransaction(t *testing.T) {
 		}
 		must(t, tx4.Commit())
 
+		records := make([]string, 0)
 		for raw := range lm.Iterator() {
-			// TODO: assert
 			r := NewLogRecord(raw)
-			t.Logf("%s", r)
+			records = append(records, r.String())
+		}
+		if !reflect.DeepEqual(records, []string{
+			"<COMMIT 4 >",
+			"<START 4 >",
+			"<ROLLBACK 3 >",
+			"<SETSTR 3 testfile:1 40 one!>",
+			"<SETINT 3 testfile:1 80 2>",
+			"<START 3 >",
+			"<COMMIT 2 >",
+			"<SETSTR 2 testfile:1 40 one>",
+			"<SETINT 2 testfile:1 80 1>",
+			"<START 2 >",
+			"<COMMIT 1 >",
+			"<START 1 >",
+		}) {
+			t.Errorf("records mismatch")
 		}
 	})
 }
