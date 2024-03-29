@@ -444,7 +444,7 @@ func NewSetInt32LogRecordPage(p *file.Page) SetInt32LogRecord {
 }
 
 func (r SetInt32LogRecord) String() string {
-	return fmt.Sprintf("<SETINT %d %s %d %d>", r.txNum, r.blockID, r.offset, r.val)
+	return fmt.Sprintf("<SETINT32 %d %s %d %d>", r.txNum, r.blockID, r.offset, r.val)
 }
 
 func (r SetInt32LogRecord) TxNum() int32 {
