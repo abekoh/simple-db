@@ -93,18 +93,18 @@ func TestTransaction(t *testing.T) {
 			records = append(records, r.String())
 		}
 		if !reflect.DeepEqual(records, []string{
-			"<COMMIT 4 >",
-			"<START 4 >",
-			"<ROLLBACK 3 >",
+			"<COMMIT 4>",
+			"<START 4>",
+			"<ROLLBACK 3>",
 			"<SETSTR 3 testfile:1 40 one!>",
 			"<SETINT32 3 testfile:1 80 2>",
-			"<START 3 >",
-			"<COMMIT 2 >",
+			"<START 3>",
+			"<COMMIT 2>",
 			"<SETSTR 2 testfile:1 40 one>",
 			"<SETINT32 2 testfile:1 80 1>",
-			"<START 2 >",
-			"<COMMIT 1 >",
-			"<START 1 >",
+			"<START 2>",
+			"<COMMIT 1>",
+			"<START 1>",
 		}) {
 			t.Errorf("records mismatch")
 		}

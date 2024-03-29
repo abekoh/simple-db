@@ -293,7 +293,7 @@ func NewStartLogRecordPage(p *file.Page) StartLogRecord {
 }
 
 func (r StartLogRecord) String() string {
-	return fmt.Sprintf("<START %d >", r.txNum)
+	return fmt.Sprintf("<START %d>", r.txNum)
 }
 
 func (r StartLogRecord) TxNum() int32 {
@@ -337,7 +337,7 @@ func NewCommitLogRecordPage(p *file.Page) CommitLogRecord {
 }
 
 func (r CommitLogRecord) String() string {
-	return fmt.Sprintf("<COMMIT %d >", r.txNum)
+	return fmt.Sprintf("<COMMIT %d>", r.txNum)
 }
 
 func (r CommitLogRecord) TxNum() int32 {
@@ -381,7 +381,7 @@ func NewRollbackLogRecordPage(p *file.Page) RollbackLogRecord {
 }
 
 func (r RollbackLogRecord) String() string {
-	return fmt.Sprintf("<ROLLBACK %d >", r.txNum)
+	return fmt.Sprintf("<ROLLBACK %d>", r.txNum)
 }
 
 func (r RollbackLogRecord) TxNum() int32 {
