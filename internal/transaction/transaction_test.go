@@ -82,7 +82,7 @@ func TestTransaction(t *testing.T) {
 
 	for raw := range lm.Iterator() {
 		// TODO: assert
-		r := CreateLogRecord(raw)
+		r := NewLogRecord(raw)
 		t.Logf("%s", r)
 	}
 }

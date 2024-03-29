@@ -62,7 +62,7 @@ func (t *Transaction) Commit() error {
 
 func (t *Transaction) Rollback() error {
 	for r := range t.lm.Iterator() {
-		lr := CreateLogRecord(r)
+		lr := NewLogRecord(r)
 		if lr == nil {
 			return fmt.Errorf("could not create log record")
 		}
@@ -221,7 +221,7 @@ type LogRecord interface {
 	WriteTo(lm *log.Manager) (log.SequenceNumber, error)
 }
 
-func CreateLogRecord(bytes []byte) LogRecord {
+func NewLogRecord(bytes []byte) LogRecord {
 	p := file.NewPageBytes(bytes)
 	switch LogRecordType(p.Int32(0)) {
 	case Checkpoint:
