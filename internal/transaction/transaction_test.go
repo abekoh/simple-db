@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/buffer"
@@ -9,6 +10,7 @@ import (
 )
 
 func TestTransaction(t *testing.T) {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	fm, err := file.NewManager(t.TempDir(), 128)
 	if err != nil {
 		t.Fatal(err)
