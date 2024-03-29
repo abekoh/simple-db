@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 	"sync/atomic"
 
@@ -165,7 +166,7 @@ func (t *Transaction) SetStr(blockID file.BlockID, offset int32, val string, okT
 	if okToLog {
 		oldVal := buf.Page().Str(offset)
 		blockID := buf.BlockID()
-		newLSN, err := NewSetStringLogRecord(t.txNum, blockID, offset, oldVal).WriteTo(t.lm)
+		newLSN, err := NewSetStrLogRecord(t.txNum, blockID, offset, oldVal).WriteTo(t.lm)
 		if err != nil {
 			return fmt.Errorf("could not write log: %w", err)
 		}
@@ -209,8 +210,8 @@ const (
 	Start
 	Commit
 	Rollback
-	SetInt
-	SetString
+	SetInt32
+	SetStr
 )
 
 type LogRecord interface {
@@ -232,10 +233,10 @@ func NewLogRecord(bytes []byte) LogRecord {
 		return NewCommitLogRecordPage(p)
 	case Rollback:
 		return NewRollbackLogRecordPage(p)
-	case SetInt:
+	case SetInt32:
 		return NewSetInt32LogRecordPage(p)
-	case SetString:
-		return NewSetStringLogRecordPage(p)
+	case SetStr:
+		return NewSetStrLogRecordPage(p)
 	default:
 		return nil
 	}
@@ -265,6 +266,7 @@ func (r CheckpointLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r CheckpointLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Debug("write checkpoint log", "record", r)
 	p := file.NewPageBytes(make([]byte, 4))
 	p.SetInt32(0, int32(Checkpoint))
 	lsn, err := lm.Append(p.RawBytes())
@@ -307,6 +309,7 @@ func (r StartLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r StartLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Debug("write start log", "record", r)
 	p := file.NewPageBytes(make([]byte, 8))
 	p.SetInt32(0, int32(Start))
 	p.SetInt32(4, r.txNum)
@@ -350,6 +353,7 @@ func (r CommitLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r CommitLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Debug("write commit log", "record", r)
 	p := file.NewPageBytes(make([]byte, 8))
 	p.SetInt32(0, int32(Commit))
 	p.SetInt32(4, r.txNum)
@@ -393,6 +397,7 @@ func (r RollbackLogRecord) Undo(tx *Transaction) error {
 }
 
 func (r RollbackLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Debug("write rollback log", "record", r)
 	p := file.NewPageBytes(make([]byte, 8))
 	p.SetInt32(0, int32(Rollback))
 	p.SetInt32(4, r.txNum)
@@ -447,10 +452,11 @@ func (r SetInt32LogRecord) TxNum() int32 {
 }
 
 func (r SetInt32LogRecord) Type() LogRecordType {
-	return SetInt
+	return SetInt32
 }
 
 func (r SetInt32LogRecord) Undo(tx *Transaction) error {
+	slog.Debug("undo setint32 log", "record", r)
 	buf, err := tx.Pin(r.blockID)
 	if err != nil {
 		return fmt.Errorf("could not pin: %w", err)
@@ -463,13 +469,14 @@ func (r SetInt32LogRecord) Undo(tx *Transaction) error {
 }
 
 func (r SetInt32LogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Debug("write setint32 log", "record", r)
 	const tpos = 4
 	const fpos = tpos + 4
 	bpos := fpos + file.PageStrMaxLength(r.blockID.Filename())
 	opos := bpos + 4
 	vpos := opos + 4
 	p := file.NewPageBytes(make([]byte, vpos+4))
-	p.SetInt32(0, int32(SetInt))
+	p.SetInt32(0, int32(SetInt32))
 	p.SetInt32(tpos, r.txNum)
 	p.SetStr(fpos, r.blockID.Filename())
 	p.SetInt32(bpos, r.blockID.Num())
@@ -482,15 +489,15 @@ func (r SetInt32LogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) 
 	return lsn, nil
 }
 
-type SetStringLogRecord struct {
+type SetStrLogRecord struct {
 	txNum   int32
 	offset  int32
 	val     string
 	blockID file.BlockID
 }
 
-func NewSetStringLogRecord(txNum int32, blockID file.BlockID, offset int32, val string) SetStringLogRecord {
-	return SetStringLogRecord{
+func NewSetStrLogRecord(txNum int32, blockID file.BlockID, offset int32, val string) SetStrLogRecord {
+	return SetStrLogRecord{
 		txNum:   txNum,
 		blockID: blockID,
 		offset:  offset,
@@ -498,7 +505,7 @@ func NewSetStringLogRecord(txNum int32, blockID file.BlockID, offset int32, val 
 	}
 }
 
-func NewSetStringLogRecordPage(p *file.Page) SetStringLogRecord {
+func NewSetStrLogRecordPage(p *file.Page) SetStrLogRecord {
 	const tpos = 4
 	txNum := p.Int32(tpos)
 	const fpos = tpos + 4
@@ -509,7 +516,7 @@ func NewSetStringLogRecordPage(p *file.Page) SetStringLogRecord {
 	offset := p.Int32(opos)
 	vpos := opos + 4
 	val := p.Str(vpos)
-	return SetStringLogRecord{
+	return SetStrLogRecord{
 		txNum:   txNum,
 		blockID: blockID,
 		offset:  offset,
@@ -517,19 +524,20 @@ func NewSetStringLogRecordPage(p *file.Page) SetStringLogRecord {
 	}
 }
 
-func (r SetStringLogRecord) String() string {
-	return fmt.Sprintf("<SETSTRING %d %s %d %s>", r.txNum, r.blockID, r.offset, r.val)
+func (r SetStrLogRecord) String() string {
+	return fmt.Sprintf("<SETSTR %d %s %d %s>", r.txNum, r.blockID, r.offset, r.val)
 }
 
-func (r SetStringLogRecord) TxNum() int32 {
+func (r SetStrLogRecord) TxNum() int32 {
 	return r.txNum
 }
 
-func (r SetStringLogRecord) Type() LogRecordType {
-	return SetString
+func (r SetStrLogRecord) Type() LogRecordType {
+	return SetStr
 }
 
-func (r SetStringLogRecord) Undo(tx *Transaction) error {
+func (r SetStrLogRecord) Undo(tx *Transaction) error {
+	slog.Debug("undo setstr log", "record", r)
 	buf, err := tx.Pin(r.blockID)
 	if err != nil {
 		return fmt.Errorf("could not pin: %w", err)
@@ -541,14 +549,15 @@ func (r SetStringLogRecord) Undo(tx *Transaction) error {
 	return nil
 }
 
-func (r SetStringLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+func (r SetStrLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
+	slog.Debug("write setst log", "record", r)
 	const tpos = 4
 	const fpos = tpos + 4
 	bpos := fpos + file.PageStrMaxLength(r.blockID.Filename())
 	opos := bpos + 4
 	vpos := opos + 4
 	p := file.NewPageBytes(make([]byte, vpos+file.PageStrMaxLength(r.val)))
-	p.SetInt32(0, int32(SetString))
+	p.SetInt32(0, int32(SetStr))
 	p.SetInt32(tpos, r.txNum)
 	p.SetStr(fpos, r.blockID.Filename())
 	p.SetInt32(bpos, r.blockID.Num())
