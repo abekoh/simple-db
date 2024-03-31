@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"sync"
 	"sync/atomic"
 
 	"github.com/abekoh/simple-db/internal/buffer"
@@ -18,12 +19,13 @@ func nextTxNumber() int32 {
 }
 
 type Transaction struct {
-	bm      *buffer.Manager
-	fm      *file.Manager
-	lm      *log.Manager
-	txNum   int32
-	bufMap  map[file.BlockID]*buffer.Buffer
-	bufPins []file.BlockID
+	bm        *buffer.Manager
+	fm        *file.Manager
+	lm        *log.Manager
+	txNum     int32
+	bufMap    map[file.BlockID]*buffer.Buffer
+	bufPins   []file.BlockID
+	lockTable lockTable
 }
 
 func NewTransaction(
@@ -36,12 +38,13 @@ func NewTransaction(
 		return nil, fmt.Errorf("could not write log: %w", err)
 	}
 	return &Transaction{
-		bm:      bm,
-		fm:      fm,
-		lm:      lm,
-		txNum:   txNum,
-		bufMap:  make(map[file.BlockID]*buffer.Buffer),
-		bufPins: make([]file.BlockID, 0),
+		bm:        bm,
+		fm:        fm,
+		lm:        lm,
+		txNum:     txNum,
+		bufMap:    make(map[file.BlockID]*buffer.Buffer),
+		bufPins:   make([]file.BlockID, 0),
+		lockTable: lockTable{},
 	}, nil
 }
 
@@ -56,7 +59,7 @@ func (t *Transaction) Commit() error {
 	if err := t.lm.Flush(lsn); err != nil {
 		return fmt.Errorf("could not flush: %w", err)
 	}
-	// TODO: release locks
+	t.lockTable.release()
 	t.unpinAll()
 	return nil
 }
@@ -84,7 +87,7 @@ func (t *Transaction) Rollback() error {
 	if err := t.lm.Flush(lsn); err != nil {
 		return fmt.Errorf("could not flush: %w", err)
 	}
-	// TODO: release locks
+	t.lockTable.release()
 	t.unpinAll()
 	return nil
 }
@@ -118,7 +121,7 @@ func (t *Transaction) unpinAll() {
 }
 
 func (t *Transaction) Int32(blockID file.BlockID, offset int32) (int32, error) {
-	// TODO: sLock
+	t.lockTable.sLock(blockID)
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return 0, fmt.Errorf("block not pinned")
@@ -127,7 +130,7 @@ func (t *Transaction) Int32(blockID file.BlockID, offset int32) (int32, error) {
 }
 
 func (t *Transaction) Str(blockID file.BlockID, offset int32) (string, error) {
-	// TODO: sLock
+	t.lockTable.sLock(blockID)
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return "", fmt.Errorf("block not pinned")
@@ -136,7 +139,7 @@ func (t *Transaction) Str(blockID file.BlockID, offset int32) (string, error) {
 }
 
 func (t *Transaction) SetInt32(blockID file.BlockID, offset, val int32, okToLog bool) error {
-	// TODO: xLock
+	t.lockTable.xLock(blockID)
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return fmt.Errorf("block not pinned")
@@ -157,7 +160,7 @@ func (t *Transaction) SetInt32(blockID file.BlockID, offset, val int32, okToLog 
 }
 
 func (t *Transaction) SetStr(blockID file.BlockID, offset int32, val string, okToLog bool) error {
-	// TODO: xLock
+	t.lockTable.xLock(blockID)
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return fmt.Errorf("block not pinned")
@@ -178,7 +181,8 @@ func (t *Transaction) SetStr(blockID file.BlockID, offset int32, val string, okT
 }
 
 func (t *Transaction) Size(filename string) (int32, error) {
-	// sLock
+	dummyBlockID := file.NewBlockID(filename, -1)
+	t.lockTable.sLock(dummyBlockID)
 	l, err := t.fm.Length(filename)
 	if err != nil {
 		return 0, fmt.Errorf("could not get length: %w", err)
@@ -187,7 +191,8 @@ func (t *Transaction) Size(filename string) (int32, error) {
 }
 
 func (t *Transaction) Append(filename string) (file.BlockID, error) {
-	// xLock
+	dummyBlockID := file.NewBlockID(filename, -1)
+	t.lockTable.xLock(dummyBlockID)
 	blockID, err := t.fm.Append(filename)
 	if err != nil {
 		return file.BlockID{}, fmt.Errorf("could not append: %w", err)
@@ -568,4 +573,25 @@ func (r SetStrLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
 		return 0, fmt.Errorf("could not append: %w", err)
 	}
 	return lsn, nil
+}
+
+type lockTable struct {
+	mutexes sync.Map
+}
+
+func (m *lockTable) xLock(blockID file.BlockID) {
+	mu, _ := m.mutexes.LoadOrStore(blockID, &sync.RWMutex{})
+	mu.(*sync.RWMutex).Lock()
+}
+
+func (m *lockTable) sLock(blockID file.BlockID) {
+	mu, _ := m.mutexes.LoadOrStore(blockID, &sync.RWMutex{})
+	mu.(*sync.RWMutex).RLock()
+}
+
+func (m *lockTable) release() {
+	m.mutexes.Range(func(_, value any) bool {
+		value.(sync.Locker).Unlock()
+		return true
+	})
 }
