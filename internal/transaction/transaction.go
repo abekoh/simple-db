@@ -665,7 +665,7 @@ func (m *concurrencyManager) loop() {
 					} else if mutex.(*sync.RWMutex).TryRLock() {
 						localLockTable[req.blockID] = sLock
 						req.complete <- nil
-					} else if time.Now().After(req.expiredAt) {
+					} else if time.Now().Before(req.expiredAt) {
 						m.sLockCh <- req
 					} else {
 						req.complete <- fmt.Errorf("timeout")
@@ -676,7 +676,7 @@ func (m *concurrencyManager) loop() {
 				if mutex.(*sync.RWMutex).TryRLock() {
 					localLockTable[req.blockID] = sLock
 					req.complete <- nil
-				} else if time.Now().After(req.expiredAt) {
+				} else if time.Now().Before(req.expiredAt) {
 					m.sLockCh <- req
 				} else {
 					req.complete <- fmt.Errorf("timeout")
@@ -695,7 +695,7 @@ func (m *concurrencyManager) loop() {
 					if mutex.(*sync.RWMutex).TryLock() {
 						localLockTable[req.blockID] = xLock
 						req.complete <- nil
-					} else if time.Now().After(req.expiredAt) {
+					} else if time.Now().Before(req.expiredAt) {
 						m.xLockCh <- req
 					} else {
 						req.complete <- fmt.Errorf("timeout")
@@ -708,7 +708,7 @@ func (m *concurrencyManager) loop() {
 				if mutex.(*sync.RWMutex).TryLock() {
 					localLockTable[req.blockID] = xLock
 					req.complete <- nil
-				} else if time.Now().After(req.expiredAt) {
+				} else if time.Now().Before(req.expiredAt) {
 					m.xLockCh <- req
 				} else {
 					req.complete <- fmt.Errorf("timeout")
