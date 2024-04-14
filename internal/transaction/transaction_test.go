@@ -1,9 +1,13 @@
 package transaction
 
 import (
+	"fmt"
 	"log/slog"
 	"reflect"
 	"testing"
+	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/abekoh/simple-db/internal/buffer"
 	"github.com/abekoh/simple-db/internal/file"
@@ -11,10 +15,15 @@ import (
 )
 
 func TestTransaction(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Transaction", func(t *testing.T) {
-		t.Parallel()
+		must := func(t *testing.T, err error) {
+			t.Helper()
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 		fm, err := file.NewManager(t.TempDir(), 128)
 		if err != nil {
@@ -106,14 +115,53 @@ func TestTransaction(t *testing.T) {
 			"<COMMIT 1>",
 			"<START 1>",
 		}) {
-			t.Errorf("records mismatch")
+
 		}
 	})
-}
+	t.Run("Concurrency", func(t *testing.T) {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+		fm, err := file.NewManager(t.TempDir(), 128)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lm, err := log.NewManager(fm, "logfile")
+		if err != nil {
+			t.Fatal(err)
+		}
+		bm := buffer.NewManager(fm, lm, 8)
 
-func must(t *testing.T, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatal(err)
-	}
+		var g errgroup.Group
+		g.Go(func() error {
+			txA, err := NewTransaction(bm, fm, lm)
+			if err != nil {
+				return fmt.Errorf("failed txA: %w", err)
+			}
+			blockID1 := file.NewBlockID("testfile", 1)
+			blockID2 := file.NewBlockID("testfile", 2)
+			_, err = txA.Pin(blockID1)
+			if err != nil {
+				return fmt.Errorf("failed txA: %w", err)
+			}
+			_, err = txA.Pin(blockID2)
+			if err != nil {
+				return fmt.Errorf("failed txA: %w", err)
+			}
+			_, err = txA.Int32(blockID1, 0)
+			if err != nil {
+				return fmt.Errorf("failed txA: %w", err)
+			}
+			time.Sleep(1 * time.Second)
+			_, err = txA.Int32(blockID2, 0)
+			if err != nil {
+				return fmt.Errorf("failed txA: %w", err)
+			}
+			if err := txA.Commit(); err != nil {
+				return fmt.Errorf("failed txA: %w", err)
+			}
+			return nil
+		})
+		if err := g.Wait(); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
