@@ -19,13 +19,13 @@ func nextTxNumber() int32 {
 }
 
 type Transaction struct {
-	bm        *buffer.Manager
-	fm        *file.Manager
-	lm        *log.Manager
-	txNum     int32
-	bufMap    map[file.BlockID]*buffer.Buffer
-	bufPins   []file.BlockID
-	lockTable concurrencyManager
+	bm      *buffer.Manager
+	fm      *file.Manager
+	lm      *log.Manager
+	txNum   int32
+	bufMap  map[file.BlockID]*buffer.Buffer
+	bufPins []file.BlockID
+	concMgr concurrencyManager
 }
 
 func NewTransaction(
@@ -38,13 +38,13 @@ func NewTransaction(
 		return nil, fmt.Errorf("could not write log: %w", err)
 	}
 	return &Transaction{
-		bm:        bm,
-		fm:        fm,
-		lm:        lm,
-		txNum:     txNum,
-		bufMap:    make(map[file.BlockID]*buffer.Buffer),
-		bufPins:   make([]file.BlockID, 0),
-		lockTable: concurrencyManager{},
+		bm:      bm,
+		fm:      fm,
+		lm:      lm,
+		txNum:   txNum,
+		bufMap:  make(map[file.BlockID]*buffer.Buffer),
+		bufPins: make([]file.BlockID, 0),
+		concMgr: concurrencyManager{},
 	}, nil
 }
 
@@ -59,7 +59,7 @@ func (t *Transaction) Commit() error {
 	if err := t.lm.Flush(lsn); err != nil {
 		return fmt.Errorf("could not flush: %w", err)
 	}
-	t.lockTable.release()
+	t.concMgr.release()
 	t.unpinAll()
 	return nil
 }
@@ -87,7 +87,7 @@ func (t *Transaction) Rollback() error {
 	if err := t.lm.Flush(lsn); err != nil {
 		return fmt.Errorf("could not flush: %w", err)
 	}
-	t.lockTable.release()
+	t.concMgr.release()
 	t.unpinAll()
 	return nil
 }
@@ -121,7 +121,7 @@ func (t *Transaction) unpinAll() {
 }
 
 func (t *Transaction) Int32(blockID file.BlockID, offset int32) (int32, error) {
-	t.lockTable.sLock(blockID)
+	t.concMgr.sLock(blockID)
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return 0, fmt.Errorf("block not pinned")
@@ -130,7 +130,7 @@ func (t *Transaction) Int32(blockID file.BlockID, offset int32) (int32, error) {
 }
 
 func (t *Transaction) Str(blockID file.BlockID, offset int32) (string, error) {
-	t.lockTable.sLock(blockID)
+	t.concMgr.sLock(blockID)
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return "", fmt.Errorf("block not pinned")
@@ -139,7 +139,7 @@ func (t *Transaction) Str(blockID file.BlockID, offset int32) (string, error) {
 }
 
 func (t *Transaction) SetInt32(blockID file.BlockID, offset, val int32, okToLog bool) error {
-	t.lockTable.xLock(blockID)
+	t.concMgr.xLock(blockID)
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return fmt.Errorf("block not pinned")
@@ -160,7 +160,7 @@ func (t *Transaction) SetInt32(blockID file.BlockID, offset, val int32, okToLog 
 }
 
 func (t *Transaction) SetStr(blockID file.BlockID, offset int32, val string, okToLog bool) error {
-	t.lockTable.xLock(blockID)
+	t.concMgr.xLock(blockID)
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return fmt.Errorf("block not pinned")
@@ -182,7 +182,7 @@ func (t *Transaction) SetStr(blockID file.BlockID, offset int32, val string, okT
 
 func (t *Transaction) Size(filename string) (int32, error) {
 	dummyBlockID := file.NewBlockID(filename, -1)
-	t.lockTable.sLock(dummyBlockID)
+	t.concMgr.sLock(dummyBlockID)
 	l, err := t.fm.Length(filename)
 	if err != nil {
 		return 0, fmt.Errorf("could not get length: %w", err)
@@ -192,7 +192,7 @@ func (t *Transaction) Size(filename string) (int32, error) {
 
 func (t *Transaction) Append(filename string) (file.BlockID, error) {
 	dummyBlockID := file.NewBlockID(filename, -1)
-	t.lockTable.xLock(dummyBlockID)
+	t.concMgr.xLock(dummyBlockID)
 	blockID, err := t.fm.Append(filename)
 	if err != nil {
 		return file.BlockID{}, fmt.Errorf("could not append: %w", err)
@@ -575,16 +575,118 @@ func (r SetStrLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
 	return lsn, nil
 }
 
-var lockTable sync.Map
+var globalLockTable sync.Map
 
-type concurrencyManager struct {
-}
+type (
+	sLockRequest struct {
+		blockID  file.BlockID
+		complete chan error
+	}
+	xLockRequest struct {
+		blockID  file.BlockID
+		complete chan error
+	}
+	concurrencyManager struct {
+		sLockCh   chan sLockRequest
+		xLockCh   chan xLockRequest
+		releaseCh chan struct{}
+	}
+)
 
-func (m *concurrencyManager) xLock(blockID file.BlockID) {
+func newConcurrencyManager() concurrencyManager {
+	m := concurrencyManager{
+		sLockCh:   make(chan sLockRequest),
+		xLockCh:   make(chan xLockRequest),
+		releaseCh: make(chan struct{}),
+	}
+	go m.loop()
+	return m
 }
 
 func (m *concurrencyManager) sLock(blockID file.BlockID) {
+	ch := make(chan error)
+	m.sLockCh <- sLockRequest{
+		blockID:  blockID,
+		complete: ch,
+	}
+	<-ch
+}
+
+func (m *concurrencyManager) xLock(blockID file.BlockID) {
+	ch := make(chan error)
+	m.xLockCh <- xLockRequest{
+		blockID:  blockID,
+		complete: ch,
+	}
+	<-ch
 }
 
 func (m *concurrencyManager) release() {
+	m.releaseCh <- struct{}{}
+}
+
+func (m *concurrencyManager) loop() {
+	type lockType int
+	const (
+		sLock lockType = iota
+		xLock
+	)
+	localLockTable := make(map[file.BlockID]lockType)
+	for {
+		select {
+		case req := <-m.sLockCh:
+			if t, ok := localLockTable[req.blockID]; ok {
+				switch t {
+				case sLock:
+					req.complete <- nil
+				case xLock:
+					req.complete <- fmt.Errorf("block already locked")
+				}
+				continue
+			}
+			mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
+			if mutex.(*sync.RWMutex).TryRLock() {
+				localLockTable[req.blockID] = sLock
+				continue
+			}
+			req.complete <- fmt.Errorf("block already locked")
+		case req := <-m.xLockCh:
+			if t, ok := localLockTable[req.blockID]; ok {
+				switch t {
+				case sLock:
+					mutex, ok := globalLockTable.Load(req.blockID)
+					if !ok {
+						req.complete <- fmt.Errorf("block not found")
+						continue
+					}
+					mutex.(*sync.RWMutex).RUnlock()
+					mutex.(*sync.RWMutex).Lock()
+					localLockTable[req.blockID] = xLock
+				case xLock:
+					req.complete <- nil
+				}
+				continue
+			}
+			mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
+			if mutex.(*sync.RWMutex).TryLock() {
+				localLockTable[req.blockID] = xLock
+				continue
+			}
+			req.complete <- fmt.Errorf("block already locked")
+		case <-m.releaseCh:
+			for blockID, t := range localLockTable {
+				mutex, ok := globalLockTable.Load(blockID)
+				if !ok {
+					continue
+				}
+				switch t {
+				case sLock:
+					mutex.(*sync.RWMutex).RUnlock()
+				case xLock:
+					mutex.(*sync.RWMutex).Unlock()
+				}
+			}
+			localLockTable = make(map[file.BlockID]lockType)
+		}
+	}
 }
