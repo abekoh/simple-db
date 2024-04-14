@@ -655,6 +655,7 @@ func (m *concurrencyManager) loop() {
 					req.complete <- nil
 					continue
 				case xLock:
+					// TODO: wait
 					req.complete <- fmt.Errorf("block already locked")
 					continue
 				}
@@ -665,6 +666,7 @@ func (m *concurrencyManager) loop() {
 				req.complete <- nil
 				continue
 			}
+			// TODO: wait
 			req.complete <- fmt.Errorf("block already locked")
 		case req := <-m.xLockCh:
 			if t, ok := localLockTable[req.blockID]; ok {
@@ -681,6 +683,7 @@ func (m *concurrencyManager) loop() {
 						req.complete <- nil
 						continue
 					}
+					// TODO: wait
 					req.complete <- fmt.Errorf("block already locked")
 					continue
 				case xLock:
@@ -694,6 +697,7 @@ func (m *concurrencyManager) loop() {
 				req.complete <- nil
 				continue
 			}
+			// TODO: wait
 			req.complete <- fmt.Errorf("block already locked")
 		case <-m.releaseCh:
 			for blockID, t := range localLockTable {
