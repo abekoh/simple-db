@@ -666,6 +666,8 @@ func (m *concurrencyManager) loop() {
 						localLockTable[req.blockID] = sLock
 						req.complete <- nil
 					} else if time.Now().Before(req.expiredAt) {
+						// FIXME: push to the back of the queue, but old request must be prioritized
+						// implement a priority queue instead of a channel
 						m.sLockCh <- req
 					} else {
 						req.complete <- fmt.Errorf("timeout")
