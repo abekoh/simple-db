@@ -639,10 +639,11 @@ func (m *concurrencyManager) loop() {
 				switch t {
 				case sLock:
 					req.complete <- nil
+					continue
 				case xLock:
 					req.complete <- fmt.Errorf("block already locked")
+					continue
 				}
-				continue
 			}
 			mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
 			if mutex.(*sync.RWMutex).TryRLock() {
@@ -661,12 +662,17 @@ func (m *concurrencyManager) loop() {
 						continue
 					}
 					mutex.(*sync.RWMutex).RUnlock()
-					mutex.(*sync.RWMutex).Lock()
-					localLockTable[req.blockID] = xLock
+					if mutex.(*sync.RWMutex).TryLock() {
+						localLockTable[req.blockID] = xLock
+						req.complete <- nil
+						continue
+					}
+					req.complete <- fmt.Errorf("block already locked")
+					continue
 				case xLock:
 					req.complete <- nil
+					continue
 				}
-				continue
 			}
 			mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
 			if mutex.(*sync.RWMutex).TryLock() {
