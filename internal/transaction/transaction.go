@@ -79,7 +79,9 @@ func (t *Transaction) Rollback() error {
 			}
 		}
 	}
-	t.bm.FlushAll(t.txNum)
+	if err := t.bm.FlushAll(t.txNum); err != nil {
+		return fmt.Errorf("could not flush: %w", err)
+	}
 	lsn, err := NewRollbackLogRecord(t.txNum).WriteTo(t.lm)
 	if err != nil {
 		return fmt.Errorf("could not write log: %w", err)
@@ -278,7 +280,7 @@ func (r CheckpointLogRecord) TxNum() int32 {
 	return -1
 }
 
-func (r CheckpointLogRecord) Undo(tx *Transaction) error {
+func (r CheckpointLogRecord) Undo(_ *Transaction) error {
 	return nil
 }
 
@@ -321,7 +323,7 @@ func (r StartLogRecord) Type() LogRecordType {
 	return Start
 }
 
-func (r StartLogRecord) Undo(tx *Transaction) error {
+func (r StartLogRecord) Undo(_ *Transaction) error {
 	return nil
 }
 
@@ -365,7 +367,7 @@ func (r CommitLogRecord) Type() LogRecordType {
 	return Commit
 }
 
-func (r CommitLogRecord) Undo(tx *Transaction) error {
+func (r CommitLogRecord) Undo(_ *Transaction) error {
 	return nil
 }
 
@@ -409,7 +411,7 @@ func (r RollbackLogRecord) Type() LogRecordType {
 	return Rollback
 }
 
-func (r RollbackLogRecord) Undo(tx *Transaction) error {
+func (r RollbackLogRecord) Undo(_ *Transaction) error {
 	return nil
 }
 
