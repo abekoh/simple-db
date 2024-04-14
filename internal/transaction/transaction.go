@@ -594,12 +594,14 @@ var globalLockTable sync.Map
 
 type (
 	sLockRequest struct {
-		blockID  file.BlockID
-		complete chan error
+		blockID   file.BlockID
+		complete  chan error
+		expiredAt time.Time
 	}
 	xLockRequest struct {
-		blockID  file.BlockID
-		complete chan error
+		blockID   file.BlockID
+		complete  chan error
+		expiredAt time.Time
 	}
 	concurrencyManager struct {
 		sLockCh   chan sLockRequest
@@ -610,8 +612,8 @@ type (
 
 func newConcurrencyManager() concurrencyManager {
 	m := concurrencyManager{
-		sLockCh:   make(chan sLockRequest),
-		xLockCh:   make(chan xLockRequest),
+		sLockCh:   make(chan sLockRequest, 20),
+		xLockCh:   make(chan xLockRequest, 20),
 		releaseCh: make(chan struct{}),
 	}
 	go m.loop()
@@ -621,8 +623,9 @@ func newConcurrencyManager() concurrencyManager {
 func (m *concurrencyManager) sLock(blockID file.BlockID) error {
 	ch := make(chan error)
 	m.sLockCh <- sLockRequest{
-		blockID:  blockID,
-		complete: ch,
+		blockID:   blockID,
+		complete:  ch,
+		expiredAt: time.Now().Add(10 * time.Second),
 	}
 	return <-ch
 }
@@ -630,8 +633,9 @@ func (m *concurrencyManager) sLock(blockID file.BlockID) error {
 func (m *concurrencyManager) xLock(blockID file.BlockID) error {
 	ch := make(chan error)
 	m.xLockCh <- xLockRequest{
-		blockID:  blockID,
-		complete: ch,
+		blockID:   blockID,
+		complete:  ch,
+		expiredAt: time.Now().Add(10 * time.Second),
 	}
 	return <-ch
 }
@@ -650,47 +654,35 @@ func (m *concurrencyManager) loop() {
 	for {
 		select {
 		case req := <-m.sLockCh:
-			sLockStartedAt := time.Now()
 			if t, ok := localLockTable[req.blockID]; ok {
 				switch t {
 				case sLock:
 					req.complete <- nil
-					continue
 				case xLock:
 					mutex, ok := globalLockTable.Load(req.blockID)
 					if !ok {
 						req.complete <- fmt.Errorf("block not found")
-						continue
+					} else if mutex.(*sync.RWMutex).TryRLock() {
+						localLockTable[req.blockID] = sLock
+						req.complete <- nil
+					} else if time.Now().After(req.expiredAt) {
+						m.sLockCh <- req
+					} else {
+						req.complete <- fmt.Errorf("timeout")
 					}
-					for time.Since(sLockStartedAt) < 10*time.Second {
-						if mutex.(*sync.RWMutex).TryRLock() {
-							localLockTable[req.blockID] = sLock
-							req.complete <- nil
-							break
-						}
-						time.Sleep(500 * time.Millisecond)
-					}
-					req.complete <- fmt.Errorf("timeout")
-					continue
 				}
-			}
-			mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
-			if mutex.(*sync.RWMutex).TryRLock() {
-				localLockTable[req.blockID] = sLock
-				req.complete <- nil
-				continue
-			}
-			for time.Since(sLockStartedAt) < 10*time.Second {
+			} else {
+				mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
 				if mutex.(*sync.RWMutex).TryRLock() {
 					localLockTable[req.blockID] = sLock
 					req.complete <- nil
-					break
+				} else if time.Now().After(req.expiredAt) {
+					m.sLockCh <- req
+				} else {
+					req.complete <- fmt.Errorf("timeout")
 				}
-				time.Sleep(500 * time.Millisecond)
 			}
-			req.complete <- fmt.Errorf("timeout")
 		case req := <-m.xLockCh:
-			mLockStartedAt := time.Now()
 			if t, ok := localLockTable[req.blockID]; ok {
 				switch t {
 				case sLock:
@@ -703,38 +695,25 @@ func (m *concurrencyManager) loop() {
 					if mutex.(*sync.RWMutex).TryLock() {
 						localLockTable[req.blockID] = xLock
 						req.complete <- nil
-						continue
+					} else if time.Now().After(req.expiredAt) {
+						m.xLockCh <- req
+					} else {
+						req.complete <- fmt.Errorf("timeout")
 					}
-					for time.Since(mLockStartedAt) < 10*time.Second {
-						if mutex.(*sync.RWMutex).TryLock() {
-							localLockTable[req.blockID] = xLock
-							req.complete <- nil
-							break
-						}
-						time.Sleep(500 * time.Millisecond)
-					}
-					req.complete <- fmt.Errorf("timeout")
-					continue
 				case xLock:
 					req.complete <- nil
-					continue
 				}
-			}
-			mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
-			if mutex.(*sync.RWMutex).TryLock() {
-				localLockTable[req.blockID] = xLock
-				req.complete <- nil
-				continue
-			}
-			for time.Since(mLockStartedAt) < 10*time.Second {
+			} else {
+				mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
 				if mutex.(*sync.RWMutex).TryLock() {
 					localLockTable[req.blockID] = xLock
 					req.complete <- nil
-					break
+				} else if time.Now().After(req.expiredAt) {
+					m.xLockCh <- req
+				} else {
+					req.complete <- fmt.Errorf("timeout")
 				}
-				time.Sleep(500 * time.Millisecond)
 			}
-			req.complete <- fmt.Errorf("block already locked")
 		case <-m.releaseCh:
 			for blockID, t := range localLockTable {
 				mutex, ok := globalLockTable.Load(blockID)
