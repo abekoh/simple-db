@@ -25,7 +25,7 @@ type Transaction struct {
 	txNum     int32
 	bufMap    map[file.BlockID]*buffer.Buffer
 	bufPins   []file.BlockID
-	lockTable lockTable
+	lockTable concurrencyManager
 }
 
 func NewTransaction(
@@ -44,7 +44,7 @@ func NewTransaction(
 		txNum:     txNum,
 		bufMap:    make(map[file.BlockID]*buffer.Buffer),
 		bufPins:   make([]file.BlockID, 0),
-		lockTable: lockTable{},
+		lockTable: concurrencyManager{},
 	}, nil
 }
 
@@ -575,23 +575,16 @@ func (r SetStrLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
 	return lsn, nil
 }
 
-type lockTable struct {
-	mutexes sync.Map
+var lockTable sync.Map
+
+type concurrencyManager struct {
 }
 
-func (m *lockTable) xLock(blockID file.BlockID) {
-	mu, _ := m.mutexes.LoadOrStore(blockID, &sync.RWMutex{})
-	mu.(*sync.RWMutex).Lock()
+func (m *concurrencyManager) xLock(blockID file.BlockID) {
 }
 
-func (m *lockTable) sLock(blockID file.BlockID) {
-	mu, _ := m.mutexes.LoadOrStore(blockID, &sync.RWMutex{})
-	mu.(*sync.RWMutex).RLock()
+func (m *concurrencyManager) sLock(blockID file.BlockID) {
 }
 
-func (m *lockTable) release() {
-	m.mutexes.Range(func(_, value any) bool {
-		value.(sync.Locker).Unlock()
-		return true
-	})
+func (m *concurrencyManager) release() {
 }
