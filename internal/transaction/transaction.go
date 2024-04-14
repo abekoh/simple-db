@@ -44,7 +44,7 @@ func NewTransaction(
 		txNum:   txNum,
 		bufMap:  make(map[file.BlockID]*buffer.Buffer),
 		bufPins: make([]file.BlockID, 0),
-		concMgr: concurrencyManager{},
+		concMgr: newConcurrencyManager(),
 	}, nil
 }
 
