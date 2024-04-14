@@ -121,7 +121,9 @@ func (t *Transaction) unpinAll() {
 }
 
 func (t *Transaction) Int32(blockID file.BlockID, offset int32) (int32, error) {
-	t.concMgr.sLock(blockID)
+	if err := t.concMgr.sLock(blockID); err != nil {
+		return 0, fmt.Errorf("could not lock: %w", err)
+	}
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return 0, fmt.Errorf("block not pinned")
@@ -130,7 +132,9 @@ func (t *Transaction) Int32(blockID file.BlockID, offset int32) (int32, error) {
 }
 
 func (t *Transaction) Str(blockID file.BlockID, offset int32) (string, error) {
-	t.concMgr.sLock(blockID)
+	if err := t.concMgr.sLock(blockID); err != nil {
+		return "", fmt.Errorf("could not lock: %w", err)
+	}
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return "", fmt.Errorf("block not pinned")
@@ -139,7 +143,9 @@ func (t *Transaction) Str(blockID file.BlockID, offset int32) (string, error) {
 }
 
 func (t *Transaction) SetInt32(blockID file.BlockID, offset, val int32, okToLog bool) error {
-	t.concMgr.xLock(blockID)
+	if err := t.concMgr.xLock(blockID); err != nil {
+		return fmt.Errorf("could not lock: %w", err)
+	}
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return fmt.Errorf("block not pinned")
@@ -160,7 +166,9 @@ func (t *Transaction) SetInt32(blockID file.BlockID, offset, val int32, okToLog 
 }
 
 func (t *Transaction) SetStr(blockID file.BlockID, offset int32, val string, okToLog bool) error {
-	t.concMgr.xLock(blockID)
+	if err := t.concMgr.xLock(blockID); err != nil {
+		return fmt.Errorf("could not lock: %w", err)
+	}
 	buf, ok := t.bufMap[blockID]
 	if !ok {
 		return fmt.Errorf("block not pinned")
@@ -182,7 +190,9 @@ func (t *Transaction) SetStr(blockID file.BlockID, offset int32, val string, okT
 
 func (t *Transaction) Size(filename string) (int32, error) {
 	dummyBlockID := file.NewBlockID(filename, -1)
-	t.concMgr.sLock(dummyBlockID)
+	if err := t.concMgr.sLock(dummyBlockID); err != nil {
+		return 0, fmt.Errorf("could not lock: %w", err)
+	}
 	l, err := t.fm.Length(filename)
 	if err != nil {
 		return 0, fmt.Errorf("could not get length: %w", err)
@@ -192,7 +202,9 @@ func (t *Transaction) Size(filename string) (int32, error) {
 
 func (t *Transaction) Append(filename string) (file.BlockID, error) {
 	dummyBlockID := file.NewBlockID(filename, -1)
-	t.concMgr.xLock(dummyBlockID)
+	if err := t.concMgr.xLock(dummyBlockID); err != nil {
+		return file.BlockID{}, fmt.Errorf("could not lock: %w", err)
+	}
 	blockID, err := t.fm.Append(filename)
 	if err != nil {
 		return file.BlockID{}, fmt.Errorf("could not append: %w", err)
@@ -603,22 +615,22 @@ func newConcurrencyManager() concurrencyManager {
 	return m
 }
 
-func (m *concurrencyManager) sLock(blockID file.BlockID) {
+func (m *concurrencyManager) sLock(blockID file.BlockID) error {
 	ch := make(chan error)
 	m.sLockCh <- sLockRequest{
 		blockID:  blockID,
 		complete: ch,
 	}
-	<-ch
+	return <-ch
 }
 
-func (m *concurrencyManager) xLock(blockID file.BlockID) {
+func (m *concurrencyManager) xLock(blockID file.BlockID) error {
 	ch := make(chan error)
 	m.xLockCh <- xLockRequest{
 		blockID:  blockID,
 		complete: ch,
 	}
-	<-ch
+	return <-ch
 }
 
 func (m *concurrencyManager) release() {
