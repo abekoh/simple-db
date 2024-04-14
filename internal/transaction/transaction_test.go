@@ -198,6 +198,40 @@ func TestTransaction(t *testing.T) {
 			t.Log("txB: commit")
 			return nil
 		})
+		g.Go(func() error {
+			txC, err := NewTransaction(bm, fm, lm)
+			if err != nil {
+				return fmt.Errorf("failed txC: %w", err)
+			}
+			blockID1 := file.NewBlockID("testfile", 1)
+			blockID2 := file.NewBlockID("testfile", 2)
+			_, err = txC.Pin(blockID1)
+			if err != nil {
+				return fmt.Errorf("failed txC: %w", err)
+			}
+			_, err = txC.Pin(blockID2)
+			if err != nil {
+				return fmt.Errorf("failed txC: %w", err)
+			}
+			time.Sleep(500 * time.Millisecond)
+			t.Logf("txC: request xLock %s", blockID1)
+			if err := txC.SetInt32(blockID1, 0, 0, false); err != nil {
+				return fmt.Errorf("failed txC: %w", err)
+			}
+			t.Logf("txC: receive xLock %s", blockID1)
+			time.Sleep(1 * time.Second)
+			t.Logf("txC: request sLock %s", blockID2)
+			_, err = txC.Int32(blockID2, 0)
+			if err != nil {
+				return fmt.Errorf("failed txC: %w", err)
+			}
+			t.Logf("txC: receive sLock %s", blockID2)
+			if err := txC.Commit(); err != nil {
+				return fmt.Errorf("failed txC: %w", err)
+			}
+			t.Log("txC: commit")
+			return nil
+		})
 		if err := g.Wait(); err != nil {
 			t.Fatal(err)
 		}
