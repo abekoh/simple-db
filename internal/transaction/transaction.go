@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/abekoh/simple-db/internal/buffer"
 	"github.com/abekoh/simple-db/internal/file"
@@ -649,14 +650,27 @@ func (m *concurrencyManager) loop() {
 	for {
 		select {
 		case req := <-m.sLockCh:
+			sLockStartedAt := time.Now()
 			if t, ok := localLockTable[req.blockID]; ok {
 				switch t {
 				case sLock:
 					req.complete <- nil
 					continue
 				case xLock:
-					// TODO: wait
-					req.complete <- fmt.Errorf("block already locked")
+					mutex, ok := globalLockTable.Load(req.blockID)
+					if !ok {
+						req.complete <- fmt.Errorf("block not found")
+						continue
+					}
+					for time.Since(sLockStartedAt) < 10*time.Second {
+						if mutex.(*sync.RWMutex).TryRLock() {
+							localLockTable[req.blockID] = sLock
+							req.complete <- nil
+							break
+						}
+						time.Sleep(500 * time.Millisecond)
+					}
+					req.complete <- fmt.Errorf("timeout")
 					continue
 				}
 			}
@@ -666,9 +680,17 @@ func (m *concurrencyManager) loop() {
 				req.complete <- nil
 				continue
 			}
-			// TODO: wait
-			req.complete <- fmt.Errorf("block already locked")
+			for time.Since(sLockStartedAt) < 10*time.Second {
+				if mutex.(*sync.RWMutex).TryRLock() {
+					localLockTable[req.blockID] = sLock
+					req.complete <- nil
+					break
+				}
+				time.Sleep(500 * time.Millisecond)
+			}
+			req.complete <- fmt.Errorf("timeout")
 		case req := <-m.xLockCh:
+			mLockStartedAt := time.Now()
 			if t, ok := localLockTable[req.blockID]; ok {
 				switch t {
 				case sLock:
@@ -683,8 +705,15 @@ func (m *concurrencyManager) loop() {
 						req.complete <- nil
 						continue
 					}
-					// TODO: wait
-					req.complete <- fmt.Errorf("block already locked")
+					for time.Since(mLockStartedAt) < 10*time.Second {
+						if mutex.(*sync.RWMutex).TryLock() {
+							localLockTable[req.blockID] = xLock
+							req.complete <- nil
+							break
+						}
+						time.Sleep(500 * time.Millisecond)
+					}
+					req.complete <- fmt.Errorf("timeout")
 					continue
 				case xLock:
 					req.complete <- nil
@@ -697,7 +726,14 @@ func (m *concurrencyManager) loop() {
 				req.complete <- nil
 				continue
 			}
-			// TODO: wait
+			for time.Since(mLockStartedAt) < 10*time.Second {
+				if mutex.(*sync.RWMutex).TryLock() {
+					localLockTable[req.blockID] = xLock
+					req.complete <- nil
+					break
+				}
+				time.Sleep(500 * time.Millisecond)
+			}
 			req.complete <- fmt.Errorf("block already locked")
 		case <-m.releaseCh:
 			for blockID, t := range localLockTable {
