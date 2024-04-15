@@ -15,7 +15,7 @@ import (
 )
 
 func TestTransaction(t *testing.T) {
-
+	t.Parallel()
 	t.Run("Transaction", func(t *testing.T) {
 		must := func(t *testing.T, err error) {
 			t.Helper()
