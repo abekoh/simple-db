@@ -449,7 +449,7 @@ func NewSetInt32LogRecordPage(p *file.Page) SetInt32LogRecord {
 	txNum := p.Int32(tpos)
 	const fpos = tpos + 4
 	filename := p.Str(fpos)
-	bpos := fpos + file.PageStrMaxLength(filename)
+	bpos := fpos + file.PageStrMaxLengthByStr(filename)
 	blockID := file.NewBlockID(filename, p.Int32(bpos))
 	opos := bpos + 4
 	offset := p.Int32(opos)
@@ -492,7 +492,7 @@ func (r SetInt32LogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) 
 	slog.Debug("write setint32 log", "record", r)
 	const tpos = 4
 	const fpos = tpos + 4
-	bpos := fpos + file.PageStrMaxLength(r.blockID.Filename())
+	bpos := fpos + file.PageStrMaxLengthByStr(r.blockID.Filename())
 	opos := bpos + 4
 	vpos := opos + 4
 	p := file.NewPageBytes(make([]byte, vpos+4))
@@ -530,7 +530,7 @@ func NewSetStrLogRecordPage(p *file.Page) SetStrLogRecord {
 	txNum := p.Int32(tpos)
 	const fpos = tpos + 4
 	filename := p.Str(fpos)
-	bpos := fpos + file.PageStrMaxLength(filename)
+	bpos := fpos + file.PageStrMaxLengthByStr(filename)
 	blockID := file.NewBlockID(filename, p.Int32(bpos))
 	opos := bpos + 4
 	offset := p.Int32(opos)
@@ -573,10 +573,10 @@ func (r SetStrLogRecord) WriteTo(lm *log.Manager) (log.SequenceNumber, error) {
 	slog.Debug("write setst log", "record", r)
 	const tpos = 4
 	const fpos = tpos + 4
-	bpos := fpos + file.PageStrMaxLength(r.blockID.Filename())
+	bpos := fpos + file.PageStrMaxLengthByStr(r.blockID.Filename())
 	opos := bpos + 4
 	vpos := opos + 4
-	p := file.NewPageBytes(make([]byte, vpos+file.PageStrMaxLength(r.val)))
+	p := file.NewPageBytes(make([]byte, vpos+file.PageStrMaxLengthByStr(r.val)))
 	p.SetInt32(0, int32(SetStr))
 	p.SetInt32(tpos, r.txNum)
 	p.SetStr(fpos, r.blockID.Filename())

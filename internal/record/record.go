@@ -1,5 +1,7 @@
 package record
 
+import "github.com/abekoh/simple-db/internal/file"
+
 type FieldType int
 
 const (
@@ -59,4 +61,41 @@ func (s *Schema) Typ(name string) FieldType {
 
 func (s *Schema) Length(name string) int {
 	return s.fields[name].length
+}
+
+type Layout struct {
+	schema   Schema
+	offsets  map[string]int
+	slotSize int
+}
+
+func NewLayoutSchema(schema Schema) Layout {
+	offsets := make(map[string]int)
+	pos := 4
+	for _, name := range schema.FieldNames() {
+		offsets[name] = pos
+		switch schema.Typ(name) {
+		case Integer32:
+			pos += 4
+		case Varchar:
+			pos += int(file.PageStrMaxLength(schema.Length(name)))
+		}
+	}
+	return Layout{schema: schema, offsets: offsets, slotSize: pos}
+}
+
+func NewLayout(schema Schema, offsets map[string]int, slotSize int) Layout {
+	return Layout{schema: schema, offsets: offsets, slotSize: slotSize}
+}
+
+func (l Layout) Schema() Schema {
+	return l.schema
+}
+
+func (l Layout) Offset(name string) int {
+	return l.offsets[name]
+}
+
+func (l Layout) SlotSize() int {
+	return l.slotSize
 }
