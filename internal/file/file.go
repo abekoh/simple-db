@@ -84,11 +84,11 @@ func (p *Page) SetStr(offset int32, s string) {
 }
 
 func PageStrMaxLengthByStr(s string) int32 {
-	return PageStrMaxLength(len(s))
+	return PageStrMaxLength(int32(len(s)))
 }
 
-func PageStrMaxLength(l int) int32 {
-	return int32Size + int32(l)
+func PageStrMaxLength(l int32) int32 {
+	return int32Size + l
 }
 
 type Manager struct {

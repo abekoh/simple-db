@@ -16,7 +16,7 @@ const (
 
 type Field struct {
 	typ    FieldType
-	length int
+	length int32
 }
 
 type Schema struct {
@@ -35,7 +35,7 @@ func (s *Schema) AddInt32Field(name string) {
 	s.AddField(name, Field{typ: Integer32, length: 0})
 }
 
-func (s *Schema) AddStrField(name string, length int) {
+func (s *Schema) AddStrField(name string, length int32) {
 	s.AddField(name, Field{typ: Varchar, length: length})
 }
 
@@ -68,7 +68,7 @@ func (s *Schema) Typ(name string) FieldType {
 	return s.fields[name].typ
 }
 
-func (s *Schema) Length(name string) int {
+func (s *Schema) Length(name string) int32 {
 	return s.fields[name].length
 }
 
