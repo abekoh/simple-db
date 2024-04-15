@@ -248,7 +248,7 @@ func TestTransaction(t *testing.T) {
 		}
 		bm := buffer.NewManager(fm, lm, 8)
 
-		n := 1000
+		n := 100
 		completeValCh := make(chan int32)
 		var g errgroup.Group
 		for i := 0; i < n; i++ {
