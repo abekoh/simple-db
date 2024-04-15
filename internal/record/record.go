@@ -1,6 +1,11 @@
 package record
 
-import "github.com/abekoh/simple-db/internal/file"
+import (
+	"fmt"
+
+	"github.com/abekoh/simple-db/internal/file"
+	"github.com/abekoh/simple-db/internal/transaction"
+)
 
 type FieldType int
 
@@ -102,4 +107,65 @@ func (l Layout) Offset(name string) int {
 
 func (l Layout) SlotSize() int {
 	return l.slotSize
+}
+
+type RecordPage struct {
+	tx      *transaction.Transaction
+	blockID file.BlockID
+	layout  Layout
+}
+
+func NewRecordPage(tx *transaction.Transaction, blockID file.BlockID, layout Layout) (*RecordPage, error) {
+	if _, err := tx.Pin(blockID); err != nil {
+		return nil, fmt.Errorf("could not pin block: %w", err)
+	}
+	return &RecordPage{tx: tx, blockID: blockID, layout: layout}, nil
+}
+
+func (rp *RecordPage) Int32(slot int, fieldName string) (int32, error) {
+	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
+	val, err := rp.tx.Int32(rp.blockID, int32(fieldPos))
+	if err != nil {
+		return 0, fmt.Errorf("could not read int32: %w", err)
+	}
+	return val, nil
+}
+
+func (rp *RecordPage) Str(slot int, fieldName string) (string, error) {
+	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
+	val, err := rp.tx.Str(rp.blockID, int32(fieldPos))
+	if err != nil {
+		return "", fmt.Errorf("could not read string: %w", err)
+	}
+	return val, nil
+}
+
+func (rp *RecordPage) SetInt32(slot int, fieldName string, n int32) error {
+	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
+	if err := rp.tx.SetInt32(rp.blockID, int32(fieldPos), n, false); err != nil {
+		return fmt.Errorf("could not set int32: %w", err)
+	}
+	return nil
+}
+
+func (rp *RecordPage) SetStr(slot int, fieldName, s string) error {
+	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
+	if err := rp.tx.SetStr(rp.blockID, int32(fieldPos), s, false); err != nil {
+		return fmt.Errorf("could not set string: %w", err)
+	}
+	return nil
+}
+
+func (rp *RecordPage) Format() {
+	slot := 0
+	for rp.isValidSlot(slot) {
+	}
+}
+
+func (rp *RecordPage) offset(slot int) int {
+	return slot * rp.layout.SlotSize()
+}
+
+func (rp *RecordPage) isValidSlot(slot int) bool {
+	return int32(rp.offset(slot+1)) <= rp.tx.BlockSize()
 }
