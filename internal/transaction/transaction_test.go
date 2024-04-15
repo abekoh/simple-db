@@ -248,13 +248,13 @@ func TestTransaction(t *testing.T) {
 		}
 		bm := buffer.NewManager(fm, lm, 8)
 
-		n := 100
+		n := 1000
 		completeValCh := make(chan int32)
 		var g errgroup.Group
 		for i := 0; i < n; i++ {
 			i := i
 			g.Go(func() error {
-				time.Sleep(time.Duration(i) * 10 * time.Millisecond)
+				time.Sleep(time.Duration(i) * time.Millisecond)
 				tx, err := NewTransaction(bm, fm, lm)
 				if err != nil {
 					return err
