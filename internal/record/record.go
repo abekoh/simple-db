@@ -18,6 +18,10 @@ type Schema struct {
 	fields map[string]Field
 }
 
+func NewSchema() Schema {
+	return Schema{fields: make(map[string]Field)}
+}
+
 func (s *Schema) AddField(name string, f Field) {
 	s.fields[name] = f
 }
