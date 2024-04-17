@@ -65,11 +65,11 @@ func TestRecordPage(t *testing.T) {
 	}
 
 	t.Log("Filling the page with random records.")
-	slot, err := rp.InsertAfter(-1)
+	slot, ok, err := rp.InsertAfter(-1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for slot >= 0 {
+	for ok {
 		n := rand.Int32N(50)
 		if err := rp.SetInt32(slot, "A", n); err != nil {
 			t.Fatal(err)
@@ -79,7 +79,7 @@ func TestRecordPage(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("inserting into slot %d : { %d, %s }", slot, n, s)
-		slot, err = rp.InsertAfter(slot)
+		slot, ok, err = rp.InsertAfter(slot)
 		if err != nil {
 			t.Fatal(err)
 		}

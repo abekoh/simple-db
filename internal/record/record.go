@@ -223,21 +223,21 @@ func (rp *RecordPage) Format() error {
 	return nil
 }
 
-func (rp *RecordPage) NextAfter(slot int32) (int32, error) {
+func (rp *RecordPage) NextAfter(slot int32) (int32, bool, error) {
 	return rp.searchAfter(slot, Empty)
 }
 
-func (rp *RecordPage) InsertAfter(slot int32) (int32, error) {
-	newSlot, err := rp.searchAfter(slot, Empty)
+func (rp *RecordPage) InsertAfter(slot int32) (int32, bool, error) {
+	newSlot, ok, err := rp.searchAfter(slot, Empty)
 	if err != nil {
-		return -1, fmt.Errorf("could not search after: %w", err)
+		return -1, false, fmt.Errorf("could not search after: %w", err)
 	}
-	if newSlot >= 0 {
+	if ok {
 		if err := rp.setFlag(newSlot, Used); err != nil {
-			return -1, fmt.Errorf("could not set flag: %w", err)
+			return -1, false, fmt.Errorf("could not set flag: %w", err)
 		}
 	}
-	return newSlot, nil
+	return newSlot, ok, nil
 }
 
 func (rp *RecordPage) offset(slot int32) int32 {
@@ -248,19 +248,19 @@ func (rp *RecordPage) isValidSlot(slot int32) bool {
 	return rp.offset(slot+1) <= rp.tx.BlockSize()
 }
 
-func (rp *RecordPage) searchAfter(slot int32, flag Flag) (int32, error) {
+func (rp *RecordPage) searchAfter(slot int32, flag Flag) (int32, bool, error) {
 	slot++
 	for rp.isValidSlot(slot) {
 		val, err := rp.tx.Int32(rp.blockID, rp.offset(slot))
 		if err != nil {
-			return -1, fmt.Errorf("could not read int32: %w", err)
+			return -1, false, fmt.Errorf("could not read int32: %w", err)
 		}
 		if Flag(val) == flag {
-			return slot, nil
+			return slot, true, nil
 		}
 		slot++
 	}
-	return -1, nil
+	return -1, false, nil
 }
 
 func (rp *RecordPage) setFlag(slot int32, flag Flag) error {
