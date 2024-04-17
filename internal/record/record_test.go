@@ -2,6 +2,7 @@ package record
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/buffer"
@@ -67,8 +68,7 @@ func TestRecordPage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i := 0
-	for ok {
+	for i := 0; ok; i++ {
 		if err := rp.SetInt32(slot, "A", int32(i)); err != nil {
 			t.Fatal(err)
 		}
@@ -76,6 +76,7 @@ func TestRecordPage(t *testing.T) {
 		if err := rp.SetStr(slot, "B", s); err != nil {
 			t.Fatal(err)
 		}
+		t.Logf("inserted at slot %d: A=%d, B=%s", slot, i, s)
 		slot, ok, err = rp.InsertAfter(slot)
 		if err != nil {
 			t.Fatal(err)
@@ -109,5 +110,13 @@ func TestRecordPage(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	t.Log(got)
+	expected := []string{
+		"slot 0: A=0, B=rec0",
+		"slot 1: A=1, B=rec1",
+		"slot 3: A=3, B=rec3",
+		"slot 5: A=5, B=rec5",
+	}
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("expected %v, got %v", expected, got)
+	}
 }
