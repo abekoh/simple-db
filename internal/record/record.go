@@ -224,7 +224,7 @@ func (rp *RecordPage) Format() error {
 }
 
 func (rp *RecordPage) NextAfter(slot int32) (int32, bool, error) {
-	return rp.searchAfter(slot, Empty)
+	return rp.searchAfter(slot, Used)
 }
 
 func (rp *RecordPage) InsertAfter(slot int32) (int32, bool, error) {
