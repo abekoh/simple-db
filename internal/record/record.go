@@ -131,7 +131,7 @@ func NewRecordPage(tx *transaction.Transaction, blockID file.BlockID, layout Lay
 
 func (rp *RecordPage) Int32(slot int32, fieldName string) (int32, error) {
 	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
-	val, err := rp.tx.Int32(rp.blockID, int32(fieldPos))
+	val, err := rp.tx.Int32(rp.blockID, fieldPos)
 	if err != nil {
 		return 0, fmt.Errorf("could not read int32: %w", err)
 	}
@@ -140,7 +140,7 @@ func (rp *RecordPage) Int32(slot int32, fieldName string) (int32, error) {
 
 func (rp *RecordPage) Str(slot int32, fieldName string) (string, error) {
 	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
-	val, err := rp.tx.Str(rp.blockID, int32(fieldPos))
+	val, err := rp.tx.Str(rp.blockID, fieldPos)
 	if err != nil {
 		return "", fmt.Errorf("could not read string: %w", err)
 	}
@@ -149,7 +149,7 @@ func (rp *RecordPage) Str(slot int32, fieldName string) (string, error) {
 
 func (rp *RecordPage) SetInt32(slot int32, fieldName string, n int32) error {
 	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
-	if err := rp.tx.SetInt32(rp.blockID, int32(fieldPos), n, false); err != nil {
+	if err := rp.tx.SetInt32(rp.blockID, fieldPos, n, false); err != nil {
 		return fmt.Errorf("could not set int32: %w", err)
 	}
 	return nil
@@ -157,7 +157,7 @@ func (rp *RecordPage) SetInt32(slot int32, fieldName string, n int32) error {
 
 func (rp *RecordPage) SetStr(slot int32, fieldName, s string) error {
 	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
-	if err := rp.tx.SetStr(rp.blockID, int32(fieldPos), s, false); err != nil {
+	if err := rp.tx.SetStr(rp.blockID, fieldPos, s, false); err != nil {
 		return fmt.Errorf("could not set string: %w", err)
 	}
 	return nil

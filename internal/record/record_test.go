@@ -1,6 +1,7 @@
 package record
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"testing"
 
@@ -73,11 +74,11 @@ func TestRecordPage(t *testing.T) {
 		if err := rp.SetInt32(slot, "A", n); err != nil {
 			t.Fatal(err)
 		}
-		s := "rec" + string(n)
+		s := fmt.Sprintf("rec%d", n)
 		if err := rp.SetStr(slot, "B", s); err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("inserting into slot %d : { %d, %s}", slot, n, s)
+		t.Logf("inserting into slot %d : { %d, %s }", slot, n, s)
 		slot, err = rp.InsertAfter(slot)
 		if err != nil {
 			t.Fatal(err)
