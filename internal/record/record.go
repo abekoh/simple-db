@@ -180,6 +180,7 @@ func (rp *RecordPage) SetStr(slot int32, fieldName, s string) error {
 	if !ok {
 		return fmt.Errorf("field not found: %s", fieldName)
 	}
+	// TODO: validate length
 	if err := rp.tx.SetStr(rp.blockID, rp.offset(slot)+layoutOffset, s, true); err != nil {
 		return fmt.Errorf("could not set string: %w", err)
 	}
