@@ -27,56 +27,65 @@ type Field struct {
 }
 
 type Schema struct {
-	fields map[string]Field
+	fields    []string
+	fieldsMap map[string]Field
 }
 
 func NewSchema() Schema {
-	return Schema{fields: make(map[string]Field)}
+	return Schema{
+		fields:    make([]string, 0),
+		fieldsMap: make(map[string]Field),
+	}
 }
 
-func (s *Schema) AddField(name string, f Field) {
-	s.fields[name] = f
+func (s *Schema) addField(name string, f Field) {
+	s.fields = append(s.fields, name)
+	s.fieldsMap[name] = f
 }
 
 func (s *Schema) AddInt32Field(name string) {
-	s.AddField(name, Field{typ: Integer32, length: 0})
+	s.addField(name, Field{typ: Integer32, length: 0})
 }
 
 func (s *Schema) AddStrField(name string, length int32) {
-	s.AddField(name, Field{typ: Varchar, length: length})
+	s.addField(name, Field{typ: Varchar, length: length})
 }
 
 func (s *Schema) Add(name string, schema Schema) {
 	typ := schema.Typ(name)
 	length := schema.Length(name)
-	s.AddField(name, Field{typ: typ, length: length})
+	s.addField(name, Field{typ: typ, length: length})
 }
 
 func (s *Schema) AddAll(schema Schema) {
-	for name, field := range schema.fields {
-		s.AddField(name, field)
+	for _, field := range schema.fields {
+		f, ok := schema.fieldsMap[field]
+		if !ok {
+			panic("field not found")
+		}
+		s.addField(field, f)
 	}
 }
 
 func (s *Schema) FieldNames() []string {
-	names := make([]string, 0, len(s.fields))
-	for name := range s.fields {
+	names := make([]string, 0, len(s.fieldsMap))
+	for name := range s.fieldsMap {
 		names = append(names, name)
 	}
 	return names
 }
 
 func (s *Schema) HasField(name string) bool {
-	_, ok := s.fields[name]
+	_, ok := s.fieldsMap[name]
 	return ok
 }
 
 func (s *Schema) Typ(name string) FieldType {
-	return s.fields[name].typ
+	return s.fieldsMap[name].typ
 }
 
 func (s *Schema) Length(name string) int32 {
-	return s.fields[name].length
+	return s.fieldsMap[name].length
 }
 
 type Layout struct {
