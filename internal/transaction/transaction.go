@@ -659,19 +659,7 @@ func (m *concurrencyManager) loop() {
 				case sLock:
 					req.complete <- nil
 				case xLock:
-					mutex, ok := globalLockTable.Load(req.blockID)
-					if !ok {
-						req.complete <- fmt.Errorf("block not found")
-					} else if mutex.(*sync.RWMutex).TryRLock() {
-						localLockTable[req.blockID] = sLock
-						req.complete <- nil
-					} else if time.Now().Before(req.expiredAt) {
-						// FIXME: push to the back of the queue, but old request must be prioritized
-						// implement a priority queue instead of a channel
-						m.sLockCh <- req
-					} else {
-						req.complete <- fmt.Errorf("timeout")
-					}
+					req.complete <- nil
 				}
 			} else {
 				mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
