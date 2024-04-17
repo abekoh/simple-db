@@ -255,7 +255,7 @@ func (rp *RecordPage) searchAfter(slot int32, flag Flag) (int32, error) {
 		if err != nil {
 			return -1, fmt.Errorf("could not read int32: %w", err)
 		}
-		if val == int32(flag) {
+		if Flag(val) == flag {
 			return slot, nil
 		}
 		slot++
