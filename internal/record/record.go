@@ -108,8 +108,9 @@ func (l Layout) Schema() *Schema {
 	return &l.schema
 }
 
-func (l Layout) Offset(name string) int32 {
-	return l.offsets[name]
+func (l Layout) Offset(name string) (int32, bool) {
+	r, ok := l.offsets[name]
+	return r, ok
 }
 
 func (l Layout) SlotSize() int32 {
@@ -130,8 +131,12 @@ func NewRecordPage(tx *transaction.Transaction, blockID file.BlockID, layout Lay
 }
 
 func (rp *RecordPage) Int32(slot int32, fieldName string) (int32, error) {
-	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
-	val, err := rp.tx.Int32(rp.blockID, fieldPos)
+	layoutOffset, ok := rp.layout.Offset(fieldName)
+	if !ok {
+		return 0, fmt.Errorf("field not found: %s", fieldName)
+
+	}
+	val, err := rp.tx.Int32(rp.blockID, rp.offset(slot)+layoutOffset)
 	if err != nil {
 		return 0, fmt.Errorf("could not read int32: %w", err)
 	}
@@ -139,8 +144,11 @@ func (rp *RecordPage) Int32(slot int32, fieldName string) (int32, error) {
 }
 
 func (rp *RecordPage) Str(slot int32, fieldName string) (string, error) {
-	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
-	val, err := rp.tx.Str(rp.blockID, fieldPos)
+	layoutOffset, ok := rp.layout.Offset(fieldName)
+	if !ok {
+		return "", fmt.Errorf("field not found: %s", fieldName)
+	}
+	val, err := rp.tx.Str(rp.blockID, rp.offset(slot)+layoutOffset)
 	if err != nil {
 		return "", fmt.Errorf("could not read string: %w", err)
 	}
@@ -148,16 +156,22 @@ func (rp *RecordPage) Str(slot int32, fieldName string) (string, error) {
 }
 
 func (rp *RecordPage) SetInt32(slot int32, fieldName string, n int32) error {
-	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
-	if err := rp.tx.SetInt32(rp.blockID, fieldPos, n, false); err != nil {
+	layoutOffset, ok := rp.layout.Offset(fieldName)
+	if !ok {
+		return fmt.Errorf("field not found: %s", fieldName)
+	}
+	if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot)+layoutOffset, n, false); err != nil {
 		return fmt.Errorf("could not set int32: %w", err)
 	}
 	return nil
 }
 
 func (rp *RecordPage) SetStr(slot int32, fieldName, s string) error {
-	fieldPos := rp.offset(slot) + rp.layout.Offset(fieldName)
-	if err := rp.tx.SetStr(rp.blockID, fieldPos, s, false); err != nil {
+	layoutOffset, ok := rp.layout.Offset(fieldName)
+	if !ok {
+		return fmt.Errorf("field not found: %s", fieldName)
+	}
+	if err := rp.tx.SetStr(rp.blockID, rp.offset(slot)+layoutOffset, s, false); err != nil {
 		return fmt.Errorf("could not set string: %w", err)
 	}
 	return nil
@@ -178,14 +192,18 @@ func (rp *RecordPage) Format() error {
 		}
 		schema := rp.layout.Schema()
 		for _, name := range schema.FieldNames() {
-			fieldPos := rp.offset(slot) + rp.layout.Offset(name)
+			layoutOffset, ok := rp.layout.Offset(name)
+			if !ok {
+				return fmt.Errorf("field not found: %s", name)
+			}
+			fieldPos := rp.offset(slot) + layoutOffset
 			switch schema.Typ(name) {
 			case Integer32:
-				if err := rp.tx.SetInt32(rp.blockID, int32(fieldPos), 0, false); err != nil {
+				if err := rp.tx.SetInt32(rp.blockID, fieldPos, 0, false); err != nil {
 					return fmt.Errorf("could not format: %w", err)
 				}
 			case Varchar:
-				if err := rp.tx.SetStr(rp.blockID, int32(fieldPos), "", false); err != nil {
+				if err := rp.tx.SetStr(rp.blockID, fieldPos, "", false); err != nil {
 					return fmt.Errorf("could not format: %w", err)
 				}
 			}

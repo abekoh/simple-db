@@ -18,11 +18,11 @@ func TestLayout(t *testing.T) {
 	s.AddInt32Field("A")
 	s.AddStrField("B", 9)
 	l := NewLayoutSchema(s)
-	if l.Offset("A") != 4 {
-		t.Errorf("expected 0, got %d", l.Offset("A"))
+	if offset, ok := l.Offset("A"); !ok || offset != 4 {
+		t.Errorf("expected 0, got %d", offset)
 	}
-	if l.Offset("B") != 8 {
-		t.Errorf("expected 8, got %d", l.Offset("B"))
+	if offset, ok := l.Offset("B"); !ok || offset != 8 {
+		t.Errorf("expected 8, got %d", offset)
 	}
 }
 
