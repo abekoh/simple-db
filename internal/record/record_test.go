@@ -74,7 +74,7 @@ func TestRecordPage(t *testing.T) {
 		if err := rp.SetInt32(slot, "A", n); err != nil {
 			t.Fatal(err)
 		}
-		s := fmt.Sprintf("regwoiwaogihwaec%d", n)
+		s := fmt.Sprintf("rec%d", n)
 		if err := rp.SetStr(slot, "B", s); err != nil {
 			t.Fatal(err)
 		}
