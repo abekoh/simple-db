@@ -164,24 +164,23 @@ func (rp *RecordPage) Str(slot int32, fieldName string) (string, error) {
 	return val, nil
 }
 
-func (rp *RecordPage) SetInt32(slot int32, fieldName string, n int32) error {
+func (rp *RecordPage) SetInt32(slot int32, fieldName string, val int32) error {
 	layoutOffset, ok := rp.layout.Offset(fieldName)
 	if !ok {
 		return fmt.Errorf("field not found: %s", fieldName)
 	}
-	if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot)+layoutOffset, n, true); err != nil {
+	if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot)+layoutOffset, val, true); err != nil {
 		return fmt.Errorf("could not set int32: %w", err)
 	}
 	return nil
 }
 
-func (rp *RecordPage) SetStr(slot int32, fieldName, s string) error {
+func (rp *RecordPage) SetStr(slot int32, fieldName, val string) error {
 	layoutOffset, ok := rp.layout.Offset(fieldName)
 	if !ok {
 		return fmt.Errorf("field not found: %s", fieldName)
 	}
-	// TODO: validate length
-	if err := rp.tx.SetStr(rp.blockID, rp.offset(slot)+layoutOffset, s, true); err != nil {
+	if err := rp.tx.SetStr(rp.blockID, rp.offset(slot)+layoutOffset, val, true); err != nil {
 		return fmt.Errorf("could not set string: %w", err)
 	}
 	return nil
