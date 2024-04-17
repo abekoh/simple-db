@@ -2,7 +2,6 @@ package record
 
 import (
 	"fmt"
-	"math/rand/v2"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/buffer"
@@ -64,24 +63,51 @@ func TestRecordPage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Filling the page with random records.")
 	slot, ok, err := rp.InsertAfter(-1)
 	if err != nil {
 		t.Fatal(err)
 	}
+	i := 0
 	for ok {
-		n := rand.Int32N(50)
-		if err := rp.SetInt32(slot, "A", n); err != nil {
+		if err := rp.SetInt32(slot, "A", int32(i)); err != nil {
 			t.Fatal(err)
 		}
-		s := fmt.Sprintf("rec%d", n)
+		s := fmt.Sprintf("rec%d", i)
 		if err := rp.SetStr(slot, "B", s); err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("inserting into slot %d : { %d, %s }", slot, n, s)
 		slot, ok, err = rp.InsertAfter(slot)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
+
+	if err := rp.Delete(2); err != nil {
+		t.Fatal(err)
+	}
+	if err := rp.Delete(4); err != nil {
+		t.Fatal(err)
+	}
+
+	slot, ok, err = rp.NextAfter(-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := make([]string, 0)
+	for ok {
+		a, err := rp.Int32(slot, "A")
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := rp.Str(slot, "B")
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, fmt.Sprintf("slot %d: A=%d, B=%s", slot, a, b))
+		slot, ok, err = rp.NextAfter(slot)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Log(got)
 }
