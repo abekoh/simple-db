@@ -169,7 +169,7 @@ func (rp *RecordPage) SetInt32(slot int32, fieldName string, n int32) error {
 	if !ok {
 		return fmt.Errorf("field not found: %s", fieldName)
 	}
-	if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot)+layoutOffset, n, false); err != nil {
+	if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot)+layoutOffset, n, true); err != nil {
 		return fmt.Errorf("could not set int32: %w", err)
 	}
 	return nil
@@ -180,7 +180,7 @@ func (rp *RecordPage) SetStr(slot int32, fieldName, s string) error {
 	if !ok {
 		return fmt.Errorf("field not found: %s", fieldName)
 	}
-	if err := rp.tx.SetStr(rp.blockID, rp.offset(slot)+layoutOffset, s, false); err != nil {
+	if err := rp.tx.SetStr(rp.blockID, rp.offset(slot)+layoutOffset, s, true); err != nil {
 		return fmt.Errorf("could not set string: %w", err)
 	}
 	return nil
