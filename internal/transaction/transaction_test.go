@@ -236,8 +236,7 @@ func TestTransaction(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
-	t.Run("Concurrency 2", func(t *testing.T) {
-		t.Skip()
+	t.Run("Concurrency sLock after xLock", func(t *testing.T) {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 		fm, err := file.NewManager(t.TempDir(), 128)
 		if err != nil {
@@ -249,58 +248,22 @@ func TestTransaction(t *testing.T) {
 		}
 		bm := buffer.NewManager(fm, lm, 8)
 
-		n := 100
-		completeValCh := make(chan int32)
-		var g errgroup.Group
-		for i := 0; i < n; i++ {
-			i := i
-			g.Go(func() error {
-				time.Sleep(time.Duration(i) * time.Millisecond)
-				tx, err := NewTransaction(bm, fm, lm)
-				if err != nil {
-					return err
-				}
-				blockID := file.NewBlockID("testfile", 1)
-				_, err = tx.Pin(blockID)
-				if err != nil {
-					return err
-				}
-				val := int32(i)
-				if err := tx.SetInt32(blockID, 0, val, false); err != nil {
-					return err
-				}
-				if err := tx.Commit(); err != nil {
-					return err
-				}
-				completeValCh <- val
-				return nil
-			})
-		}
-		var values []int32
-		completeCh := make(chan struct{})
-		go func() {
-			count := 0
-			for val := range completeValCh {
-				values = append(values, val)
-				count++
-				if count == n {
-					close(completeCh)
-				}
-			}
-		}()
-		if err := g.Wait(); err != nil {
+		tx, err := NewTransaction(bm, fm, lm)
+		if err != nil {
 			t.Fatal(err)
 		}
-		<-completeCh
-		if len(values) != n {
-			t.Errorf("expected %d, got %d", n, len(values))
+		blockID1 := file.NewBlockID("testfile", 1)
+		_, err = tx.Pin(blockID1)
+		if err != nil {
+			t.Fatal(err)
 		}
-		expected := make([]int32, n)
-		for i := range expected {
-			expected[i] = int32(i)
+		err = tx.SetInt32(blockID1, 0, 0, true)
+		if err != nil {
+			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(values, expected) {
-			t.Errorf("expected %v, got %v", expected, values)
+		_, err = tx.Int32(blockID1, 0)
+		if err != nil {
+			t.Fatal(err)
 		}
 	})
 }
