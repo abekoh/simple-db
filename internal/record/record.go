@@ -234,7 +234,7 @@ func (rp *RecordPage) InsertAfter(slot int32) (int32, bool, error) {
 	}
 	if ok {
 		if err := rp.setFlag(newSlot, Used); err != nil {
-			return -1, false, fmt.Errorf("could not set flag: %w", err)
+			return -1, ok, fmt.Errorf("could not set flag: %w", err)
 		}
 	}
 	return newSlot, ok, nil
