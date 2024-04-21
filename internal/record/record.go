@@ -356,8 +356,7 @@ func (ts *TableScan) Next() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("could not next after: %w", err)
 	}
-	for ok {
-		ts.currentSlot = cs
+	for !ok {
 		lastBlock, err := ts.atLastBlock()
 		if err != nil {
 			return false, fmt.Errorf("could not at last block: %w", err)
@@ -368,10 +367,100 @@ func (ts *TableScan) Next() (bool, error) {
 		if err := ts.moveToBlock(ts.rp.blockID.Num() + 1); err != nil {
 			return false, fmt.Errorf("could not move to block: %w", err)
 		}
-		cs, ok, err = ts.rp.NextAfter(ts.currentSlot)
+		cs, ok, err = ts.rp.NextAfter(cs)
 		if err != nil {
 			return false, fmt.Errorf("could not next after: %w", err)
 		}
 	}
+	ts.currentSlot = cs
 	return true, nil
+}
+
+func (ts *TableScan) Int32(fieldName string) (int32, error) {
+	r, err := ts.rp.Int32(ts.currentSlot, fieldName)
+	if err != nil {
+		return 0, fmt.Errorf("could not read int32: %w", err)
+	}
+	return r, nil
+}
+
+func (ts *TableScan) Str(fieldName string) (string, error) {
+	r, err := ts.rp.Str(ts.currentSlot, fieldName)
+	if err != nil {
+		return "", fmt.Errorf("could not read string: %w", err)
+	}
+	return r, nil
+}
+
+func (ts *TableScan) Val(fieldName string) (any, error) {
+	switch ts.layout.Schema().Typ(fieldName) {
+	case Integer32:
+		return ts.Int32(fieldName)
+	case Varchar:
+		return ts.Str(fieldName)
+	}
+	return nil, fmt.Errorf("unknown type")
+}
+
+func (ts *TableScan) HasField(fieldName string) bool {
+	return ts.layout.Schema().HasField(fieldName)
+}
+
+func (ts *TableScan) SetInt32(fieldName string, val int32) error {
+	if err := ts.rp.SetInt32(ts.currentSlot, fieldName, val); err != nil {
+		return fmt.Errorf("could not set int32: %w", err)
+	}
+	return nil
+}
+
+func (ts *TableScan) SetStr(fieldName, val string) error {
+	if err := ts.rp.SetStr(ts.currentSlot, fieldName, val); err != nil {
+		return fmt.Errorf("could not set string: %w", err)
+	}
+	return nil
+}
+
+func (ts *TableScan) SetVal(fieldName string, val any) error {
+	switch v := val.(type) {
+	case int32:
+		return ts.SetInt32(fieldName, v)
+	case string:
+		return ts.SetStr(fieldName, v)
+	}
+	return fmt.Errorf("unknown type")
+}
+
+func (ts *TableScan) Insert() error {
+	cs, ok, err := ts.rp.InsertAfter(ts.currentSlot)
+	if err != nil {
+		return fmt.Errorf("could not insert after: %w", err)
+	}
+	if !ok {
+		lastBlock, err := ts.atLastBlock()
+		if err != nil {
+			return fmt.Errorf("could not at last block: %w", err)
+		}
+		if lastBlock {
+			if err := ts.moveToNewBlock(); err != nil {
+				return fmt.Errorf("could not move to new block: %w", err)
+			}
+		} else {
+			if err := ts.moveToBlock(ts.rp.blockID.Num() + 1); err != nil {
+				return fmt.Errorf("could not move to block: %w", err)
+			}
+		}
+		cs, ok, err = ts.rp.InsertAfter(ts.currentSlot)
+		if err != nil {
+			return fmt.Errorf("could not insert after: %w", err)
+		}
+	}
+	ts.currentSlot = cs
+	return nil
+}
+
+func (ts *TableScan) Delete() error {
+	if err := ts.rp.Delete(ts.currentSlot); err != nil {
+		return fmt.Errorf("could not delete: %w", err)
+	}
+	return nil
 }
