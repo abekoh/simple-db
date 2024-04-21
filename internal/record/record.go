@@ -94,7 +94,7 @@ type Layout struct {
 	slotSize int32
 }
 
-func NewLayoutSchema(schema Schema) Layout {
+func NewLayoutSchema(schema Schema) *Layout {
 	offsets := make(map[string]int32)
 	var pos int32 = 4
 	for _, name := range schema.FieldNames() {
@@ -106,11 +106,11 @@ func NewLayoutSchema(schema Schema) Layout {
 			pos += file.PageStrMaxLength(schema.Length(name))
 		}
 	}
-	return Layout{schema: schema, offsets: offsets, slotSize: pos}
+	return &Layout{schema: schema, offsets: offsets, slotSize: pos}
 }
 
-func NewLayout(schema Schema, offsets map[string]int32, slotSize int32) Layout {
-	return Layout{schema: schema, offsets: offsets, slotSize: slotSize}
+func NewLayout(schema Schema, offsets map[string]int32, slotSize int32) *Layout {
+	return &Layout{schema: schema, offsets: offsets, slotSize: slotSize}
 }
 
 func (l Layout) Schema() *Schema {
@@ -129,10 +129,10 @@ func (l Layout) SlotSize() int32 {
 type RecordPage struct {
 	tx      *transaction.Transaction
 	blockID file.BlockID
-	layout  Layout
+	layout  *Layout
 }
 
-func NewRecordPage(tx *transaction.Transaction, blockID file.BlockID, layout Layout) (*RecordPage, error) {
+func NewRecordPage(tx *transaction.Transaction, blockID file.BlockID, layout *Layout) (*RecordPage, error) {
 	if _, err := tx.Pin(blockID); err != nil {
 		return nil, fmt.Errorf("could not pin block: %w", err)
 	}
