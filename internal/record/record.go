@@ -274,13 +274,13 @@ type TableScan struct {
 	tx          *transaction.Transaction
 	layout      *Layout
 	rp          *RecordPage
+	filename    string
 	currentSlot int32
 }
 
 func NewTableScan(tx *transaction.Transaction, tableName string, layout *Layout) (*TableScan, error) {
-	ts := &TableScan{tx: tx, layout: layout}
-	filename := fmt.Sprintf("%s.tbl", tableName)
-	l, err := tx.Size(filename)
+	ts := &TableScan{tx: tx, layout: layout, filename: fmt.Sprintf("%s.tbl", tableName)}
+	l, err := tx.Size(ts.filename)
 	if err != nil {
 		return nil, fmt.Errorf("could not get size: %w", err)
 	}
@@ -297,18 +297,81 @@ func NewTableScan(tx *transaction.Transaction, tableName string, layout *Layout)
 }
 
 func (ts *TableScan) moveToNewBlock() error {
+	if err := ts.Close(); err != nil {
+		return fmt.Errorf("could not close: %w", err)
+	}
+	blockID, err := ts.tx.Append(ts.filename)
+	if err != nil {
+		return fmt.Errorf("could not append: %w", err)
+	}
+	rp, err := NewRecordPage(ts.tx, blockID, ts.layout)
+	if err != nil {
+		return fmt.Errorf("could not create new record page: %w", err)
+	}
+	ts.rp = rp
+	if err := ts.rp.Format(); err != nil {
+		return fmt.Errorf("could not format: %w", err)
+	}
+	ts.currentSlot = -1
 	return nil
 }
 
-func (ts *TableScan) moveToBlock() error {
+func (ts *TableScan) moveToBlock(blockNum int32) error {
+	if err := ts.Close(); err != nil {
+		return fmt.Errorf("could not close: %w", err)
+	}
+	blockID := file.NewBlockID(ts.filename, blockNum)
+	rp, err := NewRecordPage(ts.tx, blockID, ts.layout)
+	if err != nil {
+		return fmt.Errorf("could not create new record page: %w", err)
+	}
+	ts.rp = rp
+	ts.currentSlot = -1
 	return nil
 }
 
-func (ts *TableScan) unpin() error {
+func (ts *TableScan) atLastBlock() (bool, error) {
+	s, err := ts.tx.Size(ts.filename)
+	if err != nil {
+		return false, fmt.Errorf("could not get size: %w", err)
+	}
+	return ts.rp.blockID.Num() == s-1, nil
+}
+
+func (ts *TableScan) Close() error {
 	if ts.rp != nil {
 		if err := ts.tx.Unpin(ts.rp.blockID); err != nil {
 			return fmt.Errorf("failed to unpin: %w", err)
 		}
 	}
 	return nil
+}
+
+func (ts *TableScan) BeforeFirst() {
+	ts.moveToBlock(0)
+}
+
+func (ts *TableScan) Next() (bool, error) {
+	cs, ok, err := ts.rp.NextAfter(ts.currentSlot)
+	if err != nil {
+		return false, fmt.Errorf("could not next after: %w", err)
+	}
+	for ok {
+		ts.currentSlot = cs
+		lastBlock, err := ts.atLastBlock()
+		if err != nil {
+			return false, fmt.Errorf("could not at last block: %w", err)
+		}
+		if lastBlock {
+			return false, nil
+		}
+		if err := ts.moveToBlock(ts.rp.blockID.Num() + 1); err != nil {
+			return false, fmt.Errorf("could not move to block: %w", err)
+		}
+		cs, ok, err = ts.rp.NextAfter(ts.currentSlot)
+		if err != nil {
+			return false, fmt.Errorf("could not next after: %w", err)
+		}
+	}
+	return true, nil
 }
