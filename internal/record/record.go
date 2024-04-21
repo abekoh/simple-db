@@ -464,3 +464,42 @@ func (ts *TableScan) Delete() error {
 	}
 	return nil
 }
+
+func (ts *TableScan) MoveToRID(rid RID) error {
+	if err := ts.Close(); err != nil {
+		return fmt.Errorf("could not close: %w", err)
+	}
+	blockID := file.NewBlockID(ts.filename, rid.BlockNum())
+	rp, err := NewRecordPage(ts.tx, blockID, ts.layout)
+	if err != nil {
+		return fmt.Errorf("could not create new record page: %w", err)
+	}
+	ts.rp = rp
+	ts.currentSlot = rid.Slot()
+	return nil
+}
+
+func (ts *TableScan) RID() RID {
+	return NewRID(ts.rp.blockID.Num(), ts.currentSlot)
+}
+
+type RID struct {
+	blockNum int32
+	slot     int32
+}
+
+func NewRID(blockNum, slot int32) RID {
+	return RID{blockNum: blockNum, slot: slot}
+}
+
+func (r RID) BlockNum() int32 {
+	return r.blockNum
+}
+
+func (r RID) Slot() int32 {
+	return r.slot
+}
+
+func (r RID) String() string {
+	return fmt.Sprintf("RID{blockNum=%d, slot=%d}", r.blockNum, r.slot)
+}
