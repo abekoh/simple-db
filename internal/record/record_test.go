@@ -163,4 +163,63 @@ func TestTableScan(t *testing.T) {
 		}
 		t.Logf("inserted: %v, {%v, %v}", ts.RID(), i, s)
 	}
+
+	ts.BeforeFirst()
+	ok, err := ts.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for ok {
+		a, err := ts.Int32("A")
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := ts.Str("B")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("scanned: %v, {%v, %v}", ts.RID(), a, b)
+		if a%2 == 0 {
+			if err := ts.Delete(); err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("deleted: %v", ts.RID())
+		}
+		ok, err = ts.Next()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	ts.BeforeFirst()
+	ok, err = ts.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := make([]string, 0)
+	for ok {
+		a, err := ts.Int32("A")
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := ts.Str("B")
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, fmt.Sprintf("%v, {%v, %v}", ts.RID(), a, b))
+		ok, err = ts.Next()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	expected := []string{
+		"RID{blockNum=0, slot=1}, {1, rec1}",
+		"RID{blockNum=0, slot=3}, {3, rec3}",
+		"RID{blockNum=0, slot=5}, {5, rec5}",
+		"RID{blockNum=1, slot=1}, {7, rec7}",
+		"RID{blockNum=1, slot=3}, {9, rec9}",
+	}
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("expected %v, got %v", expected, got)
+	}
 }
