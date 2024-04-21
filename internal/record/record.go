@@ -289,7 +289,7 @@ func NewTableScan(tx *transaction.Transaction, tableName string, layout *Layout)
 			return nil, fmt.Errorf("could not move to new block: %w", err)
 		}
 	} else {
-		if err := ts.moveToBlock(); err != nil {
+		if err := ts.moveToBlock(0); err != nil {
 			return nil, fmt.Errorf("could not move to block: %w", err)
 		}
 	}
