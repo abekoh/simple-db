@@ -120,3 +120,47 @@ func TestRecordPage(t *testing.T) {
 		t.Errorf("expected %v, got %v", expected, got)
 	}
 }
+
+func TestTableScan(t *testing.T) {
+	t.Parallel()
+
+	fm, err := file.NewManager(t.TempDir(), 128)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lm, err := log.NewManager(fm, "logfile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bm := buffer.NewManager(fm, lm, 8)
+
+	tx, err := transaction.NewTransaction(bm, fm, lm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	schema := NewSchema()
+	schema.AddInt32Field("A")
+	schema.AddStrField("B", 9)
+
+	layout := NewLayoutSchema(schema)
+
+	ts, err := NewTableScan(tx, "T", layout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 10; i++ {
+		if err := ts.Insert(); err != nil {
+			t.Fatal(err)
+		}
+		if err := ts.SetInt32("A", int32(i)); err != nil {
+			t.Fatal(err)
+		}
+		s := fmt.Sprintf("rec%d", i)
+		if err := ts.SetStr("B", s); err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("inserted: %v, {%v, %v}", ts.RID(), i, s)
+	}
+}
