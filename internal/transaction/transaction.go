@@ -105,7 +105,11 @@ func (t *Transaction) Pin(blockID file.BlockID) (*buffer.Buffer, error) {
 	return buf, nil
 }
 
-func (t *Transaction) Unpin(buf *buffer.Buffer) {
+func (t *Transaction) Unpin(blockID file.BlockID) error {
+	buf, ok := t.bufMap[blockID]
+	if !ok {
+		return fmt.Errorf("block not pinned")
+	}
 	t.bm.Unpin(buf)
 	if idx := slices.Index(t.bufPins, buf.BlockID()); idx != -1 {
 		t.bufPins = append(t.bufPins[:idx], t.bufPins[idx+1:]...)
@@ -113,6 +117,7 @@ func (t *Transaction) Unpin(buf *buffer.Buffer) {
 	if !slices.Contains(t.bufPins, buf.BlockID()) {
 		delete(t.bufMap, buf.BlockID())
 	}
+	return nil
 }
 
 func (t *Transaction) unpinAll() {
@@ -477,14 +482,16 @@ func (r SetInt32LogRecord) Type() LogRecordType {
 
 func (r SetInt32LogRecord) Undo(tx *Transaction) error {
 	slog.Debug("undo setint32 log", "record", r)
-	buf, err := tx.Pin(r.blockID)
+	_, err := tx.Pin(r.blockID)
 	if err != nil {
 		return fmt.Errorf("could not pin: %w", err)
 	}
 	if err := tx.SetInt32(r.blockID, r.offset, r.val, false); err != nil {
 		return fmt.Errorf("could not set int32: %w", err)
 	}
-	tx.Unpin(buf)
+	if err := tx.Unpin(r.blockID); err != nil {
+		return fmt.Errorf("could not unpin: %w", err)
+	}
 	return nil
 }
 
@@ -558,14 +565,16 @@ func (r SetStrLogRecord) Type() LogRecordType {
 
 func (r SetStrLogRecord) Undo(tx *Transaction) error {
 	slog.Debug("undo setstr log", "record", r)
-	buf, err := tx.Pin(r.blockID)
+	_, err := tx.Pin(r.blockID)
 	if err != nil {
 		return fmt.Errorf("could not pin: %w", err)
 	}
 	if err := tx.SetStr(r.blockID, r.offset, r.val, false); err != nil {
 		return fmt.Errorf("could not set string: %w", err)
 	}
-	tx.Unpin(buf)
+	if err := tx.Unpin(r.blockID); err != nil {
+		return fmt.Errorf("could not unpin: %w", err)
+	}
 	return nil
 }
 

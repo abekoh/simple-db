@@ -269,3 +269,46 @@ func (rp *RecordPage) setFlag(slot int32, flag Flag) error {
 	}
 	return nil
 }
+
+type TableScan struct {
+	tx          *transaction.Transaction
+	layout      *Layout
+	rp          *RecordPage
+	currentSlot int32
+}
+
+func NewTableScan(tx *transaction.Transaction, tableName string, layout *Layout) (*TableScan, error) {
+	ts := &TableScan{tx: tx, layout: layout}
+	filename := fmt.Sprintf("%s.tbl", tableName)
+	l, err := tx.Size(filename)
+	if err != nil {
+		return nil, fmt.Errorf("could not get size: %w", err)
+	}
+	if l == 0 {
+		if err := ts.moveToNewBlock(); err != nil {
+			return nil, fmt.Errorf("could not move to new block: %w", err)
+		}
+	} else {
+		if err := ts.moveToBlock(); err != nil {
+			return nil, fmt.Errorf("could not move to block: %w", err)
+		}
+	}
+	return ts, nil
+}
+
+func (ts *TableScan) moveToNewBlock() error {
+	return nil
+}
+
+func (ts *TableScan) moveToBlock() error {
+	return nil
+}
+
+func (ts *TableScan) unpin() error {
+	if ts.rp != nil {
+		if err := ts.tx.Unpin(ts.rp.blockID); err != nil {
+			return fmt.Errorf("failed to unpin: %w", err)
+		}
+	}
+	return nil
+}
