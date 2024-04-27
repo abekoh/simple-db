@@ -7,7 +7,7 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
-type FieldType int
+type FieldType int32
 
 const (
 	Integer32 FieldType = iota
@@ -26,6 +26,10 @@ type Field struct {
 	length int32
 }
 
+func NewField(typ FieldType, length int32) Field {
+	return Field{typ: typ, length: length}
+}
+
 type Schema struct {
 	fields    []string
 	fieldsMap map[string]Field
@@ -38,23 +42,23 @@ func NewSchema() Schema {
 	}
 }
 
-func (s *Schema) addField(name string, f Field) {
+func (s *Schema) AddField(name string, f Field) {
 	s.fields = append(s.fields, name)
 	s.fieldsMap[name] = f
 }
 
 func (s *Schema) AddInt32Field(name string) {
-	s.addField(name, Field{typ: Integer32, length: 0})
+	s.AddField(name, Field{typ: Integer32, length: 0})
 }
 
 func (s *Schema) AddStrField(name string, length int32) {
-	s.addField(name, Field{typ: Varchar, length: length})
+	s.AddField(name, Field{typ: Varchar, length: length})
 }
 
 func (s *Schema) Add(name string, schema Schema) {
 	typ := schema.Typ(name)
 	length := schema.Length(name)
-	s.addField(name, Field{typ: typ, length: length})
+	s.AddField(name, Field{typ: typ, length: length})
 }
 
 func (s *Schema) AddAll(schema Schema) {
@@ -63,7 +67,7 @@ func (s *Schema) AddAll(schema Schema) {
 		if !ok {
 			panic("field not found")
 		}
-		s.addField(field, f)
+		s.AddField(field, f)
 	}
 }
 
