@@ -193,7 +193,7 @@ type StatManager struct {
 	tableManager *TableManager
 	tableStats   map[string]StatInfo
 	tableStatsMu sync.RWMutex
-	numCalls     atomic.Int32
+	numCalls     atomic.Int64
 }
 
 func NewStatManager(tableManager *TableManager, tx *transaction.Transaction) (*StatManager, error) {
@@ -207,6 +207,7 @@ func NewStatManager(tableManager *TableManager, tx *transaction.Transaction) (*S
 func (m *StatManager) refresh(tx *transaction.Transaction) error {
 	m.tableStatsMu.Lock()
 	defer m.tableStatsMu.Unlock()
+	m.numCalls.Store(0)
 	m.tableStats = make(map[string]StatInfo)
 	tableCatalog, err := record.NewTableScan(tx, "table_catalog", m.tableManager.tableCatalogLayout)
 	if err != nil {
@@ -261,6 +262,28 @@ func (m *StatManager) calcStats(tableName string, layout *record.Layout, tx *tra
 		return StatInfo{}, fmt.Errorf("scan close error: %w", err)
 	}
 	return NewStatInfo(numBlocks, numRecs), nil
+}
+
+func (m *StatManager) Stat(tableName string, layout *record.Layout, tx *transaction.Transaction) (StatInfo, error) {
+	m.numCalls.Add(1)
+	if m.numCalls.Load() > 100 {
+		if err := m.refresh(tx); err != nil {
+			return StatInfo{}, fmt.Errorf("refresh error: %w", err)
+		}
+	}
+	m.tableStatsMu.RLock()
+	statInfo, ok := m.tableStats[tableName]
+	m.tableStatsMu.RUnlock()
+	if !ok {
+		statInfo, err := m.calcStats(tableName, layout, tx)
+		if err != nil {
+			return StatInfo{}, fmt.Errorf("calc stats error: %w", err)
+		}
+		m.tableStatsMu.Lock()
+		m.tableStats[tableName] = statInfo
+		m.tableStatsMu.Unlock()
+	}
+	return statInfo, nil
 }
 
 const maxViewDef = 1000
