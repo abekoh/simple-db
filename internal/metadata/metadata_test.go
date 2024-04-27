@@ -45,12 +45,9 @@ func TestTableManager(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		layout, ok, err := tm.Layout("MyTable", tx)
+		layout, err := tm.Layout("MyTable", tx)
 		if err != nil {
 			t.Fatal(err)
-		}
-		if !ok {
-			t.Fatal("table not found")
 		}
 		if layout.SlotSize() != 21 {
 			t.Errorf("expected 21, got %d", layout.SlotSize())

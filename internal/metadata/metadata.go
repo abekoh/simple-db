@@ -97,75 +97,75 @@ func (m *TableManager) CreateTable(tableName string, schema record.Schema, tx *t
 	return nil
 }
 
-func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*record.Layout, bool, error) {
+func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*record.Layout, error) {
 	var size int32 = -1
 	tableCatalog, err := record.NewTableScan(tx, "table_catalog", m.tableCatalogLayout)
 	if err != nil {
-		return nil, false, fmt.Errorf("table catalog scan error: %w", err)
+		return nil, fmt.Errorf("table catalog scan error: %w", err)
 	}
 	for {
 		if ok, err := tableCatalog.Next(); err != nil {
-			return nil, false, fmt.Errorf("table catalog next error: %w", err)
+			return nil, fmt.Errorf("table catalog next error: %w", err)
 		} else if !ok {
 			break
 		}
 		if name, err := tableCatalog.Str("table_name"); err != nil {
-			return nil, false, fmt.Errorf("table catalog get string error: %w", err)
+			return nil, fmt.Errorf("table catalog get string error: %w", err)
 		} else if name == tableName {
 			s, err := tableCatalog.Int32("slot_size")
 			if err != nil {
-				return nil, false, fmt.Errorf("table catalog get int32 error: %w", err)
+				return nil, fmt.Errorf("table catalog get int32 error: %w", err)
 			}
 			size = s
 			break
 		}
 	}
 	if err := tableCatalog.Close(); err != nil {
-		return nil, false, fmt.Errorf("table catalog close error: %w", err)
+		return nil, fmt.Errorf("table catalog close error: %w", err)
 	}
 
 	schema := record.NewSchema()
 	offsets := make(map[string]int32)
 	fieldCatalog, err := record.NewTableScan(tx, "field_catalog", m.fieldCatalogLayout)
 	if err != nil {
-		return nil, false, fmt.Errorf("field catalog scan error: %w", err)
+		return nil, fmt.Errorf("field catalog scan error: %w", err)
 	}
 	for {
 		if ok, err := fieldCatalog.Next(); err != nil {
-			return nil, false, fmt.Errorf("field catalog next error: %w", err)
+			return nil, fmt.Errorf("field catalog next error: %w", err)
 		} else if !ok {
 			break
 		}
 		if name, err := fieldCatalog.Str("table_name"); err != nil {
-			return nil, false, fmt.Errorf("field catalog get string error: %w", err)
+			return nil, fmt.Errorf("field catalog get string error: %w", err)
 		} else if name == tableName {
 			fieldName, err := fieldCatalog.Str("field_name")
 			if err != nil {
-				return nil, false, fmt.Errorf("field catalog get string error: %w", err)
+				return nil, fmt.Errorf("field catalog get string error: %w", err)
 			}
 			fieldType, err := fieldCatalog.Int32("type")
 			if err != nil {
-				return nil, false, fmt.Errorf("field catalog get int32 error: %w", err)
+				return nil, fmt.Errorf("field catalog get int32 error: %w", err)
 			}
 			fieldLength, err := fieldCatalog.Int32("length")
 			if err != nil {
-				return nil, false, fmt.Errorf("field catalog get int32 error: %w", err)
+				return nil, fmt.Errorf("field catalog get int32 error: %w", err)
 			}
 			fieldOffset, err := fieldCatalog.Int32("offset")
 			if err != nil {
-				return nil, false, fmt.Errorf("field catalog get int32 error: %w", err)
+				return nil, fmt.Errorf("field catalog get int32 error: %w", err)
 			}
 			offsets[fieldName] = fieldOffset
 			schema.AddField(fieldName, record.NewField(record.FieldType(fieldType), fieldLength))
 		}
 	}
 	if err := fieldCatalog.Close(); err != nil {
-		return nil, false, fmt.Errorf("field catalog close error: %w", err)
+		return nil, fmt.Errorf("field catalog close error: %w", err)
 	}
 	if size == -1 {
-		return nil, false, nil
+		return nil, fmt.Errorf("table not found: %s", tableName)
 	}
-	return record.NewLayout(schema, offsets, size), true, nil
+	return record.NewLayout(schema, offsets, size), nil
 }
 
 type StatInfo struct {
@@ -223,12 +223,9 @@ func (m *StatManager) refresh(tx *transaction.Transaction) error {
 		if err != nil {
 			return fmt.Errorf("table catalog get string error: %w", err)
 		}
-		layout, ok, err := m.tableManager.Layout(name, tx)
+		layout, err := m.tableManager.Layout(name, tx)
 		if err != nil {
 			return fmt.Errorf("layout error: %w", err)
-		}
-		if !ok {
-			return fmt.Errorf("table not found: %s", name)
 		}
 		stat, err := m.calcStats(name, layout, tx)
 		if err != nil {
@@ -306,12 +303,9 @@ func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Tran
 }
 
 func (m *ViewManager) CreateView(viewName, viewDef string, tx *transaction.Transaction) error {
-	layout, ok, err := m.tableManager.Layout("view_catalog", tx)
+	layout, err := m.tableManager.Layout("view_catalog", tx)
 	if err != nil {
 		return fmt.Errorf("layout error: %w", err)
-	}
-	if !ok {
-		return fmt.Errorf("view catalog not found")
 	}
 	scan, err := record.NewTableScan(tx, "view_catalog", layout)
 	if err != nil {
@@ -332,39 +326,36 @@ func (m *ViewManager) CreateView(viewName, viewDef string, tx *transaction.Trans
 	return nil
 }
 
-func (m *ViewManager) ViewDef(viewName string, tx *transaction.Transaction) (string, bool, error) {
+func (m *ViewManager) ViewDef(viewName string, tx *transaction.Transaction) (string, error) {
 	var res string
-	layout, ok, err := m.tableManager.Layout("view_catalog", tx)
+	layout, err := m.tableManager.Layout("view_catalog", tx)
 	if err != nil {
-		return "", false, fmt.Errorf("layout error: %w", err)
-	}
-	if !ok {
-		return "", false, nil
+		return "", fmt.Errorf("layout error: %w", err)
 	}
 	scan, err := record.NewTableScan(tx, "view_catalog", layout)
 	if err != nil {
-		return "", false, fmt.Errorf("table scan error: %w", err)
+		return "", fmt.Errorf("table scan error: %w", err)
 	}
 	for {
 		if ok, err := scan.Next(); err != nil {
-			return "", false, fmt.Errorf("next error: %w", err)
+			return "", fmt.Errorf("next error: %w", err)
 		} else if !ok {
 			break
 		}
 		name, err := scan.Str("view_name")
 		if err != nil {
-			return "", false, fmt.Errorf("get string error: %w", err)
+			return "", fmt.Errorf("get string error: %w", err)
 		}
 		if name == viewName {
 			res, err = scan.Str("view_def")
 			if err != nil {
-				return "", false, fmt.Errorf("get string error: %w", err)
+				return "", fmt.Errorf("get string error: %w", err)
 			}
 			break
 		}
 	}
 	if err := scan.Close(); err != nil {
-		return "", false, fmt.Errorf("close error: %w", err)
+		return "", fmt.Errorf("close error: %w", err)
 	}
-	return res, true, nil
+	return res, nil
 }
