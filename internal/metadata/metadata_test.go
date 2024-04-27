@@ -104,7 +104,7 @@ func TestMetadataManager(t *testing.T) {
 
 	// ViewManager
 	viewDef := "SELECT B FROM MyTable WHERE A = 1"
-	if err := m.CreateView("ViewA", viewDef, tx); err != nil {
+	if err := m.CreateView("MyView", viewDef, tx); err != nil {
 		t.Fatal(err)
 	}
 	gotViewDef, err := m.ViewDef("MyView", tx)
@@ -112,6 +112,22 @@ func TestMetadataManager(t *testing.T) {
 		t.Fatal(err)
 	}
 	if gotViewDef != viewDef {
-		t.Errorf("expected %s, got %s", viewDef, gotViewDef)
+		t.Errorf("expected %s, got %s", "SELECT B FROM MyTable WHERE A = 1", gotViewDef)
 	}
+
+	// IndexManager
+	if err := m.CreateIndex("IndexA", "MyTable", "A", tx); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.CreateIndex("IndexB", "MyTable", "B", tx); err != nil {
+		t.Fatal(err)
+	}
+	indexMap, err := m.IndexInfo("MyTable", tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(indexMap) != 2 {
+		t.Errorf("expected 2, got %d", len(indexMap))
+	}
+	// TODO: assert indexMap
 }
