@@ -2,6 +2,8 @@ package metadata
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
 
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/transaction"
@@ -164,6 +166,101 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 		return nil, false, nil
 	}
 	return record.NewLayout(schema, offsets, size), true, nil
+}
+
+type StatInfo struct {
+	numBlocks  int
+	numRecords int
+}
+
+func NewStatInfo(numBlocks, numRecords int) StatInfo {
+	return StatInfo{numBlocks: numBlocks, numRecords: numRecords}
+}
+
+func (s StatInfo) BlocksAccessed() int {
+	return s.numBlocks
+}
+
+func (s StatInfo) RecordsOutput() int {
+	return s.numRecords
+}
+
+func (s StatInfo) DistinctValues(f string) int {
+	return 1 + s.numRecords/3
+}
+
+type StatManager struct {
+	tableManager *TableManager
+	tableStats   map[string]StatInfo
+	tableStatsMu sync.RWMutex
+	numCalls     atomic.Int32
+}
+
+func NewStatManager(tableManager *TableManager, tx *transaction.Transaction) (*StatManager, error) {
+	m := &StatManager{tableManager: tableManager}
+	if err := m.refresh(tx); err != nil {
+		return nil, fmt.Errorf("refresh error: %w", err)
+	}
+	return m, nil
+}
+
+func (m *StatManager) refresh(tx *transaction.Transaction) error {
+	m.tableStatsMu.Lock()
+	defer m.tableStatsMu.Unlock()
+	m.tableStats = make(map[string]StatInfo)
+	tableCatalog, err := record.NewTableScan(tx, "table_catalog", m.tableManager.tableCatalogLayout)
+	if err != nil {
+		return fmt.Errorf("table catalog scan error: %w", err)
+	}
+	for {
+		if ok, err := tableCatalog.Next(); err != nil {
+			return fmt.Errorf("table catalog next error: %w", err)
+		} else if !ok {
+			break
+		}
+		name, err := tableCatalog.Str("table_name")
+		if err != nil {
+			return fmt.Errorf("table catalog get string error: %w", err)
+		}
+		layout, ok, err := m.tableManager.Layout(name, tx)
+		if err != nil {
+			return fmt.Errorf("layout error: %w", err)
+		}
+		if !ok {
+			return fmt.Errorf("table not found: %s", name)
+		}
+		stat, err := m.calcStats(name, layout, tx)
+		if err != nil {
+			return fmt.Errorf("calc stats error: %w", err)
+		}
+		m.tableStats[name] = stat
+	}
+	if err := tableCatalog.Close(); err != nil {
+		return fmt.Errorf("table catalog close error: %w", err)
+	}
+	return nil
+}
+
+func (m *StatManager) calcStats(tableName string, layout *record.Layout, tx *transaction.Transaction) (StatInfo, error) {
+	numRecs := 0
+	numBlocks := 0
+	scan, err := record.NewTableScan(tx, tableName, layout)
+	if err != nil {
+		return StatInfo{}, fmt.Errorf("table scan error: %w", err)
+	}
+	for {
+		if ok, err := scan.Next(); err != nil {
+			return StatInfo{}, fmt.Errorf("scan next error: %w", err)
+		} else if !ok {
+			break
+		}
+		numRecs++
+		numBlocks = int(scan.RID().BlockNum() + 1)
+	}
+	if err := scan.Close(); err != nil {
+		return StatInfo{}, fmt.Errorf("scan close error: %w", err)
+	}
+	return NewStatInfo(numBlocks, numRecs), nil
 }
 
 const maxViewDef = 1000
