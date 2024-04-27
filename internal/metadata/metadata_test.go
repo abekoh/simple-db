@@ -95,4 +95,10 @@ func TestMetadataManager(t *testing.T) {
 	if statInfo.RecordsOutput() != 50 {
 		t.Errorf("expected 50, got %d", statInfo.RecordsOutput())
 	}
+	if statInfo.DistinctValues("A") != 17 {
+		t.Errorf("expected 17, got %d", statInfo.DistinctValues("A"))
+	}
+	if statInfo.DistinctValues("B") != 17 {
+		t.Errorf("expected 17, got %d", statInfo.DistinctValues("B"))
+	}
 }
