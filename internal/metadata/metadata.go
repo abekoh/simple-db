@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/abekoh/simple-db/internal/index"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
@@ -358,4 +359,107 @@ func (m *ViewManager) ViewDef(viewName string, tx *transaction.Transaction) (str
 		return "", fmt.Errorf("close error: %w", err)
 	}
 	return res, nil
+}
+
+type IndexInfo struct {
+	indexName, fieldName string
+	tx                   *transaction.Transaction
+	tableSchema          *record.Schema
+	indexLayout          *record.Layout
+	statInfo             StatInfo
+}
+
+func NewIndexInfo(
+	indexName, fieldName string,
+	tableSchema *record.Schema,
+	tx *transaction.Transaction,
+	statInfo StatInfo,
+) (*IndexInfo, error) {
+	return &IndexInfo{
+		indexName:   indexName,
+		fieldName:   fieldName,
+		tx:          tx,
+		tableSchema: tableSchema,
+		statInfo:    statInfo,
+	}, nil
+}
+
+func (i *IndexInfo) Open() index.Index {
+	// TODO: implement
+	return nil
+}
+
+func (i *IndexInfo) BlockAccessed() int {
+	// TODO: implement
+	return -1
+}
+
+func (i *IndexInfo) RecordsOutput() int {
+	return i.statInfo.RecordsOutput() / i.statInfo.DistinctValues(i.fieldName)
+}
+
+func (i *IndexInfo) DistinctKeys(fieldName string) int {
+	if fieldName == i.fieldName {
+		return 1
+	}
+	return i.statInfo.DistinctValues(fieldName)
+}
+
+func (i *IndexInfo) createIndexLayout() *record.Layout {
+	schema := record.NewSchema()
+	schema.AddInt32Field("block")
+	schema.AddInt32Field("id")
+	switch i.tableSchema.Typ(i.fieldName) {
+	case record.Integer32:
+		schema.AddInt32Field("data_value")
+	case record.Varchar:
+		schema.AddStrField("data_value", i.tableSchema.Length(i.fieldName))
+	}
+	return record.NewLayoutSchema(schema)
+}
+
+type IndexManager struct {
+	layout       *record.Layout
+	tableManager *TableManager
+	statManager  *StatManager
+}
+
+func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatManager, tx *transaction.Transaction) (*IndexManager, error) {
+	if isNew {
+		schema := record.NewSchema()
+		schema.AddStrField("index_name", maxTableNameLength)
+		schema.AddStrField("table_name", maxTableNameLength)
+		schema.AddStrField("field_name", maxTableNameLength)
+		if err := tableManager.CreateTable("index_catalog", schema, tx); err != nil {
+			return nil, fmt.Errorf("create index catalog error: %w", err)
+		}
+	}
+	layout, err := tableManager.Layout("index_catalog", tx)
+	if err != nil {
+		return nil, fmt.Errorf("layout error: %w", err)
+	}
+	return &IndexManager{layout: layout, tableManager: tableManager, statManager: statManager}, nil
+}
+
+func (m *IndexManager) CreateIndex(indexName, tableName, fieldName string, tx *transaction.Transaction) error {
+	scan, err := record.NewTableScan(tx, "index_catalog", m.layout)
+	if err != nil {
+		return fmt.Errorf("table scan error: %w", err)
+	}
+	if err := scan.Insert(); err != nil {
+		return fmt.Errorf("insert error: %w", err)
+	}
+	if err := scan.SetStr("index_name", indexName); err != nil {
+		return fmt.Errorf("set string error: %w", err)
+	}
+	if err := scan.SetStr("table_name", tableName); err != nil {
+		return fmt.Errorf("set string error: %w", err)
+	}
+	if err := scan.SetStr("field_name", fieldName); err != nil {
+		return fmt.Errorf("set string error: %w", err)
+	}
+	if err := scan.Close(); err != nil {
+		return fmt.Errorf("close error: %w", err)
+	}
+	return nil
 }
