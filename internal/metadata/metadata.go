@@ -88,9 +88,9 @@ func (m *TableManager) CreateTable(tableName string, schema record.Schema, tx *t
 		if err := fieldCatalog.SetInt32("offset", offset); err != nil {
 			return fmt.Errorf("field catalog set int32 error: %w", err)
 		}
-		if err := fieldCatalog.Close(); err != nil {
-			return fmt.Errorf("field catalog close error: %w", err)
-		}
+	}
+	if err := fieldCatalog.Close(); err != nil {
+		return fmt.Errorf("field catalog close error: %w", err)
 	}
 	return nil
 }
