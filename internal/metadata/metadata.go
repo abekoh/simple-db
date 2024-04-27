@@ -273,13 +273,14 @@ func (m *StatManager) StatInfo(tableName string, layout *record.Layout, tx *tran
 	statInfo, ok := m.tableStats[tableName]
 	m.tableStatsMu.RUnlock()
 	if !ok {
-		statInfo, err := m.calcStats(tableName, layout, tx)
+		si, err := m.calcStats(tableName, layout, tx)
 		if err != nil {
 			return StatInfo{}, fmt.Errorf("calc stats error: %w", err)
 		}
 		m.tableStatsMu.Lock()
-		m.tableStats[tableName] = statInfo
+		m.tableStats[tableName] = si
 		m.tableStatsMu.Unlock()
+		statInfo = si
 	}
 	return statInfo, nil
 }
