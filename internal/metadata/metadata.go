@@ -291,17 +291,17 @@ type ViewManager struct {
 	tableManager *TableManager
 }
 
-func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Transaction) *ViewManager {
+func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Transaction) (*ViewManager, error) {
 	m := &ViewManager{tableManager: tableManager}
 	if isNew {
 		schema := record.NewSchema()
 		schema.AddStrField("view_name", maxTableNameLength)
 		schema.AddStrField("view_def", maxViewDef)
 		if err := tableManager.CreateTable("view_catalog", schema, tx); err != nil {
-			panic(fmt.Errorf("create view catalog error: %w", err))
+			return nil, fmt.Errorf("create view catalog error: %w", err)
 		}
 	}
-	return m
+	return m, nil
 }
 
 func (m *ViewManager) CreateView(viewName, viewDef string, tx *transaction.Transaction) error {
@@ -517,7 +517,10 @@ func NewManager(isNew bool, tx *transaction.Transaction) (*Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new table manager error: %w", err)
 	}
-	viewManager := NewViewManager(isNew, tableManager, tx)
+	viewManager, err := NewViewManager(isNew, tableManager, tx)
+	if err != nil {
+		return nil, fmt.Errorf("new view manager error: %w", err)
+	}
 	statManager, err := NewStatManager(tableManager, tx)
 	if err != nil {
 		return nil, fmt.Errorf("new stat manager error: %w", err)

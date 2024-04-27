@@ -101,4 +101,17 @@ func TestMetadataManager(t *testing.T) {
 	if statInfo.DistinctValues("B") != 17 {
 		t.Errorf("expected 17, got %d", statInfo.DistinctValues("B"))
 	}
+
+	// ViewManager
+	viewDef := "SELECT B FROM MyTable WHERE A = 1"
+	if err := m.CreateView("ViewA", viewDef, tx); err != nil {
+		t.Fatal(err)
+	}
+	gotViewDef, err := m.ViewDef("MyView", tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotViewDef != viewDef {
+		t.Errorf("expected %s, got %s", viewDef, gotViewDef)
+	}
 }
