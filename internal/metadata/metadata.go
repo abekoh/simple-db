@@ -464,6 +464,46 @@ func (m *IndexManager) CreateIndex(indexName, tableName, fieldName string, tx *t
 	return nil
 }
 
+func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) (map[string]IndexInfo, error) {
+	res := make(map[string]IndexInfo)
+	scan, err := record.NewTableScan(tx, "index_catalog", m.layout)
+	if err != nil {
+		return nil, fmt.Errorf("table scan error: %w", err)
+	}
+	for {
+		if ok, err := scan.Next(); err != nil {
+			return nil, fmt.Errorf("next error: %w", err)
+		} else if !ok {
+			break
+		}
+		indexName, err := scan.Str("index_name")
+		if err != nil {
+			return nil, fmt.Errorf("get string error: %w", err)
+		}
+		fieldName, err := scan.Str("field_name")
+		if err != nil {
+			return nil, fmt.Errorf("get string error: %w", err)
+		}
+		tableLayout, err := m.tableManager.Layout(tableName, tx)
+		if err != nil {
+			return nil, fmt.Errorf("layout error: %w", err)
+		}
+		statInfo, err := m.statManager.Stat(tableName, tableLayout, tx)
+		if err != nil {
+			return nil, fmt.Errorf("stat error: %w", err)
+		}
+		indexInfo, err := NewIndexInfo(indexName, fieldName, tableLayout.Schema(), tx, statInfo)
+		if err != nil {
+			return nil, fmt.Errorf("new index info error: %w", err)
+		}
+		res[fieldName] = *indexInfo
+	}
+	if err := scan.Close(); err != nil {
+		return nil, fmt.Errorf("close error: %w", err)
+	}
+	return res, nil
+}
+
 type Manager struct {
 	tableManager *TableManager
 	viewManager  *ViewManager
