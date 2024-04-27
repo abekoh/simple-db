@@ -463,3 +463,69 @@ func (m *IndexManager) CreateIndex(indexName, tableName, fieldName string, tx *t
 	}
 	return nil
 }
+
+type Manager struct {
+	tableManager *TableManager
+	viewManager  *ViewManager
+	indexManager *IndexManager
+	statManager  *StatManager
+}
+
+func NewManager(isNew bool, tx *transaction.Transaction) (*Manager, error) {
+	tableManager, err := NewTableManager(isNew, tx)
+	if err != nil {
+		return nil, fmt.Errorf("new table manager error: %w", err)
+	}
+	viewManager := NewViewManager(isNew, tableManager, tx)
+	statManager, err := NewStatManager(tableManager, tx)
+	if err != nil {
+		return nil, fmt.Errorf("new stat manager error: %w", err)
+	}
+	indexManager, err := NewIndexManager(isNew, tableManager, statManager, tx)
+	if err != nil {
+		return nil, fmt.Errorf("new index manager error: %w", err)
+	}
+	return &Manager{
+		tableManager: tableManager,
+		viewManager:  viewManager,
+		indexManager: indexManager,
+		statManager:  statManager,
+	}, nil
+}
+
+func (m *Manager) CreateTable(tableName string, schema record.Schema, tx *transaction.Transaction) error {
+	if err := m.tableManager.CreateTable(tableName, schema, tx); err != nil {
+		return fmt.Errorf("create table error: %w", err)
+	}
+	return nil
+}
+
+func (m *Manager) Layout(tableName string, tx *transaction.Transaction) (*record.Layout, error) {
+	layout, err := m.tableManager.Layout(tableName, tx)
+	if err != nil {
+		return nil, fmt.Errorf("layout error: %w", err)
+	}
+	return layout, nil
+}
+
+func (m *Manager) CreateView(viewName, viewDef string, tx *transaction.Transaction) error {
+	if err := m.viewManager.CreateView(viewName, viewDef, tx); err != nil {
+		return fmt.Errorf("create view error: %w", err)
+	}
+	return nil
+}
+
+func (m *Manager) ViewDef(viewName string, tx *transaction.Transaction) (string, error) {
+	viewDef, err := m.viewManager.ViewDef(viewName, tx)
+	if err != nil {
+		return "", fmt.Errorf("view def error: %w", err)
+	}
+	return viewDef, nil
+}
+
+func (m *Manager) CreateIndex(indexName, tableName, fieldName string, tx *transaction.Transaction) error {
+	if err := m.indexManager.CreateIndex(indexName, tableName, fieldName, tx); err != nil {
+		return fmt.Errorf("create index error: %w", err)
+	}
+	return nil
+}
