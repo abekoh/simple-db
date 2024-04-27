@@ -285,14 +285,13 @@ func (m *StatManager) StatInfo(tableName string, layout *record.Layout, tx *tran
 	return statInfo, nil
 }
 
-const maxViewDef = 1000
+const maxViewDef = 100
 
 type ViewManager struct {
 	tableManager *TableManager
 }
 
 func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Transaction) (*ViewManager, error) {
-	m := &ViewManager{tableManager: tableManager}
 	if isNew {
 		schema := record.NewSchema()
 		schema.AddStrField("view_name", maxTableNameLength)
@@ -301,7 +300,7 @@ func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Tran
 			return nil, fmt.Errorf("create view catalog error: %w", err)
 		}
 	}
-	return m, nil
+	return &ViewManager{tableManager: tableManager}, nil
 }
 
 func (m *ViewManager) CreateView(viewName, viewDef string, tx *transaction.Transaction) error {
