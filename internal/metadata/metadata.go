@@ -262,7 +262,7 @@ func (m *StatManager) calcStats(tableName string, layout *record.Layout, tx *tra
 	return NewStatInfo(numBlocks, numRecs), nil
 }
 
-func (m *StatManager) Stat(tableName string, layout *record.Layout, tx *transaction.Transaction) (StatInfo, error) {
+func (m *StatManager) StatInfo(tableName string, layout *record.Layout, tx *transaction.Transaction) (StatInfo, error) {
 	m.numCalls.Add(1)
 	if m.numCalls.Load() > 100 {
 		if err := m.refresh(tx); err != nil {
@@ -488,7 +488,7 @@ func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) 
 		if err != nil {
 			return nil, fmt.Errorf("layout error: %w", err)
 		}
-		statInfo, err := m.statManager.Stat(tableName, tableLayout, tx)
+		statInfo, err := m.statManager.StatInfo(tableName, tableLayout, tx)
 		if err != nil {
 			return nil, fmt.Errorf("stat error: %w", err)
 		}
@@ -568,4 +568,20 @@ func (m *Manager) CreateIndex(indexName, tableName, fieldName string, tx *transa
 		return fmt.Errorf("create index error: %w", err)
 	}
 	return nil
+}
+
+func (m *Manager) IndexInfo(tableName string, tx *transaction.Transaction) (map[string]IndexInfo, error) {
+	res, err := m.indexManager.IndexInfo(tableName, tx)
+	if err != nil {
+		return nil, fmt.Errorf("index info error: %w", err)
+	}
+	return res, nil
+}
+
+func (m *Manager) StatInfo(tableName string, layout *record.Layout, tx *transaction.Transaction) (StatInfo, error) {
+	statInfo, err := m.statManager.StatInfo(tableName, layout, tx)
+	if err != nil {
+		return StatInfo{}, fmt.Errorf("stat error: %w", err)
+	}
+	return statInfo, nil
 }
