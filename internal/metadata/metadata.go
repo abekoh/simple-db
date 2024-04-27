@@ -162,3 +162,80 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 	}
 	return record.NewLayout(schema, offsets, size), nil
 }
+
+const maxViewDef = 1000
+
+type ViewManager struct {
+	tableManager *TableManager
+}
+
+func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Transaction) *ViewManager {
+	m := &ViewManager{tableManager: tableManager}
+	if isNew {
+		schema := record.NewSchema()
+		schema.AddStrField("view_name", maxTableNameLength)
+		schema.AddStrField("view_def", maxViewDef)
+		if err := tableManager.CreateTable("view_catalog", schema, tx); err != nil {
+			panic(fmt.Errorf("create view catalog error: %w", err))
+		}
+	}
+	return m
+}
+
+func (m *ViewManager) CreateView(viewName, viewDef string, tx *transaction.Transaction) error {
+	layout, err := m.tableManager.Layout("view_catalog", tx)
+	if err != nil {
+		return fmt.Errorf("layout error: %w", err)
+	}
+	scan, err := record.NewTableScan(tx, "view_catalog", layout)
+	if err != nil {
+		return fmt.Errorf("table scan error: %w", err)
+	}
+	if err := scan.Insert(); err != nil {
+		return fmt.Errorf("insert error: %w", err)
+	}
+	if err := scan.SetStr("view_name", viewName); err != nil {
+		return fmt.Errorf("set string error: %w", err)
+	}
+	if err := scan.SetStr("view_def", viewDef); err != nil {
+		return fmt.Errorf("set string error: %w", err)
+	}
+	if err := scan.Close(); err != nil {
+		return fmt.Errorf("close error: %w", err)
+	}
+	return nil
+}
+
+func (m *ViewManager) ViewDef(viewName string, tx *transaction.Transaction) (string, error) {
+	var res string
+	layout, err := m.tableManager.Layout("view_catalog", tx)
+	if err != nil {
+		return "", fmt.Errorf("layout error: %w", err)
+	}
+	scan, err := record.NewTableScan(tx, "view_catalog", layout)
+	if err != nil {
+		return "", fmt.Errorf("table scan error: %w", err)
+	}
+	for {
+		if ok, err := scan.Next(); err != nil {
+			return "", fmt.Errorf("next error: %w", err)
+		} else if !ok {
+			break
+		}
+		name, err := scan.Str("view_name")
+		if err != nil {
+			return "", fmt.Errorf("get string error: %w", err)
+		}
+		if name == viewName {
+			res, err = scan.Str("view_def")
+			if err != nil {
+				return "", fmt.Errorf("get string error: %w", err)
+			}
+			break
+		}
+	}
+	if err := scan.Close(); err != nil {
+		return "", fmt.Errorf("close error: %w", err)
+	}
+	return res, nil
+}
