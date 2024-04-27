@@ -44,7 +44,7 @@ func NewTableManager(isNew bool, tx *transaction.Transaction) (*TableManager, er
 
 func (m *TableManager) CreateTable(tableName string, schema record.Schema, tx *transaction.Transaction) error {
 	layout := record.NewLayoutSchema(schema)
-	tableCatalog, err := record.NewTableScan(tx, "tabale_catalog", m.tableCatalogLayout)
+	tableCatalog, err := record.NewTableScan(tx, "table_catalog", m.tableCatalogLayout)
 	if err != nil {
 		return fmt.Errorf("table catalog scan error: %w", err)
 	}
@@ -110,11 +110,11 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 		if name, err := tableCatalog.Str("table_name"); err != nil {
 			return nil, fmt.Errorf("table catalog get string error: %w", err)
 		} else if name == tableName {
-			if s, err := tableCatalog.Int32("slot_size"); err != nil {
+			s, err := tableCatalog.Int32("slot_size")
+			if err != nil {
 				return nil, fmt.Errorf("table catalog get int32 error: %w", err)
-			} else {
-				size = s
 			}
+			size = s
 			break
 		}
 	}
