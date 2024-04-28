@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/abekoh/simple-db/internal/file"
+	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
@@ -282,6 +283,8 @@ type TableScan struct {
 	currentSlot int32
 }
 
+var _ query.UpdateScan = (*TableScan)(nil)
+
 func NewTableScan(tx *transaction.Transaction, tableName string, layout *Layout) (*TableScan, error) {
 	ts := &TableScan{tx: tx, layout: layout, filename: fmt.Sprintf("%s.tbl", tableName)}
 	l, err := tx.Size(ts.filename)
@@ -351,8 +354,11 @@ func (ts *TableScan) Close() error {
 	return nil
 }
 
-func (ts *TableScan) BeforeFirst() {
-	ts.moveToBlock(0)
+func (ts *TableScan) BeforeFirst() error {
+	if err := ts.moveToBlock(0); err != nil {
+		return fmt.Errorf("could not move to block: %w", err)
+	}
+	return nil
 }
 
 func (ts *TableScan) Next() (bool, error) {

@@ -164,7 +164,9 @@ func TestTableScan(t *testing.T) {
 		t.Logf("inserted: %v, {%v, %v}", ts.RID(), i, s)
 	}
 
-	ts.BeforeFirst()
+	if err := ts.BeforeFirst(); err != nil {
+		t.Fatal(err)
+	}
 	ok, err := ts.Next()
 	if err != nil {
 		t.Fatal(err)
@@ -191,7 +193,9 @@ func TestTableScan(t *testing.T) {
 		}
 	}
 
-	ts.BeforeFirst()
+	if err := ts.BeforeFirst(); err != nil {
+		t.Fatal(err)
+	}
 	ok, err = ts.Next()
 	if err != nil {
 		t.Fatal(err)
