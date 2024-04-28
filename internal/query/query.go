@@ -9,18 +9,18 @@ import (
 type Scan interface {
 	BeforeFirst() error
 	Next() (bool, error)
-	Int32(fieldName string) (int32, error)
-	Str(fieldName string) (string, error)
-	Val(fieldName string) (Constant, error)
-	HasField(fieldName string) bool
+	Int32(fieldName FieldName) (int32, error)
+	Str(fieldName FieldName) (string, error)
+	Val(fieldName FieldName) (Constant, error)
+	HasField(fieldName FieldName) bool
 	Close() error
 }
 
 type UpdateScan interface {
 	Scan
-	SetVal(fieldName string, val Constant) error
-	SetInt32(fieldName string, val int32) error
-	SetStr(fieldName string, val string) error
+	SetVal(fieldName FieldName, val Constant) error
+	SetInt32(fieldName FieldName, val int32) error
+	SetStr(fieldName FieldName, val string) error
 	Insert() error
 	Delete() error
 	RID() record.RID
@@ -67,5 +67,5 @@ type Expression interface {
 type FieldName string
 
 func (f FieldName) Evaluate(scan Scan) (Constant, error) {
-	return scan.Val(string(f))
+	return scan.Val(f)
 }
