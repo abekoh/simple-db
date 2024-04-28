@@ -1,14 +1,14 @@
 package index
 
 import (
-	"github.com/abekoh/simple-db/internal/query"
+	"github.com/abekoh/simple-db/internal/record/schema"
 )
 
 type Index interface {
 	BeforeFirst(searchKey string) error
 	Next() (bool, error)
-	DataRID() (query.RID, error)
-	Insert(searchKey string, dataRID query.RID) error
-	Delete(searchKey string, dataRID query.RID) error
+	DataRID() (schema.RID, error)
+	Insert(searchKey string, dataRID schema.RID) error
+	Delete(searchKey string, dataRID schema.RID) error
 	Close() error
 }

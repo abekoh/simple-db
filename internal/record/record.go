@@ -399,7 +399,7 @@ func (ts *TableScan) Delete() error {
 	return nil
 }
 
-func (ts *TableScan) MoveToRID(rid query.RID) error {
+func (ts *TableScan) MoveToRID(rid schema.RID) error {
 	if err := ts.Close(); err != nil {
 		return fmt.Errorf("could not close: %w", err)
 	}
@@ -413,6 +413,6 @@ func (ts *TableScan) MoveToRID(rid query.RID) error {
 	return nil
 }
 
-func (ts *TableScan) RID() query.RID {
-	return query.NewRID(ts.rp.blockID.Num(), ts.currentSlot)
+func (ts *TableScan) RID() schema.RID {
+	return schema.NewRID(ts.rp.blockID.Num(), ts.currentSlot)
 }

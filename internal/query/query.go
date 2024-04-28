@@ -6,27 +6,6 @@ import (
 	"github.com/abekoh/simple-db/internal/record/schema"
 )
 
-type RID struct {
-	blockNum int32
-	slot     int32
-}
-
-func NewRID(blockNum, slot int32) RID {
-	return RID{blockNum: blockNum, slot: slot}
-}
-
-func (r RID) BlockNum() int32 {
-	return r.blockNum
-}
-
-func (r RID) Slot() int32 {
-	return r.slot
-}
-
-func (r RID) String() string {
-	return fmt.Sprintf("RID{blockNum=%d, slot=%d}", r.blockNum, r.slot)
-}
-
 type Scan interface {
 	schema.Valuable
 	BeforeFirst() error
@@ -44,8 +23,8 @@ type UpdateScan interface {
 	SetStr(fieldName schema.FieldName, val string) error
 	Insert() error
 	Delete() error
-	RID() RID
-	MoveToRID(rid RID) error
+	RID() schema.RID
+	MoveToRID(rid schema.RID) error
 }
 
 type Expression interface {
