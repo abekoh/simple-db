@@ -10,6 +10,7 @@ import (
 	"github.com/abekoh/simple-db/internal/file"
 	"github.com/abekoh/simple-db/internal/log"
 	"github.com/abekoh/simple-db/internal/record"
+	schema2 "github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
@@ -36,7 +37,7 @@ func TestMetadataManager(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	schema := record.NewSchema()
+	schema := schema2.NewSchema()
 	schema.AddInt32Field("A")
 	schema.AddStrField("B", 9)
 	if err := m.CreateTable("MyTable", schema, tx); err != nil {
@@ -54,9 +55,9 @@ func TestMetadataManager(t *testing.T) {
 	var fields []string
 	for _, fieldName := range layout.Schema().FieldNames() {
 		switch layout.Schema().Typ(fieldName) {
-		case record.Integer32:
+		case schema2.Integer32:
 			fields = append(fields, fmt.Sprintf("%s: int", fieldName))
-		case record.Varchar:
+		case schema2.Varchar:
 			fields = append(fields, fmt.Sprintf("%s: varchar(%d)", fieldName, layout.Schema().Length(fieldName)))
 		}
 	}

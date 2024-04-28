@@ -8,6 +8,7 @@ import (
 	"github.com/abekoh/simple-db/internal/index"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
+	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
@@ -21,12 +22,12 @@ type TableManager struct {
 func NewTableManager(isNew bool, tx *transaction.Transaction) (*TableManager, error) {
 	m := &TableManager{}
 
-	tableCatalogSchema := record.NewSchema()
+	tableCatalogSchema := schema.NewSchema()
 	tableCatalogSchema.AddStrField("table_name", maxTableNameLength)
 	tableCatalogSchema.AddInt32Field("slot_size")
 	m.tableCatalogLayout = record.NewLayoutSchema(tableCatalogSchema)
 
-	fieldCatalogSchema := record.NewSchema()
+	fieldCatalogSchema := schema.NewSchema()
 	fieldCatalogSchema.AddStrField("table_name", maxTableNameLength)
 	fieldCatalogSchema.AddStrField("field_name", maxTableNameLength)
 	fieldCatalogSchema.AddInt32Field("type")
@@ -46,7 +47,7 @@ func NewTableManager(isNew bool, tx *transaction.Transaction) (*TableManager, er
 	return m, nil
 }
 
-func (m *TableManager) CreateTable(tableName string, schema record.Schema, tx *transaction.Transaction) error {
+func (m *TableManager) CreateTable(tableName string, schema schema.Schema, tx *transaction.Transaction) error {
 	layout := record.NewLayoutSchema(schema)
 	tableCatalog, err := record.NewTableScan(tx, "table_catalog", m.tableCatalogLayout)
 	if err != nil {
@@ -126,7 +127,7 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 		return nil, fmt.Errorf("table catalog close error: %w", err)
 	}
 
-	schema := record.NewSchema()
+	sche := schema.NewSchema()
 	offsets := make(map[query.FieldName]int32)
 	fieldCatalog, err := record.NewTableScan(tx, "field_catalog", m.fieldCatalogLayout)
 	if err != nil {
@@ -158,7 +159,7 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 				return nil, fmt.Errorf("field catalog get int32 error: %w", err)
 			}
 			offsets[query.FieldName(fieldName)] = fieldOffset
-			schema.AddField(query.FieldName(fieldName), record.NewField(record.FieldType(fieldType), fieldLength))
+			sche.AddField(query.FieldName(fieldName), schema.NewField(schema.FieldType(fieldType), fieldLength))
 		}
 	}
 	if err := fieldCatalog.Close(); err != nil {
@@ -167,7 +168,7 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 	if size == -1 {
 		return nil, fmt.Errorf("table not found: %s", tableName)
 	}
-	return record.NewLayout(schema, offsets, size), nil
+	return record.NewLayout(sche, offsets, size), nil
 }
 
 type StatInfo struct {
@@ -294,7 +295,7 @@ type ViewManager struct {
 
 func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Transaction) (*ViewManager, error) {
 	if isNew {
-		s := record.NewSchema()
+		s := schema.NewSchema()
 		s.AddStrField("view_name", maxTableNameLength)
 		s.AddStrField("view_def", maxViewDef)
 		if err := tableManager.CreateTable("view_catalog", s, tx); err != nil {
@@ -366,7 +367,7 @@ type IndexInfo struct {
 	indexName   string
 	fieldName   query.FieldName
 	tx          *transaction.Transaction
-	tableSchema *record.Schema
+	tableSchema *schema.Schema
 	indexLayout *record.Layout
 	statInfo    StatInfo
 }
@@ -374,7 +375,7 @@ type IndexInfo struct {
 func NewIndexInfo(
 	indexName string,
 	fieldName query.FieldName,
-	tableSchema *record.Schema,
+	tableSchema *schema.Schema,
 	tx *transaction.Transaction,
 	statInfo StatInfo,
 ) (*IndexInfo, error) {
@@ -409,13 +410,13 @@ func (i *IndexInfo) DistinctKeys(fieldName query.FieldName) int {
 }
 
 func (i *IndexInfo) createIndexLayout() *record.Layout {
-	s := record.NewSchema()
+	s := schema.NewSchema()
 	s.AddInt32Field("block")
 	s.AddInt32Field("id")
 	switch i.tableSchema.Typ(i.fieldName) {
-	case record.Integer32:
+	case schema.Integer32:
 		s.AddInt32Field("data_value")
-	case record.Varchar:
+	case schema.Varchar:
 		s.AddStrField("data_value", i.tableSchema.Length(i.fieldName))
 	}
 	return record.NewLayoutSchema(s)
@@ -429,7 +430,7 @@ type IndexManager struct {
 
 func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatManager, tx *transaction.Transaction) (*IndexManager, error) {
 	if isNew {
-		s := record.NewSchema()
+		s := schema.NewSchema()
 		s.AddStrField("index_name", maxTableNameLength)
 		s.AddStrField("table_name", maxTableNameLength)
 		s.AddStrField("field_name", maxTableNameLength)
@@ -539,7 +540,7 @@ func NewManager(isNew bool, tx *transaction.Transaction) (*Manager, error) {
 	}, nil
 }
 
-func (m *Manager) CreateTable(tableName string, s record.Schema, tx *transaction.Transaction) error {
+func (m *Manager) CreateTable(tableName string, s schema.Schema, tx *transaction.Transaction) error {
 	if err := m.tableManager.CreateTable(tableName, s, tx); err != nil {
 		return fmt.Errorf("create table error: %w", err)
 	}

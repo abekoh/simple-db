@@ -8,13 +8,14 @@ import (
 	"github.com/abekoh/simple-db/internal/buffer"
 	"github.com/abekoh/simple-db/internal/file"
 	"github.com/abekoh/simple-db/internal/log"
+	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
 func TestLayout(t *testing.T) {
 	t.Parallel()
 
-	s := NewSchema()
+	s := schema.NewSchema()
 	s.AddInt32Field("A")
 	s.AddStrField("B", 9)
 	l := NewLayoutSchema(s)
@@ -44,7 +45,7 @@ func TestRecordPage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	schema := NewSchema()
+	schema := schema.NewSchema()
 	schema.AddInt32Field("A")
 	schema.AddStrField("B", 9)
 
@@ -139,7 +140,7 @@ func TestTableScan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	schema := NewSchema()
+	schema := schema.NewSchema()
 	schema.AddInt32Field("A")
 	schema.AddStrField("B", 9)
 

@@ -5,120 +5,36 @@ import (
 
 	"github.com/abekoh/simple-db/internal/file"
 	"github.com/abekoh/simple-db/internal/query"
+	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
-type FieldType int32
-
-const (
-	Integer32 FieldType = iota
-	Varchar
-)
-
-type Flag int32
-
-const (
-	Empty Flag = iota
-	Used
-)
-
-type Field struct {
-	typ    FieldType
-	length int32
-}
-
-func NewField(typ FieldType, length int32) Field {
-	return Field{typ: typ, length: length}
-}
-
-type Schema struct {
-	fields    []query.FieldName
-	fieldsMap map[query.FieldName]Field
-}
-
-func NewSchema() Schema {
-	return Schema{
-		fields:    make([]query.FieldName, 0),
-		fieldsMap: make(map[query.FieldName]Field),
-	}
-}
-
-func (s *Schema) AddField(name query.FieldName, f Field) {
-	s.fields = append(s.fields, name)
-	s.fieldsMap[name] = f
-}
-
-func (s *Schema) AddInt32Field(name query.FieldName) {
-	s.AddField(name, Field{typ: Integer32, length: 0})
-}
-
-func (s *Schema) AddStrField(name query.FieldName, length int32) {
-	s.AddField(name, Field{typ: Varchar, length: length})
-}
-
-func (s *Schema) Add(name query.FieldName, schema Schema) {
-	typ := schema.Typ(name)
-	length := schema.Length(name)
-	s.AddField(name, Field{typ: typ, length: length})
-}
-
-func (s *Schema) AddAll(schema Schema) {
-	for _, field := range schema.fields {
-		f, ok := schema.fieldsMap[field]
-		if !ok {
-			panic("field not found")
-		}
-		s.AddField(field, f)
-	}
-}
-
-func (s *Schema) FieldNames() []query.FieldName {
-	names := make([]query.FieldName, 0, len(s.fieldsMap))
-	for name := range s.fieldsMap {
-		names = append(names, name)
-	}
-	return names
-}
-
-func (s *Schema) HasField(name query.FieldName) bool {
-	_, ok := s.fieldsMap[name]
-	return ok
-}
-
-func (s *Schema) Typ(name query.FieldName) FieldType {
-	return s.fieldsMap[name].typ
-}
-
-func (s *Schema) Length(name query.FieldName) int32 {
-	return s.fieldsMap[name].length
-}
-
 type Layout struct {
-	sche     Schema
+	sche     schema.Schema
 	offsets  map[query.FieldName]int32
 	slotSize int32
 }
 
-func NewLayoutSchema(sche Schema) *Layout {
+func NewLayoutSchema(sche schema.Schema) *Layout {
 	offsets := make(map[query.FieldName]int32)
 	var pos int32 = 4
 	for _, name := range sche.FieldNames() {
 		offsets[name] = pos
 		switch sche.Typ(name) {
-		case Integer32:
+		case schema.Integer32:
 			pos += 4
-		case Varchar:
+		case schema.Varchar:
 			pos += file.PageStrMaxLength(sche.Length(name))
 		}
 	}
 	return &Layout{sche: sche, offsets: offsets, slotSize: pos}
 }
 
-func NewLayout(schema Schema, offsets map[query.FieldName]int32, slotSize int32) *Layout {
+func NewLayout(schema schema.Schema, offsets map[query.FieldName]int32, slotSize int32) *Layout {
 	return &Layout{sche: schema, offsets: offsets, slotSize: slotSize}
 }
 
-func (l Layout) Schema() *Schema {
+func (l Layout) Schema() *schema.Schema {
 	return &l.sche
 }
 
@@ -193,7 +109,7 @@ func (rp *RecordPage) SetStr(slot int32, fieldName query.FieldName, val string) 
 }
 
 func (rp *RecordPage) Delete(slot int32) error {
-	if err := rp.setFlag(slot, Empty); err != nil {
+	if err := rp.setFlag(slot, schema.Empty); err != nil {
 		return fmt.Errorf("could not set flag: %w", err)
 	}
 	return nil
@@ -202,7 +118,7 @@ func (rp *RecordPage) Delete(slot int32) error {
 func (rp *RecordPage) Format() error {
 	var slot int32
 	for rp.isValidSlot(slot) {
-		if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot), int32(Empty), false); err != nil {
+		if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot), int32(schema.Empty), false); err != nil {
 			return fmt.Errorf("could not format: %w", err)
 		}
 		sche := rp.layout.Schema()
@@ -213,11 +129,11 @@ func (rp *RecordPage) Format() error {
 			}
 			fieldPos := rp.offset(slot) + layoutOffset
 			switch sche.Typ(name) {
-			case Integer32:
+			case schema.Integer32:
 				if err := rp.tx.SetInt32(rp.blockID, fieldPos, 0, false); err != nil {
 					return fmt.Errorf("could not format: %w", err)
 				}
-			case Varchar:
+			case schema.Varchar:
 				if err := rp.tx.SetStr(rp.blockID, fieldPos, "", false); err != nil {
 					return fmt.Errorf("could not format: %w", err)
 				}
@@ -229,16 +145,16 @@ func (rp *RecordPage) Format() error {
 }
 
 func (rp *RecordPage) NextAfter(slot int32) (int32, bool, error) {
-	return rp.searchAfter(slot, Used)
+	return rp.searchAfter(slot, schema.Used)
 }
 
 func (rp *RecordPage) InsertAfter(slot int32) (int32, bool, error) {
-	newSlot, ok, err := rp.searchAfter(slot, Empty)
+	newSlot, ok, err := rp.searchAfter(slot, schema.Empty)
 	if err != nil {
 		return -1, false, fmt.Errorf("could not search after: %w", err)
 	}
 	if ok {
-		if err := rp.setFlag(newSlot, Used); err != nil {
+		if err := rp.setFlag(newSlot, schema.Used); err != nil {
 			return -1, ok, fmt.Errorf("could not set flag: %w", err)
 		}
 	}
@@ -253,14 +169,14 @@ func (rp *RecordPage) isValidSlot(slot int32) bool {
 	return rp.offset(slot+1) <= rp.tx.BlockSize()
 }
 
-func (rp *RecordPage) searchAfter(slot int32, flag Flag) (int32, bool, error) {
+func (rp *RecordPage) searchAfter(slot int32, flag schema.Flag) (int32, bool, error) {
 	slot++
 	for rp.isValidSlot(slot) {
 		val, err := rp.tx.Int32(rp.blockID, rp.offset(slot))
 		if err != nil {
 			return -1, false, fmt.Errorf("could not read int32: %w", err)
 		}
-		if Flag(val) == flag {
+		if schema.Flag(val) == flag {
 			return slot, true, nil
 		}
 		slot++
@@ -268,7 +184,7 @@ func (rp *RecordPage) searchAfter(slot int32, flag Flag) (int32, bool, error) {
 	return -1, false, nil
 }
 
-func (rp *RecordPage) setFlag(slot int32, flag Flag) error {
+func (rp *RecordPage) setFlag(slot int32, flag schema.Flag) error {
 	if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot), int32(flag), true); err != nil {
 		return fmt.Errorf("could not set int32: %w", err)
 	}
@@ -404,13 +320,13 @@ func (ts *TableScan) Str(fieldName query.FieldName) (string, error) {
 
 func (ts *TableScan) Val(fieldName query.FieldName) (query.Constant, error) {
 	switch ts.layout.Schema().Typ(fieldName) {
-	case Integer32:
+	case schema.Integer32:
 		v, err := ts.Int32(fieldName)
 		if err != nil {
 			return nil, fmt.Errorf("could not read int32: %w", err)
 		}
 		return query.ConstantInt32(v), nil
-	case Varchar:
+	case schema.Varchar:
 		v, err := ts.Str(fieldName)
 		if err != nil {
 			return nil, fmt.Errorf("could not read string: %w", err)
