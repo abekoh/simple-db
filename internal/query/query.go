@@ -106,7 +106,20 @@ func (t Term) IsSatisfied(scan Scan) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("rhs evaluation error: %w", err)
 	}
-	return lhsVal.Val() == rhsVsl.Val(), nil
+	switch lhsVal.(type) {
+	case ConstantInt32:
+		if _, ok := rhsVsl.(ConstantInt32); !ok {
+			return false, fmt.Errorf("rhs is not int32")
+		}
+		return lhsVal.Val().(int32) == rhsVsl.Val().(int32), nil
+	case ConstantStr:
+		if _, ok := rhsVsl.(ConstantStr); !ok {
+			return false, fmt.Errorf("rhs is not string")
+		}
+		return lhsVal.Val().(string) == rhsVsl.Val().(string), nil
+	default:
+		return false, fmt.Errorf("lhs, rhs type mismatch")
+	}
 }
 
 type Predicate []Term
