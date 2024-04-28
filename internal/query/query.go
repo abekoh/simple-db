@@ -28,11 +28,11 @@ func (r RID) String() string {
 }
 
 type Scan interface {
+	schema.Valuable
 	BeforeFirst() error
 	Next() (bool, error)
 	Int32(fieldName schema.FieldName) (int32, error)
 	Str(fieldName schema.FieldName) (string, error)
-	Val(fieldName schema.FieldName) (schema.Constant, error)
 	HasField(fieldName schema.FieldName) bool
 	Close() error
 }
@@ -49,7 +49,7 @@ type UpdateScan interface {
 }
 
 type Expression interface {
-	Evaluate(scan Scan) (schema.Constant, error)
+	Evaluate(v schema.Valuable) (schema.Constant, error)
 }
 
 type Term struct {

@@ -2,8 +2,6 @@ package schema
 
 import (
 	"fmt"
-
-	"github.com/abekoh/simple-db/internal/query"
 )
 
 type FieldType int32
@@ -93,8 +91,8 @@ func (s *Schema) Length(name FieldName) int32 {
 
 type FieldName string
 
-func (f FieldName) Evaluate(scan query.Scan) (Constant, error) {
-	return scan.Val(f)
+func (f FieldName) Evaluate(v Valuable) (Constant, error) {
+	return v.Val(f)
 }
 
 type Constant interface {
@@ -112,7 +110,7 @@ func (v ConstantInt32) Val() any {
 	return int32(v)
 }
 
-func (v ConstantInt32) Evaluate(query.Scan) (Constant, error) {
+func (v ConstantInt32) Evaluate(Valuable) (Constant, error) {
 	return v, nil
 }
 
@@ -126,6 +124,10 @@ func (v ConstantStr) Val() any {
 	return string(v)
 }
 
-func (v ConstantStr) Evaluate(query.Scan) (Constant, error) {
+func (v ConstantStr) Evaluate(Valuable) (Constant, error) {
 	return v, nil
+}
+
+type Valuable interface {
+	Val(fieldName FieldName) (Constant, error)
 }
