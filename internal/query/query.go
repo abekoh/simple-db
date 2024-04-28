@@ -63,3 +63,9 @@ func (v ConstantStr) Evaluate(Scan) (Constant, error) {
 type Expression interface {
 	Evaluate(scan Scan) (Constant, error)
 }
+
+type FieldName string
+
+func (f FieldName) Evaluate(scan Scan) (Constant, error) {
+	return scan.Val(string(f))
+}
