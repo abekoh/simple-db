@@ -32,14 +32,14 @@ type Scan interface {
 	Next() (bool, error)
 	Int32(fieldName schema.FieldName) (int32, error)
 	Str(fieldName schema.FieldName) (string, error)
-	Val(fieldName schema.FieldName) (Constant, error)
+	Val(fieldName schema.FieldName) (schema.Constant, error)
 	HasField(fieldName schema.FieldName) bool
 	Close() error
 }
 
 type UpdateScan interface {
 	Scan
-	SetVal(fieldName schema.FieldName, val Constant) error
+	SetVal(fieldName schema.FieldName, val schema.Constant) error
 	SetInt32(fieldName schema.FieldName, val int32) error
 	SetStr(fieldName schema.FieldName, val string) error
 	Insert() error
@@ -48,41 +48,8 @@ type UpdateScan interface {
 	MoveToRID(rid RID) error
 }
 
-type Constant interface {
-	fmt.Stringer
-	Val() any
-}
-
-type ConstantInt32 int32
-
-func (v ConstantInt32) String() string {
-	return fmt.Sprintf("%d", v)
-}
-
-func (v ConstantInt32) Val() any {
-	return int32(v)
-}
-
-func (v ConstantInt32) Evaluate(Scan) (Constant, error) {
-	return v, nil
-}
-
-type ConstantStr string
-
-func (v ConstantStr) String() string {
-	return string(v)
-}
-
-func (v ConstantStr) Val() any {
-	return string(v)
-}
-
-func (v ConstantStr) Evaluate(Scan) (Constant, error) {
-	return v, nil
-}
-
 type Expression interface {
-	Evaluate(scan Scan) (Constant, error)
+	Evaluate(scan Scan) (schema.Constant, error)
 }
 
 type Term struct {
@@ -103,13 +70,13 @@ func (t Term) IsSatisfied(scan Scan) (bool, error) {
 		return false, fmt.Errorf("rhs evaluation error: %w", err)
 	}
 	switch lhsVal.(type) {
-	case ConstantInt32:
-		if _, ok := rhsVsl.(ConstantInt32); !ok {
+	case schema.ConstantInt32:
+		if _, ok := rhsVsl.(schema.ConstantInt32); !ok {
 			return false, fmt.Errorf("rhs is not int32")
 		}
 		return lhsVal.Val().(int32) == rhsVsl.Val().(int32), nil
-	case ConstantStr:
-		if _, ok := rhsVsl.(ConstantStr); !ok {
+	case schema.ConstantStr:
+		if _, ok := rhsVsl.(schema.ConstantStr); !ok {
 			return false, fmt.Errorf("rhs is not string")
 		}
 		return lhsVal.Val().(string) == rhsVsl.Val().(string), nil

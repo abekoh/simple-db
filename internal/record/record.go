@@ -318,20 +318,20 @@ func (ts *TableScan) Str(fieldName schema.FieldName) (string, error) {
 	return r, nil
 }
 
-func (ts *TableScan) Val(fieldName schema.FieldName) (query.Constant, error) {
+func (ts *TableScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
 	switch ts.layout.Schema().Typ(fieldName) {
 	case schema.Integer32:
 		v, err := ts.Int32(fieldName)
 		if err != nil {
 			return nil, fmt.Errorf("could not read int32: %w", err)
 		}
-		return query.ConstantInt32(v), nil
+		return schema.ConstantInt32(v), nil
 	case schema.Varchar:
 		v, err := ts.Str(fieldName)
 		if err != nil {
 			return nil, fmt.Errorf("could not read string: %w", err)
 		}
-		return query.ConstantStr(v), nil
+		return schema.ConstantStr(v), nil
 	}
 	return nil, fmt.Errorf("unknown type")
 }
@@ -354,11 +354,11 @@ func (ts *TableScan) SetStr(fieldName schema.FieldName, val string) error {
 	return nil
 }
 
-func (ts *TableScan) SetVal(fieldName schema.FieldName, val query.Constant) error {
+func (ts *TableScan) SetVal(fieldName schema.FieldName, val schema.Constant) error {
 	switch v := val.(type) {
-	case query.ConstantInt32:
+	case schema.ConstantInt32:
 		return ts.SetInt32(fieldName, int32(v))
-	case query.ConstantStr:
+	case schema.ConstantStr:
 		return ts.SetStr(fieldName, string(v))
 	}
 	return fmt.Errorf("unknown type")
