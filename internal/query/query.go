@@ -8,7 +8,7 @@ type Scan interface {
 	Int32(fieldName string) (int32, error)
 	Str(fieldName string) (string, error)
 	Val(fieldName string) (any, error)
-	HasField(fieldName string) (bool, error)
+	HasField(fieldName string) bool
 	Close() error
 }
 
