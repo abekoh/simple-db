@@ -94,32 +94,32 @@ func (s *Schema) Length(name query.FieldName) int32 {
 }
 
 type Layout struct {
-	schema   Schema
+	sche     Schema
 	offsets  map[query.FieldName]int32
 	slotSize int32
 }
 
-func NewLayoutSchema(schema Schema) *Layout {
+func NewLayoutSchema(sche Schema) *Layout {
 	offsets := make(map[query.FieldName]int32)
 	var pos int32 = 4
-	for _, name := range schema.FieldNames() {
+	for _, name := range sche.FieldNames() {
 		offsets[name] = pos
-		switch schema.Typ(name) {
+		switch sche.Typ(name) {
 		case Integer32:
 			pos += 4
 		case Varchar:
-			pos += file.PageStrMaxLength(schema.Length(name))
+			pos += file.PageStrMaxLength(sche.Length(name))
 		}
 	}
-	return &Layout{schema: schema, offsets: offsets, slotSize: pos}
+	return &Layout{sche: sche, offsets: offsets, slotSize: pos}
 }
 
 func NewLayout(schema Schema, offsets map[query.FieldName]int32, slotSize int32) *Layout {
-	return &Layout{schema: schema, offsets: offsets, slotSize: slotSize}
+	return &Layout{sche: schema, offsets: offsets, slotSize: slotSize}
 }
 
 func (l Layout) Schema() *Schema {
-	return &l.schema
+	return &l.sche
 }
 
 func (l Layout) Offset(name query.FieldName) (int32, bool) {
@@ -205,14 +205,14 @@ func (rp *RecordPage) Format() error {
 		if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot), int32(Empty), false); err != nil {
 			return fmt.Errorf("could not format: %w", err)
 		}
-		schema := rp.layout.Schema()
-		for _, name := range schema.FieldNames() {
+		sche := rp.layout.Schema()
+		for _, name := range sche.FieldNames() {
 			layoutOffset, ok := rp.layout.Offset(name)
 			if !ok {
 				return fmt.Errorf("field not found: %s", name)
 			}
 			fieldPos := rp.offset(slot) + layoutOffset
-			switch schema.Typ(name) {
+			switch sche.Typ(name) {
 			case Integer32:
 				if err := rp.tx.SetInt32(rp.blockID, fieldPos, 0, false); err != nil {
 					return fmt.Errorf("could not format: %w", err)
