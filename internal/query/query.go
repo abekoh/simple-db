@@ -4,6 +4,27 @@ import (
 	"fmt"
 )
 
+type RID struct {
+	blockNum int32
+	slot     int32
+}
+
+func NewRID(blockNum, slot int32) RID {
+	return RID{blockNum: blockNum, slot: slot}
+}
+
+func (r RID) BlockNum() int32 {
+	return r.blockNum
+}
+
+func (r RID) Slot() int32 {
+	return r.slot
+}
+
+func (r RID) String() string {
+	return fmt.Sprintf("RID{blockNum=%d, slot=%d}", r.blockNum, r.slot)
+}
+
 type Scan interface {
 	BeforeFirst() error
 	Next() (bool, error)
@@ -66,25 +87,4 @@ type FieldName string
 
 func (f FieldName) Evaluate(scan Scan) (Constant, error) {
 	return scan.Val(f)
-}
-
-type RID struct {
-	blockNum int32
-	slot     int32
-}
-
-func NewRID(blockNum, slot int32) RID {
-	return RID{blockNum: blockNum, slot: slot}
-}
-
-func (r RID) BlockNum() int32 {
-	return r.blockNum
-}
-
-func (r RID) Slot() int32 {
-	return r.slot
-}
-
-func (r RID) String() string {
-	return fmt.Sprintf("RID{blockNum=%d, slot=%d}", r.blockNum, r.slot)
 }
