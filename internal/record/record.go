@@ -402,20 +402,20 @@ func (ts *TableScan) Str(fieldName string) (string, error) {
 	return r, nil
 }
 
-func (ts *TableScan) Val(fieldName string) (query.Value, error) {
+func (ts *TableScan) Val(fieldName string) (query.Constant, error) {
 	switch ts.layout.Schema().Typ(fieldName) {
 	case Integer32:
 		v, err := ts.Int32(fieldName)
 		if err != nil {
 			return nil, fmt.Errorf("could not read int32: %w", err)
 		}
-		return query.ValueInt32(v), nil
+		return query.ConstantInt32(v), nil
 	case Varchar:
 		v, err := ts.Str(fieldName)
 		if err != nil {
 			return nil, fmt.Errorf("could not read string: %w", err)
 		}
-		return query.ValueStr(v), nil
+		return query.ConstantStr(v), nil
 	}
 	return nil, fmt.Errorf("unknown type")
 }
@@ -438,11 +438,11 @@ func (ts *TableScan) SetStr(fieldName, val string) error {
 	return nil
 }
 
-func (ts *TableScan) SetVal(fieldName string, val query.Value) error {
+func (ts *TableScan) SetVal(fieldName string, val query.Constant) error {
 	switch v := val.(type) {
-	case query.ValueInt32:
+	case query.ConstantInt32:
 		return ts.SetInt32(fieldName, int32(v))
-	case query.ValueStr:
+	case query.ConstantStr:
 		return ts.SetStr(fieldName, string(v))
 	}
 	return fmt.Errorf("unknown type")

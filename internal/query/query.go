@@ -11,14 +11,14 @@ type Scan interface {
 	Next() (bool, error)
 	Int32(fieldName string) (int32, error)
 	Str(fieldName string) (string, error)
-	Val(fieldName string) (Value, error)
+	Val(fieldName string) (Constant, error)
 	HasField(fieldName string) bool
 	Close() error
 }
 
 type UpdateScan interface {
 	Scan
-	SetVal(fieldName string, val Value) error
+	SetVal(fieldName string, val Constant) error
 	SetInt32(fieldName string, val int32) error
 	SetStr(fieldName string, val string) error
 	Insert() error
@@ -27,27 +27,27 @@ type UpdateScan interface {
 	MoveToRID(rid record.RID) error
 }
 
-type Value interface {
+type Constant interface {
 	fmt.Stringer
 	Val() any
 }
 
-type ValueInt32 int32
+type ConstantInt32 int32
 
-func (v ValueInt32) String() string {
+func (v ConstantInt32) String() string {
 	return fmt.Sprintf("%d", v)
 }
 
-func (v ValueInt32) Val() any {
+func (v ConstantInt32) Val() any {
 	return int32(v)
 }
 
-type ValueStr string
+type ConstantStr string
 
-func (v ValueStr) String() string {
-	return fmt.Sprintf("%s", v)
+func (v ConstantStr) String() string {
+	return string(v)
 }
 
-func (v ValueStr) Val() any {
+func (v ConstantStr) Val() any {
 	return string(v)
 }
