@@ -294,10 +294,10 @@ type ViewManager struct {
 
 func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Transaction) (*ViewManager, error) {
 	if isNew {
-		schema := record.NewSchema()
-		schema.AddStrField("view_name", maxTableNameLength)
-		schema.AddStrField("view_def", maxViewDef)
-		if err := tableManager.CreateTable("view_catalog", schema, tx); err != nil {
+		s := record.NewSchema()
+		s.AddStrField("view_name", maxTableNameLength)
+		s.AddStrField("view_def", maxViewDef)
+		if err := tableManager.CreateTable("view_catalog", s, tx); err != nil {
 			return nil, fmt.Errorf("create view catalog error: %w", err)
 		}
 	}
@@ -409,16 +409,16 @@ func (i *IndexInfo) DistinctKeys(fieldName query.FieldName) int {
 }
 
 func (i *IndexInfo) createIndexLayout() *record.Layout {
-	schema := record.NewSchema()
-	schema.AddInt32Field("block")
-	schema.AddInt32Field("id")
+	s := record.NewSchema()
+	s.AddInt32Field("block")
+	s.AddInt32Field("id")
 	switch i.tableSchema.Typ(i.fieldName) {
 	case record.Integer32:
-		schema.AddInt32Field("data_value")
+		s.AddInt32Field("data_value")
 	case record.Varchar:
-		schema.AddStrField("data_value", i.tableSchema.Length(i.fieldName))
+		s.AddStrField("data_value", i.tableSchema.Length(i.fieldName))
 	}
-	return record.NewLayoutSchema(schema)
+	return record.NewLayoutSchema(s)
 }
 
 type IndexManager struct {
@@ -429,11 +429,11 @@ type IndexManager struct {
 
 func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatManager, tx *transaction.Transaction) (*IndexManager, error) {
 	if isNew {
-		schema := record.NewSchema()
-		schema.AddStrField("index_name", maxTableNameLength)
-		schema.AddStrField("table_name", maxTableNameLength)
-		schema.AddStrField("field_name", maxTableNameLength)
-		if err := tableManager.CreateTable("index_catalog", schema, tx); err != nil {
+		s := record.NewSchema()
+		s.AddStrField("index_name", maxTableNameLength)
+		s.AddStrField("table_name", maxTableNameLength)
+		s.AddStrField("field_name", maxTableNameLength)
+		if err := tableManager.CreateTable("index_catalog", s, tx); err != nil {
 			return nil, fmt.Errorf("create index catalog error: %w", err)
 		}
 	}
@@ -539,8 +539,8 @@ func NewManager(isNew bool, tx *transaction.Transaction) (*Manager, error) {
 	}, nil
 }
 
-func (m *Manager) CreateTable(tableName string, schema record.Schema, tx *transaction.Transaction) error {
-	if err := m.tableManager.CreateTable(tableName, schema, tx); err != nil {
+func (m *Manager) CreateTable(tableName string, s record.Schema, tx *transaction.Transaction) error {
+	if err := m.tableManager.CreateTable(tableName, s, tx); err != nil {
 		return fmt.Errorf("create table error: %w", err)
 	}
 	return nil
