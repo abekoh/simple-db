@@ -42,6 +42,10 @@ func (v ConstantInt32) Val() any {
 	return int32(v)
 }
 
+func (v ConstantInt32) Evaluate(Scan) (Constant, error) {
+	return v, nil
+}
+
 type ConstantStr string
 
 func (v ConstantStr) String() string {
@@ -50,4 +54,12 @@ func (v ConstantStr) String() string {
 
 func (v ConstantStr) Val() any {
 	return string(v)
+}
+
+func (v ConstantStr) Evaluate(Scan) (Constant, error) {
+	return v, nil
+}
+
+type Expression interface {
+	Evaluate(scan Scan) (Constant, error)
 }
