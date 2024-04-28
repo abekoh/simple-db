@@ -19,6 +19,6 @@ type UpdateScan interface {
 	SetStr(fieldName string, val string) error
 	Insert() error
 	Delete() error
-	RID() (record.RID, error)
+	RID() record.RID
 	MoveToRID(rid record.RID) error
 }
