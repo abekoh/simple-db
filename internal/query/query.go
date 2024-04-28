@@ -88,3 +88,29 @@ type FieldName string
 func (f FieldName) Evaluate(scan Scan) (Constant, error) {
 	return scan.Val(f)
 }
+
+type Term struct {
+	lhs, rhs Expression
+}
+
+func NewTerm(lhs, rhs Expression) Term {
+	return Term{lhs: lhs, rhs: rhs}
+}
+
+func (t Term) IsSatisfied(scan Scan) (bool, error) {
+	lhsVal, err := t.lhs.Evaluate(scan)
+	if err != nil {
+		return false, fmt.Errorf("lhs evaluation error: %w", err)
+	}
+	rhsVsl, err := t.rhs.Evaluate(scan)
+	if err != nil {
+		return false, fmt.Errorf("rhs evaluation error: %w", err)
+	}
+	return lhsVal.Val() == rhsVsl.Val(), nil
+}
+
+type Predicate []Term
+
+func NewPredicate(terms ...Term) Predicate {
+	return terms
+}
