@@ -11,12 +11,12 @@ import (
 
 type Layout struct {
 	sche     schema.Schema
-	offsets  map[query.FieldName]int32
+	offsets  map[schema.FieldName]int32
 	slotSize int32
 }
 
 func NewLayoutSchema(sche schema.Schema) *Layout {
-	offsets := make(map[query.FieldName]int32)
+	offsets := make(map[schema.FieldName]int32)
 	var pos int32 = 4
 	for _, name := range sche.FieldNames() {
 		offsets[name] = pos
@@ -30,7 +30,7 @@ func NewLayoutSchema(sche schema.Schema) *Layout {
 	return &Layout{sche: sche, offsets: offsets, slotSize: pos}
 }
 
-func NewLayout(schema schema.Schema, offsets map[query.FieldName]int32, slotSize int32) *Layout {
+func NewLayout(schema schema.Schema, offsets map[schema.FieldName]int32, slotSize int32) *Layout {
 	return &Layout{sche: schema, offsets: offsets, slotSize: slotSize}
 }
 
@@ -38,7 +38,7 @@ func (l Layout) Schema() *schema.Schema {
 	return &l.sche
 }
 
-func (l Layout) Offset(name query.FieldName) (int32, bool) {
+func (l Layout) Offset(name schema.FieldName) (int32, bool) {
 	r, ok := l.offsets[name]
 	return r, ok
 }
@@ -60,7 +60,7 @@ func NewRecordPage(tx *transaction.Transaction, blockID file.BlockID, layout *La
 	return &RecordPage{tx: tx, blockID: blockID, layout: layout}, nil
 }
 
-func (rp *RecordPage) Int32(slot int32, fieldName query.FieldName) (int32, error) {
+func (rp *RecordPage) Int32(slot int32, fieldName schema.FieldName) (int32, error) {
 	layoutOffset, ok := rp.layout.Offset(fieldName)
 	if !ok {
 		return 0, fmt.Errorf("field not found: %s", fieldName)
@@ -73,7 +73,7 @@ func (rp *RecordPage) Int32(slot int32, fieldName query.FieldName) (int32, error
 	return val, nil
 }
 
-func (rp *RecordPage) Str(slot int32, fieldName query.FieldName) (string, error) {
+func (rp *RecordPage) Str(slot int32, fieldName schema.FieldName) (string, error) {
 	layoutOffset, ok := rp.layout.Offset(fieldName)
 	if !ok {
 		return "", fmt.Errorf("field not found: %s", fieldName)
@@ -85,7 +85,7 @@ func (rp *RecordPage) Str(slot int32, fieldName query.FieldName) (string, error)
 	return val, nil
 }
 
-func (rp *RecordPage) SetInt32(slot int32, fieldName query.FieldName, val int32) error {
+func (rp *RecordPage) SetInt32(slot int32, fieldName schema.FieldName, val int32) error {
 	layoutOffset, ok := rp.layout.Offset(fieldName)
 	if !ok {
 		return fmt.Errorf("field not found: %s", fieldName)
@@ -96,7 +96,7 @@ func (rp *RecordPage) SetInt32(slot int32, fieldName query.FieldName, val int32)
 	return nil
 }
 
-func (rp *RecordPage) SetStr(slot int32, fieldName query.FieldName, val string) error {
+func (rp *RecordPage) SetStr(slot int32, fieldName schema.FieldName, val string) error {
 	layoutOffset, ok := rp.layout.Offset(fieldName)
 	if !ok {
 		return fmt.Errorf("field not found: %s", fieldName)
@@ -302,7 +302,7 @@ func (ts *TableScan) Next() (bool, error) {
 	return true, nil
 }
 
-func (ts *TableScan) Int32(fieldName query.FieldName) (int32, error) {
+func (ts *TableScan) Int32(fieldName schema.FieldName) (int32, error) {
 	r, err := ts.rp.Int32(ts.currentSlot, fieldName)
 	if err != nil {
 		return 0, fmt.Errorf("could not read int32: %w", err)
@@ -310,7 +310,7 @@ func (ts *TableScan) Int32(fieldName query.FieldName) (int32, error) {
 	return r, nil
 }
 
-func (ts *TableScan) Str(fieldName query.FieldName) (string, error) {
+func (ts *TableScan) Str(fieldName schema.FieldName) (string, error) {
 	r, err := ts.rp.Str(ts.currentSlot, fieldName)
 	if err != nil {
 		return "", fmt.Errorf("could not read string: %w", err)
@@ -318,7 +318,7 @@ func (ts *TableScan) Str(fieldName query.FieldName) (string, error) {
 	return r, nil
 }
 
-func (ts *TableScan) Val(fieldName query.FieldName) (query.Constant, error) {
+func (ts *TableScan) Val(fieldName schema.FieldName) (query.Constant, error) {
 	switch ts.layout.Schema().Typ(fieldName) {
 	case schema.Integer32:
 		v, err := ts.Int32(fieldName)
@@ -336,25 +336,25 @@ func (ts *TableScan) Val(fieldName query.FieldName) (query.Constant, error) {
 	return nil, fmt.Errorf("unknown type")
 }
 
-func (ts *TableScan) HasField(fieldName query.FieldName) bool {
+func (ts *TableScan) HasField(fieldName schema.FieldName) bool {
 	return ts.layout.Schema().HasField(fieldName)
 }
 
-func (ts *TableScan) SetInt32(fieldName query.FieldName, val int32) error {
+func (ts *TableScan) SetInt32(fieldName schema.FieldName, val int32) error {
 	if err := ts.rp.SetInt32(ts.currentSlot, fieldName, val); err != nil {
 		return fmt.Errorf("could not set int32: %w", err)
 	}
 	return nil
 }
 
-func (ts *TableScan) SetStr(fieldName query.FieldName, val string) error {
+func (ts *TableScan) SetStr(fieldName schema.FieldName, val string) error {
 	if err := ts.rp.SetStr(ts.currentSlot, fieldName, val); err != nil {
 		return fmt.Errorf("could not set string: %w", err)
 	}
 	return nil
 }
 
-func (ts *TableScan) SetVal(fieldName query.FieldName, val query.Constant) error {
+func (ts *TableScan) SetVal(fieldName schema.FieldName, val query.Constant) error {
 	switch v := val.(type) {
 	case query.ConstantInt32:
 		return ts.SetInt32(fieldName, int32(v))

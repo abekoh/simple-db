@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 
 	"github.com/abekoh/simple-db/internal/index"
-	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/transaction"
@@ -128,7 +127,7 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 	}
 
 	sche := schema.NewSchema()
-	offsets := make(map[query.FieldName]int32)
+	offsets := make(map[schema.FieldName]int32)
 	fieldCatalog, err := record.NewTableScan(tx, "field_catalog", m.fieldCatalogLayout)
 	if err != nil {
 		return nil, fmt.Errorf("field catalog scan error: %w", err)
@@ -158,8 +157,8 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 			if err != nil {
 				return nil, fmt.Errorf("field catalog get int32 error: %w", err)
 			}
-			offsets[query.FieldName(fieldName)] = fieldOffset
-			sche.AddField(query.FieldName(fieldName), schema.NewField(schema.FieldType(fieldType), fieldLength))
+			offsets[schema.FieldName(fieldName)] = fieldOffset
+			sche.AddField(schema.FieldName(fieldName), schema.NewField(schema.FieldType(fieldType), fieldLength))
 		}
 	}
 	if err := fieldCatalog.Close(); err != nil {
@@ -188,7 +187,7 @@ func (s StatInfo) RecordsOutput() int {
 	return s.numRecords
 }
 
-func (s StatInfo) DistinctValues(f query.FieldName) int {
+func (s StatInfo) DistinctValues(f schema.FieldName) int {
 	return 1 + s.numRecords/3
 }
 
@@ -365,7 +364,7 @@ func (m *ViewManager) ViewDef(viewName string, tx *transaction.Transaction) (str
 
 type IndexInfo struct {
 	indexName   string
-	fieldName   query.FieldName
+	fieldName   schema.FieldName
 	tx          *transaction.Transaction
 	tableSchema *schema.Schema
 	indexLayout *record.Layout
@@ -374,7 +373,7 @@ type IndexInfo struct {
 
 func NewIndexInfo(
 	indexName string,
-	fieldName query.FieldName,
+	fieldName schema.FieldName,
 	tableSchema *schema.Schema,
 	tx *transaction.Transaction,
 	statInfo StatInfo,
@@ -402,7 +401,7 @@ func (i *IndexInfo) RecordsOutput() int {
 	return i.statInfo.RecordsOutput() / i.statInfo.DistinctValues(i.fieldName)
 }
 
-func (i *IndexInfo) DistinctKeys(fieldName query.FieldName) int {
+func (i *IndexInfo) DistinctKeys(fieldName schema.FieldName) int {
 	if fieldName == i.fieldName {
 		return 1
 	}
@@ -496,7 +495,7 @@ func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) 
 		if err != nil {
 			return nil, fmt.Errorf("stat error: %w", err)
 		}
-		indexInfo, err := NewIndexInfo(indexName, query.FieldName(fieldName), tableLayout.Schema(), tx, statInfo)
+		indexInfo, err := NewIndexInfo(indexName, schema.FieldName(fieldName), tableLayout.Schema(), tx, statInfo)
 		if err != nil {
 			return nil, fmt.Errorf("new index info error: %w", err)
 		}

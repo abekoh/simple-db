@@ -2,6 +2,8 @@ package query
 
 import (
 	"fmt"
+
+	"github.com/abekoh/simple-db/internal/record/schema"
 )
 
 type RID struct {
@@ -28,18 +30,18 @@ func (r RID) String() string {
 type Scan interface {
 	BeforeFirst() error
 	Next() (bool, error)
-	Int32(fieldName FieldName) (int32, error)
-	Str(fieldName FieldName) (string, error)
-	Val(fieldName FieldName) (Constant, error)
-	HasField(fieldName FieldName) bool
+	Int32(fieldName schema.FieldName) (int32, error)
+	Str(fieldName schema.FieldName) (string, error)
+	Val(fieldName schema.FieldName) (Constant, error)
+	HasField(fieldName schema.FieldName) bool
 	Close() error
 }
 
 type UpdateScan interface {
 	Scan
-	SetVal(fieldName FieldName, val Constant) error
-	SetInt32(fieldName FieldName, val int32) error
-	SetStr(fieldName FieldName, val string) error
+	SetVal(fieldName schema.FieldName, val Constant) error
+	SetInt32(fieldName schema.FieldName, val int32) error
+	SetStr(fieldName schema.FieldName, val string) error
 	Insert() error
 	Delete() error
 	RID() RID
@@ -81,12 +83,6 @@ func (v ConstantStr) Evaluate(Scan) (Constant, error) {
 
 type Expression interface {
 	Evaluate(scan Scan) (Constant, error)
-}
-
-type FieldName string
-
-func (f FieldName) Evaluate(scan Scan) (Constant, error) {
-	return scan.Val(f)
 }
 
 type Term struct {
