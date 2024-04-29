@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/server"
@@ -49,5 +50,17 @@ func TestScan(t *testing.T) {
 		if err := scan1.Close(); err != nil {
 			t.Fatal(err)
 		}
+
+		scan2, err := record.NewTableScan(tx, "T", layout)
+		if err != nil {
+			t.Fatal(err)
+		}
+		term := query.NewTerm(schema.FieldName("A"), schema.ConstantInt32(10))
+		pred := query.NewPredicate(term)
+		if pred.String() != "A=10" {
+			t.Fatalf("unexpected string: %s", pred.String())
+		}
+		// TODO
+		_ = scan2
 	})
 }

@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/abekoh/simple-db/internal/record/schema"
 )
@@ -39,6 +40,10 @@ func NewTerm(lhs, rhs Expression) Term {
 	return Term{lhs: lhs, rhs: rhs}
 }
 
+func (t Term) String() string {
+	return fmt.Sprintf("%v=%v", t.lhs, t.rhs)
+}
+
 func (t Term) IsSatisfied(scan Scan) (bool, error) {
 	lhsVal, err := t.lhs.Evaluate(scan)
 	if err != nil {
@@ -68,4 +73,15 @@ type Predicate []Term
 
 func NewPredicate(terms ...Term) Predicate {
 	return terms
+}
+
+func (p Predicate) String() string {
+	var sb strings.Builder
+	for i, term := range p {
+		if i > 0 {
+			sb.WriteString(" AND ")
+		}
+		sb.WriteString(term.String())
+	}
+	return sb.String()
 }
