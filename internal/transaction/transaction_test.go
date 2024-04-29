@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -265,5 +266,84 @@ func TestTransaction(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+	})
+	t.Run("Recovery", func(t *testing.T) {
+		fm, err := file.NewManager(t.TempDir(), 400)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lm, err := log.NewManager(fm, "logfile")
+		if err != nil {
+			t.Fatal(err)
+		}
+		bm := buffer.NewManager(fm, lm, 8)
+
+		blockID0 := file.NewBlockID("testfile", 0)
+		blockID1 := file.NewBlockID("testfile", 1)
+
+		assertValues := func(t *testing.T, expected string) {
+			p0 := file.NewPage(fm.BlockSize())
+			p1 := file.NewPage(fm.BlockSize())
+			if err := fm.Read(blockID0, p0); err != nil {
+				t.Fatal(err)
+			}
+			if err := fm.Read(blockID1, p1); err != nil {
+				t.Fatal(err)
+			}
+			pos := int32(0)
+			var sb strings.Builder
+			for i := 0; i < 6; i++ {
+				sb.WriteString(fmt.Sprintf("%d ", p0.Int32(pos)))
+				sb.WriteString(fmt.Sprintf("%d ", p1.Int32(pos)))
+				pos += 4
+			}
+			sb.WriteString(p0.Str(30) + " ")
+			sb.WriteString(p1.Str(30) + " ")
+			if sb.String() != expected {
+				t.Errorf("expected %s, got %s", expected, sb.String())
+			}
+		}
+
+		tx1, err := NewTransaction(bm, fm, lm)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx2, err := NewTransaction(bm, fm, lm)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = tx1.Pin(blockID0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = tx2.Pin(blockID1)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		pos := int32(0)
+		for i := 0; i < 6; i++ {
+			if err := tx1.SetInt32(blockID0, pos, pos, false); err != nil {
+				t.Fatal(err)
+			}
+			if err := tx2.SetInt32(blockID1, pos, pos, false); err != nil {
+				t.Fatal(err)
+			}
+			pos += 4
+		}
+		if err := tx1.SetStr(blockID0, 30, "abc", false); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx2.SetStr(blockID1, 30, "def", false); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx1.Commit(); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx2.Commit(); err != nil {
+			t.Fatal(err)
+		}
+		assertValues(t, "0 0 4 4 8 8 12 12 16 16 20 20 abc def ")
 	})
 }
