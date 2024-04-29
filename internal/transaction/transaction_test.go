@@ -307,14 +307,14 @@ func TestTransaction(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ctx := context.Background()
-		bm1 := buffer.NewManager(ctx, fm1, lm1, 8)
+		ctx1, cancel := context.WithCancel(context.Background())
+		bm1 := buffer.NewManager(ctx1, fm1, lm1, 8)
 
-		tx1, err := NewTransaction(ctx, bm1, fm1, lm1)
+		tx1, err := NewTransaction(ctx1, bm1, fm1, lm1)
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx2, err := NewTransaction(ctx, bm1, fm1, lm1)
+		tx2, err := NewTransaction(ctx1, bm1, fm1, lm1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -354,11 +354,11 @@ func TestTransaction(t *testing.T) {
 		assertValues(t, "0 0 4 4 8 8 12 12 16 16 20 20 abc def ", fm1)
 
 		// modify
-		tx3, err := NewTransaction(ctx, bm1, fm1, lm1)
+		tx3, err := NewTransaction(ctx1, bm1, fm1, lm1)
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx4, err := NewTransaction(ctx, bm1, fm1, lm1)
+		tx4, err := NewTransaction(ctx1, bm1, fm1, lm1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -400,6 +400,8 @@ func TestTransaction(t *testing.T) {
 		}
 		assertValues(t, "0 100 4 104 8 108 12 112 16 116 20 120 abc xyz ", fm1)
 
+		cancel()
+
 		fm2, err := file.NewManager(tmpDir, 400)
 		if err != nil {
 			t.Fatal(err)
@@ -408,11 +410,11 @@ func TestTransaction(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ctx = context.Background()
-		bm2 := buffer.NewManager(ctx, fm2, lm2, 8)
+		ctx2 := context.Background()
+		bm2 := buffer.NewManager(ctx2, fm2, lm2, 8)
 
 		// recover (rollback tx4)
-		tx5, err := NewTransaction(ctx, bm2, fm2, lm2)
+		tx5, err := NewTransaction(ctx2, bm2, fm2, lm2)
 		if err != nil {
 			t.Fatal(err)
 		}
