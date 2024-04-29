@@ -102,24 +102,24 @@ func (p Predicate) String() string {
 var _ UpdateScan = (*SelectScan)(nil)
 
 type SelectScan struct {
-	UpdateScan
+	Scan
 	pred Predicate
 }
 
-func NewSelectScan(updateScan UpdateScan, pred Predicate) *SelectScan {
-	return &SelectScan{UpdateScan: updateScan, pred: pred}
+func NewSelectScan(scan Scan, pred Predicate) *SelectScan {
+	return &SelectScan{Scan: scan, pred: pred}
 }
 
 func (s *SelectScan) Next() (bool, error) {
 	for {
-		ok, err := s.UpdateScan.Next()
+		ok, err := s.Scan.Next()
 		if err != nil {
 			return false, err
 		}
 		if !ok {
 			return false, nil
 		}
-		ok, err = s.pred.IsSatisfied(s.UpdateScan)
+		ok, err = s.pred.IsSatisfied(s.Scan)
 		if err != nil {
 			return false, err
 		}
@@ -127,6 +127,62 @@ func (s *SelectScan) Next() (bool, error) {
 			return true, nil
 		}
 	}
+}
+
+func (s *SelectScan) SetVal(fieldName schema.FieldName, val schema.Constant) error {
+	us, ok := s.Scan.(UpdateScan)
+	if !ok {
+		return fmt.Errorf("scan is not updatable")
+	}
+	return us.SetVal(fieldName, val)
+}
+
+func (s *SelectScan) SetInt32(fieldName schema.FieldName, val int32) error {
+	us, ok := s.Scan.(UpdateScan)
+	if !ok {
+		return fmt.Errorf("scan is not updatable")
+	}
+	return us.SetInt32(fieldName, val)
+}
+
+func (s *SelectScan) SetStr(fieldName schema.FieldName, val string) error {
+	us, ok := s.Scan.(UpdateScan)
+	if !ok {
+		return fmt.Errorf("scan is not updatable")
+	}
+	return us.SetStr(fieldName, val)
+}
+
+func (s *SelectScan) Insert() error {
+	us, ok := s.Scan.(UpdateScan)
+	if !ok {
+		return fmt.Errorf("scan is not updatable")
+	}
+	return us.Insert()
+}
+
+func (s *SelectScan) Delete() error {
+	us, ok := s.Scan.(UpdateScan)
+	if !ok {
+		return fmt.Errorf("scan is not updatable")
+	}
+	return us.Delete()
+}
+
+func (s *SelectScan) RID() schema.RID {
+	us, ok := s.Scan.(UpdateScan)
+	if !ok {
+		return schema.RID{}
+	}
+	return us.RID()
+}
+
+func (s *SelectScan) MoveToRID(rid schema.RID) error {
+	us, ok := s.Scan.(UpdateScan)
+	if !ok {
+		return fmt.Errorf("scan is not updatable")
+	}
+	return us.MoveToRID(rid)
 }
 
 type ProductScan struct {
