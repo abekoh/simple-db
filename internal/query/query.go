@@ -212,3 +212,44 @@ func (s *ProductScan) Close() error {
 	}
 	return nil
 }
+
+type ProjectScan struct {
+	Scan
+	fieldNameSet map[schema.FieldName]struct{}
+}
+
+var _ Scan = (*ProjectScan)(nil)
+
+func NewProjectScan(scan Scan, fieldNames ...schema.FieldName) *ProjectScan {
+	fieldNameSet := make(map[schema.FieldName]struct{}, len(fieldNames))
+	for _, fieldName := range fieldNames {
+		fieldNameSet[fieldName] = struct{}{}
+	}
+	return &ProjectScan{Scan: scan, fieldNameSet: fieldNameSet}
+}
+
+func (s *ProjectScan) Int32(fieldName schema.FieldName) (int32, error) {
+	if !s.HasField(fieldName) {
+		return 0, fmt.Errorf("field %s not found", fieldName)
+	}
+	return s.Scan.Int32(fieldName)
+}
+
+func (s *ProjectScan) Str(fieldName schema.FieldName) (string, error) {
+	if !s.HasField(fieldName) {
+		return "", fmt.Errorf("field %s not found", fieldName)
+	}
+	return s.Scan.Str(fieldName)
+}
+
+func (s *ProjectScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+	if !s.HasField(fieldName) {
+		return nil, fmt.Errorf("field %s not found", fieldName)
+	}
+	return s.Scan.Val(fieldName)
+}
+
+func (s *ProjectScan) HasField(fieldName schema.FieldName) bool {
+	_, ok := s.fieldNameSet[fieldName]
+	return ok
+}
