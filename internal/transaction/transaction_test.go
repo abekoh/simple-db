@@ -38,7 +38,7 @@ func TestTransaction(t *testing.T) {
 		ctx := context.Background()
 		bm := buffer.NewManager(ctx, fm, lm, 8)
 
-		tx1, err := NewTransaction(bm, fm, lm)
+		tx1, err := NewTransaction(ctx, bm, fm, lm)
 		must(t, err)
 		blockID := file.NewBlockID("testfile", 1)
 		_, err = tx1.Pin(blockID)
@@ -47,7 +47,7 @@ func TestTransaction(t *testing.T) {
 		must(t, tx1.SetStr(blockID, 40, "one", false))
 		must(t, tx1.Commit())
 
-		tx2, err := NewTransaction(bm, fm, lm)
+		tx2, err := NewTransaction(ctx, bm, fm, lm)
 		must(t, err)
 		_, err = tx2.Pin(blockID)
 		beforeTx2IntVal, err := tx2.Int32(blockID, 80)
@@ -64,7 +64,7 @@ func TestTransaction(t *testing.T) {
 		must(t, tx2.SetStr(blockID, 40, beforeTx2StrVal+"!", true))
 		must(t, tx2.Commit())
 
-		tx3, err := NewTransaction(bm, fm, lm)
+		tx3, err := NewTransaction(ctx, bm, fm, lm)
 		must(t, err)
 		_, err = tx3.Pin(blockID)
 		must(t, err)
@@ -82,7 +82,7 @@ func TestTransaction(t *testing.T) {
 		must(t, tx3.SetStr(blockID, 40, "two", true))
 		must(t, tx3.Rollback())
 
-		tx4, err := NewTransaction(bm, fm, lm)
+		tx4, err := NewTransaction(ctx, bm, fm, lm)
 		must(t, err)
 		_, err = tx4.Pin(blockID)
 		must(t, err)
@@ -136,7 +136,7 @@ func TestTransaction(t *testing.T) {
 
 		var g errgroup.Group
 		g.Go(func() error {
-			txA, err := NewTransaction(bm, fm, lm)
+			txA, err := NewTransaction(ctx, bm, fm, lm)
 			if err != nil {
 				return fmt.Errorf("failed txA: %w", err)
 			}
@@ -170,7 +170,7 @@ func TestTransaction(t *testing.T) {
 			return nil
 		})
 		g.Go(func() error {
-			txB, err := NewTransaction(bm, fm, lm)
+			txB, err := NewTransaction(ctx, bm, fm, lm)
 			if err != nil {
 				return fmt.Errorf("failed txB: %w", err)
 			}
@@ -203,7 +203,7 @@ func TestTransaction(t *testing.T) {
 			return nil
 		})
 		g.Go(func() error {
-			txC, err := NewTransaction(bm, fm, lm)
+			txC, err := NewTransaction(ctx, bm, fm, lm)
 			if err != nil {
 				return fmt.Errorf("failed txC: %w", err)
 			}
@@ -253,7 +253,7 @@ func TestTransaction(t *testing.T) {
 		ctx := context.Background()
 		bm := buffer.NewManager(ctx, fm, lm, 8)
 
-		tx, err := NewTransaction(bm, fm, lm)
+		tx, err := NewTransaction(ctx, bm, fm, lm)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -310,11 +310,11 @@ func TestTransaction(t *testing.T) {
 		ctx := context.Background()
 		bm1 := buffer.NewManager(ctx, fm1, lm1, 8)
 
-		tx1, err := NewTransaction(bm1, fm1, lm1)
+		tx1, err := NewTransaction(ctx, bm1, fm1, lm1)
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx2, err := NewTransaction(bm1, fm1, lm1)
+		tx2, err := NewTransaction(ctx, bm1, fm1, lm1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -354,11 +354,11 @@ func TestTransaction(t *testing.T) {
 		assertValues(t, "0 0 4 4 8 8 12 12 16 16 20 20 abc def ", fm1)
 
 		// modify
-		tx3, err := NewTransaction(bm1, fm1, lm1)
+		tx3, err := NewTransaction(ctx, bm1, fm1, lm1)
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx4, err := NewTransaction(bm1, fm1, lm1)
+		tx4, err := NewTransaction(ctx, bm1, fm1, lm1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -412,7 +412,7 @@ func TestTransaction(t *testing.T) {
 		bm2 := buffer.NewManager(ctx, fm2, lm2, 8)
 
 		// recover (rollback tx4)
-		tx5, err := NewTransaction(bm2, fm2, lm2)
+		tx5, err := NewTransaction(ctx, bm2, fm2, lm2)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -30,6 +31,7 @@ type Transaction struct {
 }
 
 func NewTransaction(
+	ctx context.Context,
 	bm *buffer.Manager,
 	fm *file.Manager,
 	lm *log.Manager,
@@ -45,7 +47,7 @@ func NewTransaction(
 		txNum:   txNum,
 		bufMap:  make(map[file.BlockID]*buffer.Buffer),
 		bufPins: make([]file.BlockID, 0),
-		concMgr: newConcurrencyManager(),
+		concMgr: newConcurrencyManager(ctx),
 	}, nil
 }
 
@@ -652,13 +654,13 @@ type (
 	}
 )
 
-func newConcurrencyManager() concurrencyManager {
+func newConcurrencyManager(ctx context.Context) concurrencyManager {
 	m := concurrencyManager{
 		sLockCh:   make(chan sLockRequest, 20),
 		xLockCh:   make(chan xLockRequest, 20),
 		releaseCh: make(chan struct{}),
 	}
-	go m.loop()
+	go m.loop(ctx)
 	return m
 }
 
@@ -689,7 +691,7 @@ func (m *concurrencyManager) release() {
 	m.releaseCh <- struct{}{}
 }
 
-func (m *concurrencyManager) loop() {
+func (m *concurrencyManager) loop(ctx context.Context) {
 	type lockType int
 	const (
 		sLock lockType = iota
@@ -703,6 +705,8 @@ func (m *concurrencyManager) loop() {
 	}()
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case req := <-m.sLockCh:
 			if t, ok := localLockTable[req.blockID]; ok {
 				switch t {

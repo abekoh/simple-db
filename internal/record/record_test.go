@@ -42,7 +42,7 @@ func TestRecordPage(t *testing.T) {
 	ctx := context.Background()
 	bm := buffer.NewManager(ctx, fm, lm, 8)
 
-	tx, err := transaction.NewTransaction(bm, fm, lm)
+	tx, err := transaction.NewTransaction(ctx, bm, fm, lm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func TestTableScan(t *testing.T) {
 	ctx := context.Background()
 	bm := buffer.NewManager(ctx, fm, lm, 8)
 
-	tx, err := transaction.NewTransaction(bm, fm, lm)
+	tx, err := transaction.NewTransaction(ctx, bm, fm, lm)
 	if err != nil {
 		t.Fatal(err)
 	}

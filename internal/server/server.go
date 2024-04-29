@@ -41,7 +41,7 @@ func NewSimpleDB(ctx context.Context, dirname string) (*SimpleDB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not create SimpleDB: %w", err)
 	}
-	tx, err := transaction.NewTransaction(db.bufMgr, db.fileMgr, db.logMgr)
+	tx, err := transaction.NewTransaction(ctx, db.bufMgr, db.fileMgr, db.logMgr)
 	if err != nil {
 		return nil, fmt.Errorf("could not create SimpleDB: %w", err)
 	}
@@ -65,8 +65,8 @@ func NewSimpleDB(ctx context.Context, dirname string) (*SimpleDB, error) {
 	return db, nil
 }
 
-func (db *SimpleDB) NewTx() (*transaction.Transaction, error) {
-	return transaction.NewTransaction(db.bufMgr, db.fileMgr, db.logMgr)
+func (db *SimpleDB) NewTx(ctx context.Context) (*transaction.Transaction, error) {
+	return transaction.NewTransaction(ctx, db.bufMgr, db.fileMgr, db.logMgr)
 }
 
 func (db *SimpleDB) MetadataMgr() *metadata.Manager {
