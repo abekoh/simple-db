@@ -3,6 +3,7 @@ package query_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/query"
@@ -43,7 +44,8 @@ func TestProductScan(t *testing.T) {
 	if err := ts1.BeforeFirst(); err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 200; i++ {
+	n := 5
+	for i := 0; i < n; i++ {
 		if err := ts1.Insert(); err != nil {
 			t.Fatal(err)
 		}
@@ -61,7 +63,7 @@ func TestProductScan(t *testing.T) {
 	if err := ts2.BeforeFirst(); err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 200; i++ {
+	for i := 0; i < n; i++ {
 		if err := ts2.Insert(); err != nil {
 			t.Fatal(err)
 		}
@@ -84,8 +86,11 @@ func TestProductScan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ps := query.NewProductScan(ts1p, ts2p)
-	got := make([]string, 0, 200)
+	ps, err := query.NewProductScan(ts1p, ts2p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := make([]string, 0, n*n)
 	for {
 		ok, err := ps.Next()
 		if err != nil {
@@ -112,8 +117,36 @@ func TestProductScan(t *testing.T) {
 		}
 		got = append(got, fmt.Sprintf("{%d, %s, %d, %s}", a, b, c, d))
 	}
-	if len(got) != 200*200 {
-		t.Fatalf("got %d, want %d", len(got), 200*200)
+	if len(got) != n*n {
+		t.Errorf("got %d, want %d", len(got), n*n)
+	}
+	expected := `{0, aaa0, 0, bbb0}
+{0, aaa0, 1, bbb1}
+{0, aaa0, 2, bbb2}
+{0, aaa0, 3, bbb3}
+{0, aaa0, 4, bbb4}
+{1, aaa1, 0, bbb0}
+{1, aaa1, 1, bbb1}
+{1, aaa1, 2, bbb2}
+{1, aaa1, 3, bbb3}
+{1, aaa1, 4, bbb4}
+{2, aaa2, 0, bbb0}
+{2, aaa2, 1, bbb1}
+{2, aaa2, 2, bbb2}
+{2, aaa2, 3, bbb3}
+{2, aaa2, 4, bbb4}
+{3, aaa3, 0, bbb0}
+{3, aaa3, 1, bbb1}
+{3, aaa3, 2, bbb2}
+{3, aaa3, 3, bbb3}
+{3, aaa3, 4, bbb4}
+{4, aaa4, 0, bbb0}
+{4, aaa4, 1, bbb1}
+{4, aaa4, 2, bbb2}
+{4, aaa4, 3, bbb3}
+{4, aaa4, 4, bbb4}`
+	if strings.Join(got, "\n") != expected {
+		t.Errorf("got %s, want %s", strings.Join(got, "\n"), expected)
 	}
 	if err := ps.Close(); err != nil {
 		t.Fatal(err)
@@ -121,7 +154,6 @@ func TestProductScan(t *testing.T) {
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func TestScan(t *testing.T) {

@@ -135,8 +135,12 @@ type ProductScan struct {
 
 var _ Scan = (*ProductScan)(nil)
 
-func NewProductScan(scan1, scan2 Scan) *ProductScan {
-	return &ProductScan{scan1: scan1, scan2: scan2}
+func NewProductScan(scan1, scan2 Scan) (*ProductScan, error) {
+	s := &ProductScan{scan1: scan1, scan2: scan2}
+	if err := s.BeforeFirst(); err != nil {
+		return nil, fmt.Errorf("BeforeFirst error: %w", err)
+	}
+	return s, nil
 }
 
 func (s *ProductScan) BeforeFirst() error {
