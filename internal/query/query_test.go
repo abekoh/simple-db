@@ -158,7 +158,7 @@ func TestProductScan(t *testing.T) {
 }
 
 func TestScan(t *testing.T) {
-	t.Run("Scan1", func(t *testing.T) {
+	t.Run("SelectScan -> ProjectScan", func(t *testing.T) {
 		ctx := context.Background()
 		db, err := server.NewSimpleDB(ctx, t.TempDir())
 		if err != nil {
