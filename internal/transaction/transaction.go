@@ -696,6 +696,11 @@ func (m *concurrencyManager) loop() {
 		xLock
 	)
 	localLockTable := make(map[file.BlockID]lockType)
+	defer func() {
+		for blockID := range localLockTable {
+			globalLockTable.Delete(blockID)
+		}
+	}()
 	for {
 		select {
 		case req := <-m.sLockCh:
@@ -715,7 +720,6 @@ func (m *concurrencyManager) loop() {
 					slog.Debug("slock granted (new)", "blockID", req.blockID)
 					req.complete <- nil
 				} else if time.Now().Before(req.expiredAt) {
-					slog.Debug("slock wait", "blockID", req.blockID)
 					m.sLockCh <- req
 				} else {
 					slog.Debug("slock timeout", "blockID", req.blockID)
