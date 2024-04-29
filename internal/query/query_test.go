@@ -3,6 +3,7 @@ package query_test
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -172,7 +173,7 @@ func TestScan(t *testing.T) {
 		sche.AddInt32Field("A")
 		sche.AddStrField("B", 9)
 		layout := record.NewLayoutSchema(sche)
-		scan1, err := record.NewTableScan(tx, "T1", layout)
+		scan1, err := record.NewTableScan(tx, "T", layout)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -184,7 +185,7 @@ func TestScan(t *testing.T) {
 			if err := scan1.Insert(); err != nil {
 				t.Fatal(err)
 			}
-			if err := scan1.SetInt32("A", int32(i)); err != nil {
+			if err := scan1.SetInt32("A", int32(i/10)); err != nil {
 				t.Fatal(err)
 			}
 			if err := scan1.SetStr("B", fmt.Sprintf("rec%d", i)); err != nil {
@@ -195,7 +196,7 @@ func TestScan(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		scan2, err := record.NewTableScan(tx, "T2", layout)
+		scan2, err := record.NewTableScan(tx, "T", layout)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -204,9 +205,35 @@ func TestScan(t *testing.T) {
 		if pred.String() != "A=10" {
 			t.Fatalf("unexpected string: %s", pred.String())
 		}
-		// TODO
-		_ = scan2
-
+		scan3 := query.NewSelectScan(scan2, pred)
+		scan4 := query.NewProjectScan(scan3, "B")
+		got := make([]string, 0, 10)
+		for {
+			ok, err := scan4.Next()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !ok {
+				break
+			}
+			b, err := scan4.Str("B")
+			if err != nil {
+				t.Fatal(err)
+			}
+			got = append(got, b)
+		}
+		if len(got) != 10 {
+			t.Errorf("got %d, want %d", len(got), 10)
+		}
+		expected := []string{"rec100", "rec101", "rec102", "rec103", "rec104", "rec105", "rec106", "rec107", "rec108", "rec109"}
+		if !reflect.DeepEqual(got, expected) {
+			t.Errorf("got %v, want %v", got, expected)
+		}
+		if err := scan4.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatal(err)
+		}
 	})
-
 }
