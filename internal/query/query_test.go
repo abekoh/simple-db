@@ -250,8 +250,8 @@ func TestScan(t *testing.T) {
 		sche1 := schema.NewSchema()
 		sche1.AddInt32Field("A")
 		sche1.AddStrField("B", 9)
-		layout := record.NewLayoutSchema(sche1)
-		us1, err := record.NewTableScan(tx, "T1", layout)
+		layout1 := record.NewLayoutSchema(sche1)
+		us1, err := record.NewTableScan(tx, "T1", layout1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -277,8 +277,8 @@ func TestScan(t *testing.T) {
 		sche2 := schema.NewSchema()
 		sche2.AddInt32Field("C")
 		sche2.AddStrField("D", 9)
-		layout := record.NewLayoutSchema(sche2)
-		us2, err := record.NewTableScan(tx, "T2", layout)
+		layout2 := record.NewLayoutSchema(sche2)
+		us2, err := record.NewTableScan(tx, "T2", layout2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -289,10 +289,10 @@ func TestScan(t *testing.T) {
 			if err := us2.Insert(); err != nil {
 				t.Fatal(err)
 			}
-			if err := us2.SetInt32("A", int32(i)); err != nil {
+			if err := us2.SetInt32("C", int32(i)); err != nil {
 				t.Fatal(err)
 			}
-			if err := us2.SetStr("B", fmt.Sprintf("ddd%d", i)); err != nil {
+			if err := us2.SetStr("D", fmt.Sprintf("ddd%d", i)); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -300,11 +300,11 @@ func TestScan(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		s1p, err := record.NewTableScan(tx, "T1", layout)
+		s1p, err := record.NewTableScan(tx, "T1", layout1)
 		if err != nil {
 			t.Fatal(err)
 		}
-		s2p, err := record.NewTableScan(tx, "T2", layout)
+		s2p, err := record.NewTableScan(tx, "T2", layout2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -335,10 +335,14 @@ func TestScan(t *testing.T) {
 			}
 			got = append(got, fmt.Sprintf("%s, %s", b, d))
 		}
-		if len(got) != n*n {
+		if len(got) != n {
 			t.Errorf("got %d, want %d", len(got), n*n)
 		}
-		expected := ``
+		expected := `bbb0, ddd0
+bbb1, ddd1
+bbb2, ddd2
+bbb3, ddd3
+bbb4, ddd4`
 		if strings.Join(got, "\n") != expected {
 			t.Errorf("got %s, want %s", strings.Join(got, "\n"), expected)
 		}
