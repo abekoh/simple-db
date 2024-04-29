@@ -76,6 +76,52 @@ func TestProductScan(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	ts1p, err := record.NewTableScan(tx, "T1", layout1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts2p, err := record.NewTableScan(tx, "T2", layout2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps := query.NewProductScan(ts1p, ts2p)
+	got := make([]string, 0, 200)
+	for {
+		ok, err := ps.Next()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			break
+		}
+		a, err := ps.Int32("A")
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := ps.Str("B")
+		if err != nil {
+			t.Fatal(err)
+		}
+		c, err := ps.Int32("C")
+		if err != nil {
+			t.Fatal(err)
+		}
+		d, err := ps.Str("D")
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, fmt.Sprintf("{%d, %s, %d, %s}", a, b, c, d))
+	}
+	if len(got) != 200*200 {
+		t.Fatalf("got %d, want %d", len(got), 200*200)
+	}
+	if err := ps.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func TestScan(t *testing.T) {
@@ -129,51 +175,6 @@ func TestScan(t *testing.T) {
 		// TODO
 		_ = scan2
 
-		ts1p, err := record.NewTableScan(tx, "T1", layout)
-		if err != nil {
-			t.Fatal(err)
-		}
-		ts2p, err := record.NewTableScan(tx, "T2", layout)
-		if err != nil {
-			t.Fatal(err)
-		}
-		ps := query.NewProductScan(ts1p, ts2p)
-		got := make([]string, 0, 200)
-		for {
-			ok, err := ps.Next()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !ok {
-				break
-			}
-			a, err := ps.Int32("A")
-			if err != nil {
-				t.Fatal(err)
-			}
-			b, err := ps.Str("B")
-			if err != nil {
-				t.Fatal(err)
-			}
-			c, err := ps.Int32("C")
-			if err != nil {
-				t.Fatal(err)
-			}
-			d, err := ps.Str("D")
-			if err != nil {
-				t.Fatal(err)
-			}
-			got = append(got, fmt.Sprintf("{%d, %s, %d, %s}", a, b, c, d))
-		}
-		if len(got) != 200*200 {
-			t.Fatalf("got %d, want %d", len(got), 200*200)
-		}
-		if err := ps.Close(); err != nil {
-			t.Fatal(err)
-		}
-		if err := tx.Commit(); err != nil {
-			t.Fatal(err)
-		}
 	})
 
 }
