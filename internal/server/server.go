@@ -46,6 +46,7 @@ func NewSimpleDB(dirname string) (*SimpleDB, error) {
 	}
 	isNew := db.fileMgr.IsNew()
 	if !isNew {
+		// TODO: fix
 		if err := tx.Rollback(); err != nil {
 			return nil, fmt.Errorf("could not recover: %w", err)
 		}

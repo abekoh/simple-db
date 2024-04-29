@@ -95,6 +95,39 @@ func (t *Transaction) Rollback() error {
 	return nil
 }
 
+func (t *Transaction) Recover() error {
+	if err := t.bm.FlushAll(t.txNum); err != nil {
+		return fmt.Errorf("could not flush: %w", err)
+	}
+	finishedTxSet := make(map[int32]struct{})
+	for b := range t.lm.Iterator() {
+		r := NewLogRecord(b)
+		switch r.Type() {
+		case Checkpoint:
+			break
+		case Commit | Rollback:
+			finishedTxSet[r.TxNum()] = struct{}{}
+		default:
+			if _, ok := finishedTxSet[r.TxNum()]; !ok {
+				if err := r.Undo(t); err != nil {
+					return fmt.Errorf("could not undo: %w", err)
+				}
+			}
+		}
+	}
+	if err := t.bm.FlushAll(t.txNum); err != nil {
+		return fmt.Errorf("could not flush: %w", err)
+	}
+	lsn, err := NewCheckpointLogRecord().WriteTo(t.lm)
+	if err != nil {
+		return fmt.Errorf("could not write log: %w", err)
+	}
+	if err := t.lm.Flush(lsn); err != nil {
+		return fmt.Errorf("could not flush: %w", err)
+	}
+	return nil
+}
+
 func (t *Transaction) Pin(blockID file.BlockID) (*buffer.Buffer, error) {
 	buf, err := t.bm.Pin(blockID)
 	if err != nil {
