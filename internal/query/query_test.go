@@ -12,8 +12,6 @@ import (
 )
 
 func TestProductScan(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	db, err := server.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
@@ -81,9 +79,7 @@ func TestProductScan(t *testing.T) {
 }
 
 func TestScan(t *testing.T) {
-	t.Parallel()
 	t.Run("Scan1", func(t *testing.T) {
-		t.Parallel()
 		ctx := context.Background()
 		db, err := server.NewSimpleDB(ctx, t.TempDir())
 		if err != nil {
