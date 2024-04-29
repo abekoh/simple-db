@@ -1,6 +1,7 @@
 package record
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -38,7 +39,8 @@ func TestRecordPage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bm := buffer.NewManager(fm, lm, 8)
+	ctx := context.Background()
+	bm := buffer.NewManager(ctx, fm, lm, 8)
 
 	tx, err := transaction.NewTransaction(bm, fm, lm)
 	if err != nil {
@@ -133,7 +135,8 @@ func TestTableScan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bm := buffer.NewManager(fm, lm, 8)
+	ctx := context.Background()
+	bm := buffer.NewManager(ctx, fm, lm, 8)
 
 	tx, err := transaction.NewTransaction(bm, fm, lm)
 	if err != nil {

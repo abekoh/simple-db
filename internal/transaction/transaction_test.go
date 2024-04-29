@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -34,7 +35,8 @@ func TestTransaction(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bm := buffer.NewManager(fm, lm, 8)
+		ctx := context.Background()
+		bm := buffer.NewManager(ctx, fm, lm, 8)
 
 		tx1, err := NewTransaction(bm, fm, lm)
 		must(t, err)
@@ -129,7 +131,8 @@ func TestTransaction(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bm := buffer.NewManager(fm, lm, 8)
+		ctx := context.Background()
+		bm := buffer.NewManager(ctx, fm, lm, 8)
 
 		var g errgroup.Group
 		g.Go(func() error {
@@ -247,7 +250,8 @@ func TestTransaction(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bm := buffer.NewManager(fm, lm, 8)
+		ctx := context.Background()
+		bm := buffer.NewManager(ctx, fm, lm, 8)
 
 		tx, err := NewTransaction(bm, fm, lm)
 		if err != nil {
@@ -303,7 +307,8 @@ func TestTransaction(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bm1 := buffer.NewManager(fm1, lm1, 8)
+		ctx := context.Background()
+		bm1 := buffer.NewManager(ctx, fm1, lm1, 8)
 
 		tx1, err := NewTransaction(bm1, fm1, lm1)
 		if err != nil {
@@ -403,7 +408,8 @@ func TestTransaction(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bm2 := buffer.NewManager(fm2, lm2, 8)
+		ctx = context.Background()
+		bm2 := buffer.NewManager(ctx, fm2, lm2, 8)
 
 		// recover (rollback tx4)
 		tx5, err := NewTransaction(bm2, fm2, lm2)

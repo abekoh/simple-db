@@ -1,6 +1,7 @@
 package buffer
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -124,6 +125,7 @@ type (
 const defaultMaxWaitTime = 10 * time.Second
 
 func NewManager(
+	ctx context.Context,
 	fm *file.Manager,
 	lm *log.Manager,
 	buffNum int,
@@ -146,7 +148,7 @@ func NewManager(
 	for _, opt := range opts {
 		opt(m)
 	}
-	go m.loop()
+	go m.loop(ctx)
 	return m
 }
 
@@ -156,10 +158,12 @@ func WithMaxWaitTime(d time.Duration) ManagerOption {
 	}
 }
 
-func (m *Manager) loop() {
+func (m *Manager) loop(ctx context.Context) {
 	waitMap := make(map[file.BlockID][]pinRequest)
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case flushAllReq := <-m.flushAllCh:
 			var err error
 			for _, b := range m.pool {

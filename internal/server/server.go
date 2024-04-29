@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/abekoh/simple-db/internal/buffer"
@@ -17,7 +18,7 @@ type SimpleDB struct {
 	metadataMgr *metadata.Manager
 }
 
-func NewSimpleDBWithParams(dirname string, blockSize int32, bufSize int) (*SimpleDB, error) {
+func NewSimpleDBWithParams(ctx context.Context, dirname string, blockSize int32, bufSize int) (*SimpleDB, error) {
 	fm, err := file.NewManager(dirname, blockSize)
 	if err != nil {
 		return nil, err
@@ -27,7 +28,7 @@ func NewSimpleDBWithParams(dirname string, blockSize int32, bufSize int) (*Simpl
 	if err != nil {
 		return nil, err
 	}
-	bm := buffer.NewManager(fm, lm, bufSize)
+	bm := buffer.NewManager(ctx, fm, lm, bufSize)
 	return &SimpleDB{
 		fileMgr: fm,
 		bufMgr:  bm,
@@ -35,8 +36,8 @@ func NewSimpleDBWithParams(dirname string, blockSize int32, bufSize int) (*Simpl
 	}, nil
 }
 
-func NewSimpleDB(dirname string) (*SimpleDB, error) {
-	db, err := NewSimpleDBWithParams(dirname, 400, 8)
+func NewSimpleDB(ctx context.Context, dirname string) (*SimpleDB, error) {
+	db, err := NewSimpleDBWithParams(ctx, dirname, 400, 8)
 	if err != nil {
 		return nil, fmt.Errorf("could not create SimpleDB: %w", err)
 	}

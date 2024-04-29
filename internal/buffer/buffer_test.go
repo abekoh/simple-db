@@ -1,6 +1,7 @@
 package buffer
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -36,7 +37,8 @@ func TestBufferManager(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bm := NewManager(fm, lm, 3, WithMaxWaitTime(10*time.Millisecond))
+		ctx := context.Background()
+		bm := NewManager(ctx, fm, lm, 3, WithMaxWaitTime(10*time.Millisecond))
 
 		assertAvailableNum(t, bm, 3)
 
@@ -92,7 +94,8 @@ func TestBufferManager(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bm := NewManager(fm, lm, 3, WithMaxWaitTime(10*time.Millisecond))
+		ctx := context.Background()
+		bm := NewManager(ctx, fm, lm, 3, WithMaxWaitTime(10*time.Millisecond))
 
 		buf1 := mustPin(t, bm, file.NewBlockID("testfile", 0))
 		buf1.Page().SetStr(0, "abcdefgh")

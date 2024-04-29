@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"slices"
@@ -25,7 +26,8 @@ func TestMetadataManager(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bm := buffer.NewManager(fm, lm, 8)
+	ctx := context.Background()
+	bm := buffer.NewManager(ctx, fm, lm, 8)
 
 	tx, err := transaction.NewTransaction(bm, fm, lm)
 	if err != nil {
