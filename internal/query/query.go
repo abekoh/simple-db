@@ -75,6 +75,19 @@ func NewPredicate(terms ...Term) Predicate {
 	return terms
 }
 
+func (p Predicate) IsSatisfied(scan Scan) (bool, error) {
+	for _, term := range p {
+		ok, err := term.IsSatisfied(scan)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func (p Predicate) String() string {
 	var sb strings.Builder
 	for i, term := range p {
@@ -84,4 +97,34 @@ func (p Predicate) String() string {
 		sb.WriteString(term.String())
 	}
 	return sb.String()
+}
+
+var _ UpdateScan = (*SelectScan)(nil)
+
+type SelectScan struct {
+	UpdateScan
+	pred Predicate
+}
+
+func NewSelectScan(updateScan UpdateScan, pred Predicate) *SelectScan {
+	return &SelectScan{UpdateScan: updateScan, pred: pred}
+}
+
+func (s SelectScan) Next() (bool, error) {
+	for {
+		ok, err := s.UpdateScan.Next()
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
+		ok, err = s.pred.IsSatisfied(s.UpdateScan)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
 }
