@@ -236,4 +236,117 @@ func TestScan(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+	t.Run("ProductScan -> SelectScan -> ProjectScan", func(t *testing.T) {
+		ctx := context.Background()
+		db, err := server.NewSimpleDB(ctx, t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx, err := db.NewTx(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sche1 := schema.NewSchema()
+		sche1.AddInt32Field("A")
+		sche1.AddStrField("B", 9)
+		layout := record.NewLayoutSchema(sche1)
+		us1, err := record.NewTableScan(tx, "T1", layout)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := us1.BeforeFirst(); err != nil {
+			t.Fatal(err)
+		}
+		n := 5
+		for i := 0; i < n; i++ {
+			if err := us1.Insert(); err != nil {
+				t.Fatal(err)
+			}
+			if err := us1.SetInt32("A", int32(i)); err != nil {
+				t.Fatal(err)
+			}
+			if err := us1.SetStr("B", fmt.Sprintf("bbb%d", i)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := us1.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		sche2 := schema.NewSchema()
+		sche2.AddInt32Field("C")
+		sche2.AddStrField("D", 9)
+		layout := record.NewLayoutSchema(sche2)
+		us2, err := record.NewTableScan(tx, "T2", layout)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := us2.BeforeFirst(); err != nil {
+			t.Fatal(err)
+		}
+		for i := 0; i < n; i++ {
+			if err := us2.Insert(); err != nil {
+				t.Fatal(err)
+			}
+			if err := us2.SetInt32("A", int32(i)); err != nil {
+				t.Fatal(err)
+			}
+			if err := us2.SetStr("B", fmt.Sprintf("ddd%d", i)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := us2.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		s1p, err := record.NewTableScan(tx, "T1", layout)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s2p, err := record.NewTableScan(tx, "T2", layout)
+		if err != nil {
+			t.Fatal(err)
+		}
+		prodS, err := query.NewProductScan(s1p, s2p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		term := query.NewTerm(schema.FieldName("A"), schema.FieldName("C"))
+		pred := query.NewPredicate(term)
+		ss := query.NewSelectScan(prodS, pred)
+		prjS := query.NewProjectScan(ss, "B", "D")
+		got := make([]string, 0, n*n)
+		for {
+			ok, err := prjS.Next()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !ok {
+				break
+			}
+			b, err := prjS.Str("B")
+			if err != nil {
+				t.Fatal(err)
+			}
+			d, err := prjS.Str("D")
+			if err != nil {
+				t.Fatal(err)
+			}
+			got = append(got, fmt.Sprintf("%s, %s", b, d))
+		}
+		if len(got) != n*n {
+			t.Errorf("got %d, want %d", len(got), n*n)
+		}
+		expected := ``
+		if strings.Join(got, "\n") != expected {
+			t.Errorf("got %s, want %s", strings.Join(got, "\n"), expected)
+		}
+		if err := prjS.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
