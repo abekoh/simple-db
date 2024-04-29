@@ -268,6 +268,7 @@ func TestTransaction(t *testing.T) {
 		}
 	})
 	t.Run("Recovery", func(t *testing.T) {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
 		tmpDir := t.TempDir()
 		blockID0 := file.NewBlockID("testfile", 0)
 		blockID1 := file.NewBlockID("testfile", 1)
@@ -294,127 +295,124 @@ func TestTransaction(t *testing.T) {
 			}
 		}
 
-		t.Run("Step1", func(t *testing.T) {
-			fm, err := file.NewManager(tmpDir, 400)
-			if err != nil {
-				t.Fatal(err)
-			}
-			lm, err := log.NewManager(fm, "logfile")
-			if err != nil {
-				t.Fatal(err)
-			}
-			bm := buffer.NewManager(fm, lm, 8)
+		fm1, err := file.NewManager(tmpDir, 400)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lm1, err := log.NewManager(fm1, "logfile")
+		if err != nil {
+			t.Fatal(err)
+		}
+		bm1 := buffer.NewManager(fm1, lm1, 8)
 
-			tx1, err := NewTransaction(bm, fm, lm)
-			if err != nil {
-				t.Fatal(err)
-			}
-			tx2, err := NewTransaction(bm, fm, lm)
-			if err != nil {
-				t.Fatal(err)
-			}
+		tx1, err := NewTransaction(bm1, fm1, lm1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx2, err := NewTransaction(bm1, fm1, lm1)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			_, err = tx1.Pin(blockID0)
-			if err != nil {
-				t.Fatal(err)
-			}
-			_, err = tx2.Pin(blockID1)
-			if err != nil {
-				t.Fatal(err)
-			}
+		_, err = tx1.Pin(blockID0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = tx2.Pin(blockID1)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			// initialize
-			pos := int32(0)
-			for i := 0; i < 6; i++ {
-				if err := tx1.SetInt32(blockID0, pos, pos, false); err != nil {
-					t.Fatal(err)
-				}
-				if err := tx2.SetInt32(blockID1, pos, pos, false); err != nil {
-					t.Fatal(err)
-				}
-				pos += 4
-			}
-			if err := tx1.SetStr(blockID0, 30, "abc", false); err != nil {
+		// initialize
+		pos := int32(0)
+		for i := 0; i < 6; i++ {
+			if err := tx1.SetInt32(blockID0, pos, pos, false); err != nil {
 				t.Fatal(err)
 			}
-			if err := tx2.SetStr(blockID1, 30, "def", false); err != nil {
+			if err := tx2.SetInt32(blockID1, pos, pos, false); err != nil {
 				t.Fatal(err)
 			}
-			if err := tx1.Commit(); err != nil {
-				t.Fatal(err)
-			}
-			if err := tx2.Commit(); err != nil {
-				t.Fatal(err)
-			}
-			assertValues(t, "0 0 4 4 8 8 12 12 16 16 20 20 abc def ", fm)
+			pos += 4
+		}
+		if err := tx1.SetStr(blockID0, 30, "abc", false); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx2.SetStr(blockID1, 30, "def", false); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx1.Commit(); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx2.Commit(); err != nil {
+			t.Fatal(err)
+		}
+		assertValues(t, "0 0 4 4 8 8 12 12 16 16 20 20 abc def ", fm1)
 
-			// modify
-			tx3, err := NewTransaction(bm, fm, lm)
-			if err != nil {
+		// modify
+		tx3, err := NewTransaction(bm1, fm1, lm1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx4, err := NewTransaction(bm1, fm1, lm1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = tx3.Pin(blockID0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = tx4.Pin(blockID1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pos = int32(0)
+		for i := 0; i < 6; i++ {
+			if err := tx3.SetInt32(blockID0, pos, pos+100, true); err != nil {
 				t.Fatal(err)
 			}
-			tx4, err := NewTransaction(bm, fm, lm)
-			if err != nil {
+			if err := tx4.SetInt32(blockID1, pos, pos+100, true); err != nil {
 				t.Fatal(err)
 			}
-			_, err = tx3.Pin(blockID0)
-			if err != nil {
-				t.Fatal(err)
-			}
-			_, err = tx4.Pin(blockID1)
-			if err != nil {
-				t.Fatal(err)
-			}
-			pos = int32(0)
-			for i := 0; i < 6; i++ {
-				if err := tx3.SetInt32(blockID0, pos, pos+100, true); err != nil {
-					t.Fatal(err)
-				}
-				if err := tx4.SetInt32(blockID1, pos, pos+100, true); err != nil {
-					t.Fatal(err)
-				}
-				pos += 4
-			}
-			if err := tx3.SetStr(blockID0, 30, "uvw", true); err != nil {
-				t.Fatal(err)
-			}
-			if err := tx4.SetStr(blockID1, 30, "xyz", true); err != nil {
-				t.Fatal(err)
-			}
-			if err := bm.FlushAll(3); err != nil {
-				t.Fatal(err)
-			}
-			if err := bm.FlushAll(4); err != nil {
-				t.Fatal(err)
-			}
-			assertValues(t, "100 100 104 104 108 108 112 112 116 116 120 120 uvw xyz ", fm)
+			pos += 4
+		}
+		if err := tx3.SetStr(blockID0, 30, "uvw", true); err != nil {
+			t.Fatal(err)
+		}
+		if err := tx4.SetStr(blockID1, 30, "xyz", true); err != nil {
+			t.Fatal(err)
+		}
+		if err := bm1.FlushAll(3); err != nil {
+			t.Fatal(err)
+		}
+		if err := bm1.FlushAll(4); err != nil {
+			t.Fatal(err)
+		}
+		assertValues(t, "100 100 104 104 108 108 112 112 116 116 120 120 uvw xyz ", fm1)
 
-			// rollback tx3
-			if err := tx3.Rollback(); err != nil {
-				t.Fatal(err)
-			}
-			assertValues(t, "0 100 4 104 8 108 12 112 16 116 20 120 abc xyz ", fm)
-		})
-		t.Run("Step2", func(t *testing.T) {
-			fm, err := file.NewManager(tmpDir, 400)
-			if err != nil {
-				t.Fatal(err)
-			}
-			lm, err := log.NewManager(fm, "logfile")
-			if err != nil {
-				t.Fatal(err)
-			}
-			bm := buffer.NewManager(fm, lm, 8)
+		// rollback tx3
+		if err := tx3.Rollback(); err != nil {
+			t.Fatal(err)
+		}
+		assertValues(t, "0 100 4 104 8 108 12 112 16 116 20 120 abc xyz ", fm1)
 
-			// recover (rollback tx4)
-			tx5, err := NewTransaction(bm, fm, lm)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := tx5.Recover(); err != nil {
-				t.Fatal(err)
-			}
-			assertValues(t, "0 0 4 4 8 8 12 12 16 16 20 20 abc def ", fm)
-		})
+		fm2, err := file.NewManager(tmpDir, 400)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lm2, err := log.NewManager(fm2, "logfile")
+		if err != nil {
+			t.Fatal(err)
+		}
+		bm2 := buffer.NewManager(fm2, lm2, 8)
+
+		// recover (rollback tx4)
+		tx5, err := NewTransaction(bm2, fm2, lm2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := tx5.Recover(); err != nil {
+			t.Fatal(err)
+		}
+		assertValues(t, "0 0 4 4 8 8 12 12 16 16 20 20 abc def ", fm2)
 	})
 }
