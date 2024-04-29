@@ -204,6 +204,10 @@ func (m *Manager) BlockSize() int32 {
 	return m.blockSize
 }
 
+func (m *Manager) IsNew() bool {
+	return m.isNew
+}
+
 type keyedMutex struct {
 	mutexes sync.Map
 }
