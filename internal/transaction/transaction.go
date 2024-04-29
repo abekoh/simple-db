@@ -669,6 +669,7 @@ func (m *concurrencyManager) sLock(blockID file.BlockID) error {
 		complete:  ch,
 		expiredAt: time.Now().Add(10 * time.Second),
 	}
+	slog.Debug("request slock", "blockID", blockID)
 	return <-ch
 }
 
@@ -679,10 +680,12 @@ func (m *concurrencyManager) xLock(blockID file.BlockID) error {
 		complete:  ch,
 		expiredAt: time.Now().Add(10 * time.Second),
 	}
+	slog.Debug("request xlock", "blockID", blockID)
 	return <-ch
 }
 
 func (m *concurrencyManager) release() {
+	slog.Debug("request release locks")
 	m.releaseCh <- struct{}{}
 }
 
@@ -699,18 +702,23 @@ func (m *concurrencyManager) loop() {
 			if t, ok := localLockTable[req.blockID]; ok {
 				switch t {
 				case sLock:
+					slog.Debug("slock granted (already)", "blockID", req.blockID)
 					req.complete <- nil
 				case xLock:
+					slog.Debug("slock granted (xlock found)", "blockID", req.blockID)
 					req.complete <- nil
 				}
 			} else {
 				mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
 				if mutex.(*sync.RWMutex).TryRLock() {
 					localLockTable[req.blockID] = sLock
+					slog.Debug("slock granted (new)", "blockID", req.blockID)
 					req.complete <- nil
 				} else if time.Now().Before(req.expiredAt) {
+					slog.Debug("slock wait", "blockID", req.blockID)
 					m.sLockCh <- req
 				} else {
+					slog.Debug("slock timeout", "blockID", req.blockID)
 					req.complete <- fmt.Errorf("timeout")
 				}
 			}
@@ -720,29 +728,35 @@ func (m *concurrencyManager) loop() {
 				case sLock:
 					mutex, ok := globalLockTable.Load(req.blockID)
 					if !ok {
+						slog.Debug("xlock failed (block not found)", "blockID", req.blockID)
 						req.complete <- fmt.Errorf("block not found")
 						continue
 					}
 					mutex.(*sync.RWMutex).RUnlock()
 					if mutex.(*sync.RWMutex).TryLock() {
 						localLockTable[req.blockID] = xLock
+						slog.Debug("xlock granted (upgraded)", "blockID", req.blockID)
 						req.complete <- nil
 					} else if time.Now().Before(req.expiredAt) {
 						m.xLockCh <- req
 					} else {
+						slog.Debug("xlock timeout", "blockID", req.blockID)
 						req.complete <- fmt.Errorf("timeout")
 					}
 				case xLock:
+					slog.Debug("xlock granted (already)", "blockID", req.blockID)
 					req.complete <- nil
 				}
 			} else {
 				mutex, _ := globalLockTable.LoadOrStore(req.blockID, &sync.RWMutex{})
 				if mutex.(*sync.RWMutex).TryLock() {
 					localLockTable[req.blockID] = xLock
+					slog.Debug("xlock granted (new)", "blockID", req.blockID)
 					req.complete <- nil
 				} else if time.Now().Before(req.expiredAt) {
 					m.xLockCh <- req
 				} else {
+					slog.Debug("xlock timeout", "blockID", req.blockID)
 					req.complete <- fmt.Errorf("timeout")
 				}
 			}
@@ -760,6 +774,7 @@ func (m *concurrencyManager) loop() {
 				}
 			}
 			localLockTable = make(map[file.BlockID]lockType)
+			slog.Debug("locks released")
 		}
 	}
 }
