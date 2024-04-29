@@ -110,7 +110,7 @@ func NewSelectScan(updateScan UpdateScan, pred Predicate) *SelectScan {
 	return &SelectScan{UpdateScan: updateScan, pred: pred}
 }
 
-func (s SelectScan) Next() (bool, error) {
+func (s *SelectScan) Next() (bool, error) {
 	for {
 		ok, err := s.UpdateScan.Next()
 		if err != nil {
@@ -127,4 +127,84 @@ func (s SelectScan) Next() (bool, error) {
 			return true, nil
 		}
 	}
+}
+
+type ProductScan struct {
+	scan1, scan2 Scan
+}
+
+var _ Scan = (*ProductScan)(nil)
+
+func NewProductScan(scan1, scan2 Scan) *ProductScan {
+	return &ProductScan{scan1: scan1, scan2: scan2}
+}
+
+func (s *ProductScan) BeforeFirst() error {
+	if err := s.scan1.BeforeFirst(); err != nil {
+		return fmt.Errorf("scan1.BeforeFirst error: %w", err)
+	}
+	if _, err := s.scan1.Next(); err != nil {
+		return fmt.Errorf("scan1.Next error: %w", err)
+	}
+	if err := s.scan2.BeforeFirst(); err != nil {
+		return fmt.Errorf("scan2.BeforeFirst error: %w", err)
+	}
+	return nil
+}
+
+func (s *ProductScan) Next() (bool, error) {
+	ok, err := s.scan2.Next()
+	if err != nil {
+		return false, fmt.Errorf("scan2.Next error: %w", err)
+	}
+	if ok {
+		return true, nil
+	}
+	if err := s.scan2.BeforeFirst(); err != nil {
+		return false, fmt.Errorf("scan2.BeforeFirst error: %w", err)
+	}
+	scan2Ok, err := s.scan2.Next()
+	if err != nil {
+		return false, fmt.Errorf("scan2.Next error: %w", err)
+	}
+	scan1Ok, err := s.scan1.Next()
+	if err != nil {
+		return false, fmt.Errorf("scan1.Next error: %w", err)
+	}
+	return scan2Ok && scan1Ok, nil
+}
+
+func (s *ProductScan) Int32(fieldName schema.FieldName) (int32, error) {
+	if s.scan1.HasField(fieldName) {
+		return s.scan1.Int32(fieldName)
+	}
+	return s.scan2.Int32(fieldName)
+}
+
+func (s *ProductScan) Str(fieldName schema.FieldName) (string, error) {
+	if s.scan1.HasField(fieldName) {
+		return s.scan1.Str(fieldName)
+	}
+	return s.scan2.Str(fieldName)
+}
+
+func (s *ProductScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+	if s.scan1.HasField(fieldName) {
+		return s.scan1.Val(fieldName)
+	}
+	return s.scan2.Val(fieldName)
+}
+
+func (s *ProductScan) HasField(fieldName schema.FieldName) bool {
+	return s.scan1.HasField(fieldName) || s.scan2.HasField(fieldName)
+}
+
+func (s *ProductScan) Close() error {
+	if err := s.scan1.Close(); err != nil {
+		return fmt.Errorf("scan1.Close error: %w", err)
+	}
+	if err := s.scan2.Close(); err != nil {
+		return fmt.Errorf("scan2.Close error: %w", err)
+	}
+	return nil
 }
