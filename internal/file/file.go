@@ -111,6 +111,13 @@ func NewManager(dbDirPath string, blockSize int32) (*Manager, error) {
 		if !fi.IsDir() {
 			return nil, fmt.Errorf("%s is not a directory", dbDirPath)
 		}
+		files, err := os.ReadDir(dbDirPath)
+		if err != nil {
+			return nil, fmt.Errorf("could not read directory: %w", err)
+		}
+		if len(files) == 0 {
+			isNew = true
+		}
 	}
 	return &Manager{
 		dbDirPath: dbDirPath,
