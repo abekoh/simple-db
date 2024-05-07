@@ -1,34 +1,30 @@
 package parse
 
-import "errors"
-
 type Lexer struct {
-	s      string
-	cursor int
+	s            string
+	cursor       int
+	currentToken string
 }
 
-func NewLexer(s string) *Lexer {
-	return &Lexer{s: s}
-}
+type token string
 
-func (l *Lexer) MatchDelim(c uint8) bool {
-	if l.cursor >= len(l.s) {
-		return false
-	}
-	return l.s[l.cursor] == c
-}
-
-func (l *Lexer) EatDelim(c uint8) error {
-	if !l.MatchDelim(c) {
-		return errors.New("bad syntax")
-	}
-	l.nextToken()
-	return nil
-}
-
-func (l *Lexer) nextToken() {
-	l.cursor++
-	for l.cursor < len(l.s) && l.s[l.cursor] == ' ' {
-		l.cursor++
-	}
-}
+const (
+	selectTok token = "select"
+	from      token = "from"
+	and       token = "and"
+	where     token = "where"
+	insert    token = "insert"
+	into      token = "into"
+	values    token = "values"
+	deleteTok token = "delete"
+	update    token = "update"
+	set       token = "set"
+	create    token = "create"
+	table     token = "table"
+	intTok    token = "int"
+	varchar   token = "varchar"
+	view      token = "view"
+	as        token = "as"
+	index     token = "index"
+	on        token = "on"
+)
