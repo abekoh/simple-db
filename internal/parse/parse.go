@@ -1,5 +1,7 @@
 package parse
 
+import "strings"
+
 type tokenType string
 
 const (
@@ -32,6 +34,8 @@ const (
 	stringTok tokenType = "STRING"
 
 	illegal tokenType = "ILLEGAL"
+
+	eof tokenType = "EOF"
 )
 
 var keywords = map[tokenType]struct{}{
@@ -56,6 +60,7 @@ var keywords = map[tokenType]struct{}{
 }
 
 func lookupToken(ident string) tokenType {
+	ident = strings.ToUpper(ident)
 	if _, ok := keywords[tokenType(ident)]; ok {
 		return tokenType(ident)
 	}
@@ -100,6 +105,8 @@ func (l *Lexer) NextToken() token {
 		return token{typ: rparen, literal: ")"}
 	case '\'':
 		return token{typ: stringTok, literal: l.readString()}
+	case 0:
+		return token{typ: eof, literal: ""}
 	default:
 		if isLetter(l.char) {
 			ident := l.readIdentifier()
