@@ -31,6 +31,16 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			input: `select a from mytable`,
+			want: []token{
+				{typ: selectTok, literal: "select"},
+				{typ: identifier, literal: "a"},
+				{typ: from, literal: "from"},
+				{typ: identifier, literal: "mytable"},
+				{typ: eof, literal: ""},
+			},
+		},
+		{
 			input: `INSERT INTO mytable (a, b) VALUES (1, 'foo')`,
 			want: []token{
 				{typ: insert, literal: "INSERT"},
@@ -76,6 +86,22 @@ func TestLexer(t *testing.T) {
 				{typ: identifier, literal: "b"},
 				{typ: equal, literal: "="},
 				{typ: stringTok, literal: "foo"},
+				{typ: eof, literal: ""},
+			},
+		},
+		{
+			input: `CREATE TABLE mytable (a INT, b VARCHAR)`,
+			want: []token{
+				{typ: create, literal: "CREATE"},
+				{typ: table, literal: "TABLE"},
+				{typ: identifier, literal: "mytable"},
+				{typ: lparen, literal: "("},
+				{typ: identifier, literal: "a"},
+				{typ: intTok, literal: "INT"},
+				{typ: comma, literal: ","},
+				{typ: identifier, literal: "b"},
+				{typ: varchar, literal: "VARCHAR"},
+				{typ: rparen, literal: ")"},
 				{typ: eof, literal: ""},
 			},
 		},
