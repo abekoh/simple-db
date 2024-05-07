@@ -26,6 +26,9 @@ const (
 	index     tokenType = "INDEX"
 	on        tokenType = "ON"
 
+	number    tokenType = "NUMBER"
+	stringTok tokenType = "STRING"
+
 	equal  tokenType = "EQUAL"
 	comma  tokenType = "COMMA"
 	lparen tokenType = "LPAREN"
@@ -102,7 +105,7 @@ func (l *Lexer) NextToken() token {
 		l.readChar()
 		return token{typ: rparen, literal: ")"}
 	case '\'':
-		tok := token{typ: varchar, literal: l.readString()}
+		tok := token{typ: stringTok, literal: l.readString()}
 		l.readChar()
 		return tok
 	case 0:
@@ -113,7 +116,7 @@ func (l *Lexer) NextToken() token {
 			typ := lookupToken(ident)
 			return token{typ: typ, literal: ident}
 		} else if isDigit(l.char) {
-			return token{typ: intTok, literal: l.readNumber()}
+			return token{typ: number, literal: l.readNumber()}
 		} else {
 			return token{typ: illegal, literal: string(l.char)}
 		}
