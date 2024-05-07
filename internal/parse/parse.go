@@ -31,8 +31,6 @@ const (
 	lparen tokenType = "LPAREN"
 	rparen tokenType = "RPAREN"
 
-	stringTok tokenType = "STRING"
-
 	illegal tokenType = "ILLEGAL"
 
 	eof tokenType = "EOF"
@@ -104,7 +102,9 @@ func (l *Lexer) NextToken() token {
 		l.readChar()
 		return token{typ: rparen, literal: ")"}
 	case '\'':
-		return token{typ: stringTok, literal: l.readString()}
+		tok := token{typ: varchar, literal: l.readString()}
+		l.readChar()
+		return tok
 	case 0:
 		return token{typ: eof, literal: ""}
 	default:
