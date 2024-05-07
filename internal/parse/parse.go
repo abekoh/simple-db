@@ -120,6 +120,20 @@ func (l *Lexer) NextToken() token {
 	}
 }
 
+func (l *Lexer) TokenIterator() func(func(token) bool) {
+	return func(yield func(token) bool) {
+		for {
+			tok := l.NextToken()
+			if !yield(tok) {
+				break
+			}
+			if tok.typ == eof {
+				break
+			}
+		}
+	}
+}
+
 func (l *Lexer) readChar() {
 	if l.readCursor >= len(l.s) {
 		l.char = 0
