@@ -186,6 +186,11 @@ func (p *Parser) Insert() (*InsertData, error) {
 		return nil, fmt.Errorf("expected INTO, got %s", tok.literal)
 	}
 	tok = p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	d.table = tok.literal
+	tok = p.lexer.NextToken()
 	if tok.typ != lparen {
 		return nil, fmt.Errorf("expected (, got %s", tok.literal)
 	}
