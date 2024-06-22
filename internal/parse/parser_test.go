@@ -199,9 +199,17 @@ func TestParser_CreateTable(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "CREATE TABLE",
-			s:       "CREATE TABLE mytable (a INT, b VARCHAR(10))",
-			want:    nil,
+			name: "CREATE TABLE",
+			s:    "CREATE TABLE mytable (a INT, b VARCHAR(10))",
+			want: &CreateTableData{
+				table: "mytable",
+				sche: func() schema.Schema {
+					s := schema.NewSchema()
+					s.AddField("a", schema.NewInt32Field())
+					s.AddField("b", schema.NewVarcharField(10))
+					return s
+				}(),
+			},
 			wantErr: false,
 		},
 	}
