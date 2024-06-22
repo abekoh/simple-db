@@ -304,5 +304,38 @@ func (p *Parser) expression() (query.Expression, error) {
 		return schema.ConstantStr(tok.literal), nil
 	}
 	return nil, fmt.Errorf("unexpected token %s", tok.literal)
+}
 
+type ModifyData struct {
+	table string
+	field string
+	value query.Expression
+	pred  query.Predicate
+}
+
+type InsertData struct {
+	table  string
+	fields []string
+	values []schema.Constant
+}
+
+type DeleteData struct {
+	table string
+	pred  query.Predicate
+}
+
+type CreateTableData struct {
+	table string
+	sche  schema.Schema
+}
+
+type CreateViewData struct {
+	view  string
+	query QueryData
+}
+
+type CreateIndexData struct {
+	index string
+	table string
+	field string
 }
