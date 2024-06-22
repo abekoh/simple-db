@@ -16,53 +16,54 @@ func NewParser(s string) *Parser {
 	return &Parser{lexer: NewLexer(s)}
 }
 
-func (p *Parser) predicate() (query.Predicate, error) {
+func (p *Parser) predicate() (query.Predicate, token, error) {
 	terms := make([]query.Term, 0, 1)
+	var tok token
 	for {
-		term, err := p.term()
+		term, tok, err := p.term()
 		if err != nil {
-			return nil, err
+			return nil, tok, err
 		}
 		terms = append(terms, term)
-		tok := p.lexer.NextToken()
+		tok = p.lexer.NextToken()
 		if tok.typ != and {
 			break
 		}
 	}
-	return query.NewPredicate(terms...), nil
+	return query.NewPredicate(terms...), tok, nil
 }
 
-func (p *Parser) term() (query.Term, error) {
-	lhs, err := p.expression()
+func (p *Parser) term() (query.Term, token, error) {
+	lhs, tok, err := p.expression()
 	if err != nil {
-		return query.Term{}, err
+		return query.Term{}, tok, err
 	}
-	tok := p.lexer.NextToken()
+	tok = p.lexer.NextToken()
 	if tok.typ != equal {
-		return query.Term{}, fmt.Errorf("expected =, got %s", tok.literal)
+		return query.Term{}, tok, fmt.Errorf("expected =, got %s", tok.literal)
 	}
-	rhs, err := p.expression()
+	rhs, tok, err := p.expression()
 	if err != nil {
-		return query.Term{}, err
+		return query.Term{}, tok, err
 	}
-	return query.NewTerm(lhs, rhs), nil
+	return query.NewTerm(lhs, rhs), tok, nil
 }
 
-func (p *Parser) expression() (query.Expression, error) {
+func (p *Parser) expression() (query.Expression, token, error) {
 	tok := p.lexer.NextToken()
 	switch tok.typ {
 	case identifier:
-		return schema.FieldName(tok.literal), nil
+		return schema.FieldName(tok.literal), tok, nil
 	case number:
 		i, err := strconv.Atoi(tok.literal)
 		if err != nil {
-			return nil, err
+			return nil, tok, err
 		}
-		return schema.ConstantInt32(i), nil
+		return schema.ConstantInt32(i), tok, nil
 	case stringTok:
-		return schema.ConstantStr(tok.literal), nil
+		return schema.ConstantStr(tok.literal), tok, nil
 	}
-	return nil, fmt.Errorf("unexpected token %s", tok.literal)
+	return nil, tok, fmt.Errorf("unexpected token %s", tok.literal)
 }
 
 type QueryData struct {
@@ -116,7 +117,7 @@ func (p *Parser) Query() (*QueryData, error) {
 		q.tables = append(q.tables, tok.literal)
 	}
 	if tok.typ == where {
-		pred, err := p.predicate()
+		pred, _, err := p.predicate()
 		if err != nil {
 			return nil, err
 		}
