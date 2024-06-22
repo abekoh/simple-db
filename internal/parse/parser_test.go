@@ -190,3 +190,32 @@ func TestParser_Delete(t *testing.T) {
 		})
 	}
 }
+
+func TestParser_CreateTable(t *testing.T) {
+	tests := []struct {
+		name    string
+		s       string
+		want    *CreateTableData
+		wantErr bool
+	}{
+		{
+			name:    "CREATE TABLE",
+			s:       "CREATE TABLE mytable (a INT, b VARCHAR(10))",
+			want:    nil,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewParser(tt.s)
+			got, err := p.CreateTable()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CreateTable() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CreateTable() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
