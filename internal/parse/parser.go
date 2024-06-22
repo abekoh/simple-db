@@ -81,10 +81,6 @@ func (p *Parser) fieldList() ([]string, token, error) {
 
 func (p *Parser) constList() ([]schema.Constant, token, error) {
 	constList := make([]schema.Constant, 0, 1)
-	tok := p.lexer.NextToken()
-	if tok.typ != number && tok.typ != stringTok {
-		return nil, tok, fmt.Errorf("expected number or string, got %s", tok.literal)
-	}
 	c, tok, err := p.constant()
 	if err != nil {
 		return nil, tok, err

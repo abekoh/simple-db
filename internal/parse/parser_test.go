@@ -61,3 +61,39 @@ func TestParser_Query(t *testing.T) {
 		})
 	}
 }
+
+func TestParser_Insert(t *testing.T) {
+	tests := []struct {
+		name    string
+		s       string
+		want    *InsertData
+		wantErr bool
+	}{
+		{
+			name: "INSERT",
+			s:    "INSERT INTO mytable (a, b) VALUES (1, 'foo')",
+			want: &InsertData{
+				table:  "mytable",
+				fields: []string{"a", "b"},
+				values: []schema.Constant{
+					schema.ConstantInt32(1),
+					schema.ConstantStr("foo"),
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewParser(tt.s)
+			got, err := p.Insert()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Insert() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Insert() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
