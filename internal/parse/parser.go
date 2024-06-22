@@ -83,7 +83,7 @@ func (p *Parser) constList() ([]schema.Constant, token, error) {
 	constList := make([]schema.Constant, 0, 1)
 	c, tok, err := p.constant()
 	if err != nil {
-		return nil, tok, err
+		return nil, tok, fmt.Errorf("failed to parse constant: %w", err)
 	}
 	constList = append(constList, c)
 	for {
@@ -93,7 +93,7 @@ func (p *Parser) constList() ([]schema.Constant, token, error) {
 		}
 		c, tok, err := p.constant()
 		if err != nil {
-			return nil, tok, err
+			return nil, tok, fmt.Errorf("failed to parse constant: %w", err)
 		}
 		constList = append(constList, c)
 	}
@@ -106,7 +106,7 @@ func (p *Parser) predicate() (query.Predicate, token, error) {
 	for {
 		term, tok, err := p.term()
 		if err != nil {
-			return nil, tok, err
+			return nil, tok, fmt.Errorf("failed to parse term: %w", err)
 		}
 		terms = append(terms, term)
 		tok = p.lexer.NextToken()
@@ -120,7 +120,7 @@ func (p *Parser) predicate() (query.Predicate, token, error) {
 func (p *Parser) term() (query.Term, token, error) {
 	lhs, tok, err := p.expression()
 	if err != nil {
-		return query.Term{}, tok, err
+		return query.Term{}, tok, fmt.Errorf("failed to parse expression: %w", err)
 	}
 	tok = p.lexer.NextToken()
 	if tok.typ != equal {
@@ -128,7 +128,7 @@ func (p *Parser) term() (query.Term, token, error) {
 	}
 	rhs, tok, err := p.expression()
 	if err != nil {
-		return query.Term{}, tok, err
+		return query.Term{}, tok, fmt.Errorf("failed to parse expression: %w", err)
 	}
 	return query.NewTerm(lhs, rhs), tok, nil
 }
@@ -141,7 +141,7 @@ func (p *Parser) expression() (query.Expression, token, error) {
 	case number:
 		i, err := strconv.Atoi(tok.literal)
 		if err != nil {
-			return nil, tok, err
+			return nil, tok, fmt.Errorf("failed to parse number: %w", err)
 		}
 		return schema.ConstantInt32(i), tok, nil
 	case stringTok:
@@ -156,7 +156,7 @@ func (p *Parser) constant() (schema.Constant, token, error) {
 	case number:
 		i, err := strconv.Atoi(tok.literal)
 		if err != nil {
-			return nil, tok, err
+			return nil, tok, fmt.Errorf("failed to parse number: %w", err)
 		}
 		return schema.ConstantInt32(i), tok, nil
 	case stringTok:
@@ -186,7 +186,7 @@ func (p *Parser) fieldDef() (schema.FieldName, schema.Field, token, error) {
 		}
 		i, err := strconv.Atoi(tok.literal)
 		if err != nil {
-			return "", schema.Field{}, tok, err
+			return "", schema.Field{}, tok, fmt.Errorf("failed to parse number: %w", err)
 		}
 		tok = p.lexer.NextToken()
 		if tok.typ != rparen {
@@ -203,7 +203,7 @@ func (p *Parser) fieldDefs() (schema.Schema, token, error) {
 	for {
 		fieldName, f, tok, err := p.fieldDef()
 		if err != nil {
-			return schema.Schema{}, tok, err
+			return schema.Schema{}, tok, fmt.Errorf("failed to parse field definition: %w", err)
 		}
 		s.AddField(fieldName, f)
 		tk = p.lexer.NextToken()
@@ -247,7 +247,7 @@ func (p *Parser) Insert() (*InsertData, error) {
 	}
 	fieldList, tok, err := p.fieldList()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse field list: %w", err)
 	}
 	d.fields = fieldList
 	if tok.typ != rparen {
@@ -263,7 +263,7 @@ func (p *Parser) Insert() (*InsertData, error) {
 	}
 	constList, tok, err := p.constList()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse constant list: %w", err)
 	}
 	d.values = constList
 	if tok.typ != rparen {
@@ -286,7 +286,7 @@ func (p *Parser) Query() (*QueryData, error) {
 	}
 	selectList, tok, err := p.selectList()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse select list: %w", err)
 	}
 	q.fields = selectList
 	if tok.typ != from {
@@ -294,13 +294,13 @@ func (p *Parser) Query() (*QueryData, error) {
 	}
 	tableList, tok, err := p.tableList()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse table list: %w", err)
 	}
 	q.tables = tableList
 	if tok.typ == where {
 		pred, _, err := p.predicate()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse predicate: %w", err)
 		}
 		q.pred = pred
 	}
@@ -342,14 +342,14 @@ func (p *Parser) Modify() (*ModifyData, error) {
 	}
 	val, tok, err := p.expression()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse expression: %w", err)
 	}
 	d.value = val
 	tok = p.lexer.NextToken()
 	if tok.typ == where {
 		pred, _, err := p.predicate()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse predicate: %w", err)
 		}
 		d.pred = pred
 	}
@@ -382,7 +382,7 @@ func (p *Parser) Delete() (*DeleteData, error) {
 	if tok.typ == where {
 		pred, _, err := p.predicate()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse predicate: %w", err)
 		}
 		d.pred = pred
 	}
@@ -417,7 +417,7 @@ func (p *Parser) CreateTable() (*CreateTableData, error) {
 	}
 	sche, tok, err := p.fieldDefs()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse field definitions: %w", err)
 	}
 	d.sche = sche
 	if tok.typ != rparen {
@@ -454,7 +454,7 @@ func (p *Parser) CreateView() (*CreateViewData, error) {
 	}
 	qd, err := p.Query()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse query: %w", err)
 	}
 	d.query = qd
 	return d, nil
