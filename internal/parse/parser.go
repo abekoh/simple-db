@@ -259,8 +259,9 @@ type ModifyData struct {
 	pred  query.Predicate
 }
 
-func modify(p *Parser, tok token) (*ModifyData, error) {
+func (p *Parser) Modify() (*ModifyData, error) {
 	d := &ModifyData{}
+	tok := p.lexer.NextToken()
 	if tok.typ != update {
 		return nil, fmt.Errorf("expected UPDATE, got %s", tok.literal)
 	}
@@ -287,7 +288,8 @@ func modify(p *Parser, tok token) (*ModifyData, error) {
 		return nil, err
 	}
 	d.value = val
-	if tok.typ != where {
+	tok = p.lexer.NextToken()
+	if tok.typ == where {
 		pred, _, err := p.predicate()
 		if err != nil {
 			return nil, err

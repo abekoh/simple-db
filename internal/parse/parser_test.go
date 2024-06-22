@@ -97,3 +97,41 @@ func TestParser_Insert(t *testing.T) {
 		})
 	}
 }
+
+func TestParser_Modify(t *testing.T) {
+	tests := []struct {
+		name    string
+		s       string
+		want    *ModifyData
+		wantErr bool
+	}{
+		{
+			name: "UPDATE full",
+			s:    "UPDATE mytable SET a = 1 WHERE b = 'foo'",
+			want: &ModifyData{
+				table: "mytable",
+				field: "a",
+				value: schema.ConstantInt32(1),
+				pred: query.Predicate{
+					query.NewTerm(
+						schema.FieldName("b"),
+						schema.ConstantStr("foo")),
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewParser(tt.s)
+			got, err := p.Modify()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Modify() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Modify() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
