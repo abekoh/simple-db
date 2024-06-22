@@ -259,6 +259,44 @@ type ModifyData struct {
 	pred  query.Predicate
 }
 
+func modify(p *Parser, tok token) (*ModifyData, error) {
+	d := &ModifyData{}
+	if tok.typ != update {
+		return nil, fmt.Errorf("expected UPDATE, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	d.table = tok.literal
+	tok = p.lexer.NextToken()
+	if tok.typ != set {
+		return nil, fmt.Errorf("expected SET, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	d.field = tok.literal
+	tok = p.lexer.NextToken()
+	if tok.typ != equal {
+		return nil, fmt.Errorf("expected =, got %s", tok.literal)
+	}
+	val, tok, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	d.value = val
+	if tok.typ != where {
+		pred, _, err := p.predicate()
+		if err != nil {
+			return nil, err
+		}
+		d.pred = pred
+	}
+	return d, nil
+}
+
 type DeleteData struct {
 	table string
 	pred  query.Predicate
