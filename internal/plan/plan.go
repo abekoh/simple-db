@@ -27,3 +27,21 @@ type UpdatePlanner interface {
 	ExecuteCreateView(d *parse.CreateViewData, tx *transaction.Transaction) (int, error)
 	ExecuteCreateIndex(d *parse.CreateIndexData, tx *transaction.Transaction) (int, error)
 }
+
+type Planner struct {
+	qp QueryPlanner
+	up UpdatePlanner
+}
+
+func NewPlanner(qp QueryPlanner, up UpdatePlanner) *Planner {
+	return &Planner{qp: qp, up: up}
+}
+
+func (p *Planner) CreateQueryPlan(q string, tx *transaction.Transaction) (Plan, error) {
+	ps := parse.NewParser(q)
+	qd, err := ps.Query()
+	if err != nil {
+		return nil, err
+	}
+	return p.qp.CreatePlan(qd, tx)
+}
