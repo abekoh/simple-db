@@ -58,6 +58,52 @@ func (p *Parser) tableList() ([]string, token, error) {
 	return tables, tok, nil
 }
 
+func (p *Parser) fieldList() ([]string, token, error) {
+	fields := make([]string, 0, 1)
+	tok := p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	fields = append(fields, tok.literal)
+	for {
+		tok = p.lexer.NextToken()
+		if tok.typ != comma {
+			break
+		}
+		tok = p.lexer.NextToken()
+		if tok.typ != identifier {
+			return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+		}
+		fields = append(fields, tok.literal)
+	}
+	return fields, tok, nil
+}
+
+func (p *Parser) constList() ([]schema.Constant, token, error) {
+	constList := make([]schema.Constant, 0, 1)
+	tok := p.lexer.NextToken()
+	if tok.typ != number && tok.typ != stringTok {
+		return nil, tok, fmt.Errorf("expected number or string, got %s", tok.literal)
+	}
+	c, tok, err := p.constant()
+	if err != nil {
+		return nil, tok, err
+	}
+	constList = append(constList, c)
+	for {
+		tok = p.lexer.NextToken()
+		if tok.typ != comma {
+			break
+		}
+		c, tok, err := p.constant()
+		if err != nil {
+			return nil, tok, err
+		}
+		constList = append(constList, c)
+	}
+	return constList, tok, nil
+}
+
 func (p *Parser) predicate() (query.Predicate, token, error) {
 	terms := make([]query.Term, 0, 1)
 	var tok token
@@ -108,6 +154,68 @@ func (p *Parser) expression() (query.Expression, token, error) {
 	return nil, tok, fmt.Errorf("unexpected token %s", tok.literal)
 }
 
+func (p *Parser) constant() (schema.Constant, token, error) {
+	tok := p.lexer.NextToken()
+	switch tok.typ {
+	case number:
+		i, err := strconv.Atoi(tok.literal)
+		if err != nil {
+			return nil, tok, err
+		}
+		return schema.ConstantInt32(i), tok, nil
+	case stringTok:
+		return schema.ConstantStr(tok.literal), tok, nil
+	}
+	return nil, tok, fmt.Errorf("unexpected token %s", tok.literal)
+}
+
+type InsertData struct {
+	table  string
+	fields []string
+	values []schema.Constant
+}
+
+func (p *Parser) Insert() (*InsertData, error) {
+	d := &InsertData{}
+	tok := p.lexer.NextToken()
+	if tok.typ != insert {
+		return nil, fmt.Errorf("expected INSERT, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != into {
+		return nil, fmt.Errorf("expected INTO, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != lparen {
+		return nil, fmt.Errorf("expected (, got %s", tok.literal)
+	}
+	fieldList, tok, err := p.fieldList()
+	if err != nil {
+		return nil, err
+	}
+	d.fields = fieldList
+	if tok.typ != rparen {
+		return nil, fmt.Errorf("expected ), got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != values {
+		return nil, fmt.Errorf("expected VALUES, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != lparen {
+		return nil, fmt.Errorf("expected (, got %s", tok.literal)
+	}
+	constList, tok, err := p.constList()
+	if err != nil {
+		return nil, err
+	}
+	d.values = constList
+	if tok.typ != rparen {
+		return nil, fmt.Errorf("expected ), got %s", tok.literal)
+	}
+	return d, nil
+}
+
 type QueryData struct {
 	fields []string
 	tables []string
@@ -148,12 +256,6 @@ type ModifyData struct {
 	field string
 	value query.Expression
 	pred  query.Predicate
-}
-
-type InsertData struct {
-	table  string
-	fields []string
-	values []schema.Constant
 }
 
 type DeleteData struct {
