@@ -416,7 +416,34 @@ func (p *Parser) CreateTable() (*CreateTableData, error) {
 
 type CreateViewData struct {
 	view  string
-	query QueryData
+	query *QueryData
+}
+
+func (p *Parser) CreateView() (*CreateViewData, error) {
+	d := &CreateViewData{}
+	tok := p.lexer.NextToken()
+	if tok.typ != create {
+		return nil, fmt.Errorf("expected CREATE, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != view {
+		return nil, fmt.Errorf("expected VIEW, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	d.view = tok.literal
+	tok = p.lexer.NextToken()
+	if tok.typ != as {
+		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	qd, err := p.Query()
+	if err != nil {
+		return nil, err
+	}
+	d.query = qd
+	return d, nil
 }
 
 type CreateIndexData struct {

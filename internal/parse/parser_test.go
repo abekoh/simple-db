@@ -227,3 +227,42 @@ func TestParser_CreateTable(t *testing.T) {
 		})
 	}
 }
+
+func TestParser_CreateView(t *testing.T) {
+	tests := []struct {
+		name    string
+		s       string
+		want    *CreateViewData
+		wantErr bool
+	}{
+		{
+			name: "CREATE VIEW",
+			s:    "CREATE VIEW myview AS SELECT a, b FROM mytable WHERE a = 1 AND b = 'foo'",
+			want: &CreateViewData{
+				view: "myview",
+				query: &QueryData{
+					fields: []string{"a", "b"},
+					tables: []string{"mytable"},
+					pred: query.Predicate{
+						query.NewTerm(schema.FieldName("a"), schema.ConstantInt32(1)),
+						query.NewTerm(schema.FieldName("b"), schema.ConstantStr("foo")),
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewParser(tt.s)
+			got, err := p.CreateView()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CreateView() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CreateView() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
