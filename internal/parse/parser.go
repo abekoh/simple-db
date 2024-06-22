@@ -16,6 +16,55 @@ func NewParser(s string) *Parser {
 	return &Parser{lexer: NewLexer(s)}
 }
 
+func (p *Parser) predicate() (query.Predicate, error) {
+	terms := make([]query.Term, 0, 1)
+	for {
+		term, err := p.term()
+		if err != nil {
+			return nil, err
+		}
+		terms = append(terms, term)
+		tok := p.lexer.NextToken()
+		if tok.typ != and {
+			break
+		}
+	}
+	return query.NewPredicate(terms...), nil
+}
+
+func (p *Parser) term() (query.Term, error) {
+	lhs, err := p.expression()
+	if err != nil {
+		return query.Term{}, err
+	}
+	tok := p.lexer.NextToken()
+	if tok.typ != equal {
+		return query.Term{}, fmt.Errorf("expected =, got %s", tok.literal)
+	}
+	rhs, err := p.expression()
+	if err != nil {
+		return query.Term{}, err
+	}
+	return query.NewTerm(lhs, rhs), nil
+}
+
+func (p *Parser) expression() (query.Expression, error) {
+	tok := p.lexer.NextToken()
+	switch tok.typ {
+	case identifier:
+		return schema.FieldName(tok.literal), nil
+	case number:
+		i, err := strconv.Atoi(tok.literal)
+		if err != nil {
+			return nil, err
+		}
+		return schema.ConstantInt32(i), nil
+	case stringTok:
+		return schema.ConstantStr(tok.literal), nil
+	}
+	return nil, fmt.Errorf("unexpected token %s", tok.literal)
+}
+
 type QueryData struct {
 	fields []string
 	tables []string
@@ -74,55 +123,6 @@ func (p *Parser) Query() (*QueryData, error) {
 		q.pred = pred
 	}
 	return q, nil
-}
-
-func (p *Parser) predicate() (query.Predicate, error) {
-	terms := make([]query.Term, 0, 1)
-	for {
-		term, err := p.term()
-		if err != nil {
-			return nil, err
-		}
-		terms = append(terms, term)
-		tok := p.lexer.NextToken()
-		if tok.typ != and {
-			break
-		}
-	}
-	return query.NewPredicate(terms...), nil
-}
-
-func (p *Parser) term() (query.Term, error) {
-	lhs, err := p.expression()
-	if err != nil {
-		return query.Term{}, err
-	}
-	tok := p.lexer.NextToken()
-	if tok.typ != equal {
-		return query.Term{}, fmt.Errorf("expected =, got %s", tok.literal)
-	}
-	rhs, err := p.expression()
-	if err != nil {
-		return query.Term{}, err
-	}
-	return query.NewTerm(lhs, rhs), nil
-}
-
-func (p *Parser) expression() (query.Expression, error) {
-	tok := p.lexer.NextToken()
-	switch tok.typ {
-	case identifier:
-		return schema.FieldName(tok.literal), nil
-	case number:
-		i, err := strconv.Atoi(tok.literal)
-		if err != nil {
-			return nil, err
-		}
-		return schema.ConstantInt32(i), nil
-	case stringTok:
-		return schema.ConstantStr(tok.literal), nil
-	}
-	return nil, fmt.Errorf("unexpected token %s", tok.literal)
 }
 
 type ModifyData struct {
