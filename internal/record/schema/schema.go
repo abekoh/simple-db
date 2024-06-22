@@ -48,6 +48,14 @@ func NewField(typ FieldType, length int32) Field {
 	return Field{typ: typ, length: length}
 }
 
+func NewInt32Field() Field {
+	return Field{typ: Integer32, length: 0}
+}
+
+func NewVarcharField(length int32) Field {
+	return Field{typ: Varchar, length: length}
+}
+
 type Schema struct {
 	fields    []FieldName
 	fieldsMap map[FieldName]Field
@@ -66,11 +74,11 @@ func (s *Schema) AddField(name FieldName, f Field) {
 }
 
 func (s *Schema) AddInt32Field(name FieldName) {
-	s.AddField(name, Field{typ: Integer32, length: 0})
+	s.AddField(name, NewInt32Field())
 }
 
 func (s *Schema) AddStrField(name FieldName, length int32) {
-	s.AddField(name, Field{typ: Varchar, length: length})
+	s.AddField(name, NewVarcharField(length))
 }
 
 func (s *Schema) Add(name FieldName, schema Schema) {
