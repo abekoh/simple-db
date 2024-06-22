@@ -507,3 +507,32 @@ func (p *Parser) CreateIndex() (*CreateIndexData, error) {
 	}
 	return d, nil
 }
+
+func (p *Parser) UpdateCommand() (Command, error) {
+	tok := p.lexer.NextToken()
+	switch tok.typ {
+	case insert:
+		p.lexer.Reset()
+		return p.Insert()
+	case deleteTok:
+		p.lexer.Reset()
+		return p.Delete()
+	case update:
+		p.lexer.Reset()
+		return p.Modify()
+	case create:
+		tok = p.lexer.NextToken()
+		switch tok.typ {
+		case table:
+			p.lexer.Reset()
+			return p.CreateTable()
+		case view:
+			p.lexer.Reset()
+			return p.CreateView()
+		case index:
+			p.lexer.Reset()
+			return p.CreateIndex()
+		}
+	}
+	return nil, fmt.Errorf("unexpected token %s", tok.literal)
+}

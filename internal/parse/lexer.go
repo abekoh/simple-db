@@ -183,3 +183,10 @@ func isLetter(char byte) bool {
 func isDigit(char byte) bool {
 	return '0' <= char && char <= '9'
 }
+
+func (l *Lexer) Reset() {
+	l.cursor = 0
+	l.readCursor = 0
+	var char byte
+	l.char = char
+}
