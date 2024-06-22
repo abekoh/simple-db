@@ -199,19 +199,19 @@ func (p *Parser) fieldDef() (schema.FieldName, schema.Field, token, error) {
 
 func (p *Parser) fieldDefs() (schema.Schema, token, error) {
 	s := schema.NewSchema()
-	var tok token
+	var tk token
 	for {
 		fieldName, f, tok, err := p.fieldDef()
 		if err != nil {
 			return schema.Schema{}, tok, err
 		}
 		s.AddField(fieldName, f)
-		tok = p.lexer.NextToken()
-		if tok.typ != comma {
+		tk = p.lexer.NextToken()
+		if tk.typ != comma {
 			break
 		}
 	}
-	return s, tok, nil
+	return s, tk, nil
 }
 
 type InsertData struct {
