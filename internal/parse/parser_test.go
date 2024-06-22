@@ -16,7 +16,7 @@ func TestParser_Query(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "SELECT",
+			name: "SELECT full",
 			s:    "SELECT a, b FROM mytable WHERE a = 1 AND b = 'foo'",
 			want: &QueryData{
 				fields: []string{"a", "b"},
@@ -25,6 +25,15 @@ func TestParser_Query(t *testing.T) {
 					query.NewTerm(schema.FieldName("a"), schema.ConstantInt32(1)),
 					query.NewTerm(schema.FieldName("b"), schema.ConstantStr("foo")),
 				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "SELECT without where",
+			s:    "SELECT a, b FROM mytable",
+			want: &QueryData{
+				fields: []string{"a", "b"},
+				tables: []string{"mytable"},
 			},
 			wantErr: false,
 		},
