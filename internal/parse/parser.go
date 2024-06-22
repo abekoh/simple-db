@@ -37,6 +37,27 @@ func (p *Parser) selectList() ([]string, token, error) {
 	return fields, tok, nil
 }
 
+func (p *Parser) tableList() ([]string, token, error) {
+	tables := make([]string, 0, 1)
+	tok := p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	tables = append(tables, tok.literal)
+	for {
+		tok = p.lexer.NextToken()
+		if tok.typ != comma {
+			break
+		}
+		tok = p.lexer.NextToken()
+		if tok.typ != identifier {
+			return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+		}
+		tables = append(tables, tok.literal)
+	}
+	return tables, tok, nil
+}
+
 func (p *Parser) predicate() (query.Predicate, token, error) {
 	terms := make([]query.Term, 0, 1)
 	var tok token
@@ -107,22 +128,11 @@ func (p *Parser) Query() (*QueryData, error) {
 	if tok.typ != from {
 		return nil, fmt.Errorf("expected FROM, got %s", tok.literal)
 	}
-	tok = p.lexer.NextToken()
-	if tok.typ != identifier {
-		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	tableList, tok, err := p.tableList()
+	if err != nil {
+		return nil, err
 	}
-	q.tables = append(q.tables, tok.literal)
-	for {
-		tok = p.lexer.NextToken()
-		if tok.typ != comma {
-			break
-		}
-		tok = p.lexer.NextToken()
-		if tok.typ != identifier {
-			return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
-		}
-		q.tables = append(q.tables, tok.literal)
-	}
+	q.tables = tableList
 	if tok.typ == where {
 		pred, _, err := p.predicate()
 		if err != nil {
