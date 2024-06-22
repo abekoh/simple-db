@@ -304,6 +304,32 @@ type DeleteData struct {
 	pred  query.Predicate
 }
 
+func (p *Parser) Delete() (*DeleteData, error) {
+	d := &DeleteData{}
+	tok := p.lexer.NextToken()
+	if tok.typ != deleteTok {
+		return nil, fmt.Errorf("expected DELETE, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != from {
+		return nil, fmt.Errorf("expected FROM, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	d.table = tok.literal
+	tok = p.lexer.NextToken()
+	if tok.typ == where {
+		pred, _, err := p.predicate()
+		if err != nil {
+			return nil, err
+		}
+		d.pred = pred
+	}
+	return d, nil
+}
+
 type CreateTableData struct {
 	table string
 	sche  schema.Schema

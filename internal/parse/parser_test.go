@@ -145,3 +145,48 @@ func TestParser_Modify(t *testing.T) {
 		})
 	}
 }
+
+func TestParser_Delete(t *testing.T) {
+	tests := []struct {
+		name    string
+		s       string
+		want    *DeleteData
+		wantErr bool
+	}{
+		{
+			name: "DELETE full",
+			s:    "DELETE FROM mytable WHERE a = 1",
+			want: &DeleteData{
+				table: "mytable",
+				pred: query.Predicate{
+					query.NewTerm(
+						schema.FieldName("a"),
+						schema.ConstantInt32(1),
+					),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "DELETE without where",
+			s:    "DELETE FROM mytable",
+			want: &DeleteData{
+				table: "mytable",
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewParser(tt.s)
+			got, err := p.Delete()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Delete() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Delete() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
