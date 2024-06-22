@@ -165,6 +165,50 @@ func (p *Parser) constant() (schema.Constant, token, error) {
 	return nil, tok, fmt.Errorf("unexpected token %s", tok.literal)
 }
 
+func (p *Parser) fieldDef() (schema.Field, token, error) {
+	tok := p.lexer.NextToken()
+	switch tok.typ {
+	case intTok:
+		return schema.NewInt32Field(), tok, nil
+	case varchar:
+		tok = p.lexer.NextToken()
+		if tok.typ != lparen {
+			return schema.Field{}, tok, fmt.Errorf("expected (, got %s", tok.literal)
+		}
+		tok = p.lexer.NextToken()
+		if tok.typ != number {
+			return schema.Field{}, tok, fmt.Errorf("expected number, got %s", tok.literal)
+		}
+		i, err := strconv.Atoi(tok.literal)
+		if err != nil {
+			return schema.Field{}, tok, err
+		}
+		tok = p.lexer.NextToken()
+		if tok.typ != rparen {
+			return schema.Field{}, tok, fmt.Errorf("expected ), got %s", tok.literal)
+		}
+		return schema.NewVarcharField(int32(i)), tok, nil
+	}
+	return schema.Field{}, tok, fmt.Errorf("unexpected token %s", tok.literal)
+}
+
+func (p *Parser) fieldDefs() (schema.Schema, token, error) {
+	s := schema.NewSchema()
+	var tok token
+	for {
+		f, tok, err := p.fieldDef()
+		if err != nil {
+			return schema.Schema{}, tok, err
+		}
+		s.AddField(schema.FieldName(tok.literal), f)
+		tok = p.lexer.NextToken()
+		if tok.typ != comma {
+			break
+		}
+	}
+	return s, tok, nil
+}
+
 type InsertData struct {
 	table  string
 	fields []string
@@ -333,6 +377,36 @@ func (p *Parser) Delete() (*DeleteData, error) {
 type CreateTableData struct {
 	table string
 	sche  schema.Schema
+}
+
+func (p *Parser) CreateTable() (*CreateTableData, error) {
+	d := &CreateTableData{}
+	tok := p.lexer.NextToken()
+	if tok.typ != create {
+		return nil, fmt.Errorf("expected CREATE, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != table {
+		return nil, fmt.Errorf("expected TABLE, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	d.table = tok.literal
+	tok = p.lexer.NextToken()
+	if tok.typ != lparen {
+		return nil, fmt.Errorf("expected (, got %s", tok.literal)
+	}
+	sche, tok, err := p.fieldDefs()
+	if err != nil {
+		return nil, err
+	}
+	d.sche = sche
+	if tok.typ != rparen {
+		return nil, fmt.Errorf("expected ), got %s", tok.literal)
+	}
+	return d, nil
 }
 
 type CreateViewData struct {
