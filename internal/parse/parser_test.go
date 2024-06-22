@@ -266,3 +266,36 @@ func TestParser_CreateView(t *testing.T) {
 		})
 	}
 }
+
+func TestParser_CreateIndex(t *testing.T) {
+	tests := []struct {
+		name    string
+		s       string
+		want    *CreateIndexData
+		wantErr bool
+	}{
+		{
+			name: "CREATE INDEX",
+			s:    "CREATE INDEX myindex ON mytable (a)",
+			want: &CreateIndexData{
+				index: "myindex",
+				table: "mytable",
+				field: "a",
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewParser(tt.s)
+			got, err := p.CreateIndex()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CreateIndex() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CreateIndex() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

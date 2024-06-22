@@ -451,3 +451,43 @@ type CreateIndexData struct {
 	table string
 	field string
 }
+
+func (p *Parser) CreateIndex() (*CreateIndexData, error) {
+	d := &CreateIndexData{}
+	tok := p.lexer.NextToken()
+	if tok.typ != create {
+		return nil, fmt.Errorf("expected CREATE, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != index {
+		return nil, fmt.Errorf("expected INDEX, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	d.index = tok.literal
+	tok = p.lexer.NextToken()
+	if tok.typ != on {
+		return nil, fmt.Errorf("expected ON, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	d.table = tok.literal
+	tok = p.lexer.NextToken()
+	if tok.typ != lparen {
+		return nil, fmt.Errorf("expected (, got %s", tok.literal)
+	}
+	tok = p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	d.field = tok.literal
+	tok = p.lexer.NextToken()
+	if tok.typ != rparen {
+		return nil, fmt.Errorf("expected ), got %s", tok.literal)
+	}
+	return d, nil
+}
