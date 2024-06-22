@@ -214,11 +214,17 @@ func (p *Parser) fieldDefs() (schema.Schema, token, error) {
 	return s, tk, nil
 }
 
+type Command interface {
+	Command()
+}
+
 type InsertData struct {
 	table  string
 	fields []string
 	values []schema.Constant
 }
+
+func (d *InsertData) Command() {}
 
 func (p *Parser) Insert() (*InsertData, error) {
 	d := &InsertData{}
@@ -308,6 +314,8 @@ type ModifyData struct {
 	pred  query.Predicate
 }
 
+func (d *ModifyData) Command() {}
+
 func (p *Parser) Modify() (*ModifyData, error) {
 	d := &ModifyData{}
 	tok := p.lexer.NextToken()
@@ -353,6 +361,8 @@ type DeleteData struct {
 	pred  query.Predicate
 }
 
+func (d *DeleteData) Command() {}
+
 func (p *Parser) Delete() (*DeleteData, error) {
 	d := &DeleteData{}
 	tok := p.lexer.NextToken()
@@ -383,6 +393,8 @@ type CreateTableData struct {
 	table string
 	sche  schema.Schema
 }
+
+func (d *CreateTableData) Command() {}
 
 func (p *Parser) CreateTable() (*CreateTableData, error) {
 	d := &CreateTableData{}
@@ -419,6 +431,8 @@ type CreateViewData struct {
 	query *QueryData
 }
 
+func (d *CreateViewData) Command() {}
+
 func (p *Parser) CreateView() (*CreateViewData, error) {
 	d := &CreateViewData{}
 	tok := p.lexer.NextToken()
@@ -451,6 +465,8 @@ type CreateIndexData struct {
 	table string
 	field string
 }
+
+func (d *CreateIndexData) Command() {}
 
 func (p *Parser) CreateIndex() (*CreateIndexData, error) {
 	d := &CreateIndexData{}
