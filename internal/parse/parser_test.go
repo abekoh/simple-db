@@ -120,6 +120,16 @@ func TestParser_Modify(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "UPDATE without where",
+			s:    "UPDATE mytable SET a = 1",
+			want: &ModifyData{
+				table: "mytable",
+				field: "a",
+				value: schema.ConstantInt32(1),
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
