@@ -88,6 +88,18 @@ func (t Term) ReductionFactor(distinctValues func(fn schema.FieldName) int) int 
 	return math.MaxInt
 }
 
+func (t Term) EquatesWithConstant(fieldName schema.FieldName) (schema.Constant, bool) {
+	lhsFieldName, isLHSFieldName := t.lhs.(schema.FieldName)
+	rhsFieldName, isRHSFieldName := t.rhs.(schema.FieldName)
+	if isLHSFieldName && !isRHSFieldName && lhsFieldName == fieldName {
+		return t.rhs.(schema.Constant), true
+	}
+	if isRHSFieldName && !isLHSFieldName && rhsFieldName == fieldName {
+		return t.lhs.(schema.Constant), true
+	}
+	return nil, false
+}
+
 type Predicate []Term
 
 func NewPredicate(terms ...Term) Predicate {
@@ -116,6 +128,15 @@ func (p Predicate) String() string {
 		sb.WriteString(term.String())
 	}
 	return sb.String()
+}
+
+func (p Predicate) EquateWithConstant(fieldName schema.FieldName) (schema.Constant, bool) {
+	for _, term := range p {
+		if c, ok := term.EquatesWithConstant(fieldName); ok {
+			return c, true
+		}
+	}
+	return nil, false
 }
 
 var _ UpdateScan = (*SelectScan)(nil)
