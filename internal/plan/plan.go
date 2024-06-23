@@ -138,7 +138,16 @@ func (s SelectPlan) RecordsOutput() int {
 }
 
 func (s SelectPlan) DistinctValues(fieldName schema.FieldName) int {
-	panic("TODO")
+	if _, ok := s.pred.EquatesWithConstant(fieldName); !ok {
+		return 1
+	} else {
+		fieldName2, ok := s.pred.EquatesWithField(fieldName)
+		if ok {
+			return min(s.p.DistinctValues(fieldName), s.p.DistinctValues(fieldName2))
+		} else {
+			return s.p.DistinctValues(fieldName)
+		}
+	}
 }
 
 func (s SelectPlan) Schema() *schema.Schema {
