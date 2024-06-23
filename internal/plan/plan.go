@@ -20,7 +20,7 @@ type TablePlan struct {
 	tableName string
 	tx        *transaction.Transaction
 	layout    *record.Layout
-	statInfo  metadata.StatInfo
+	statInfo  *metadata.StatInfo
 }
 
 var _ Plan = (*TablePlan)(nil)
@@ -29,7 +29,7 @@ func NewTablePlan(
 	tableName string,
 	tx *transaction.Transaction,
 	layout *record.Layout,
-	statInfo metadata.StatInfo) *TablePlan {
+	statInfo *metadata.StatInfo) *TablePlan {
 	return &TablePlan{
 		tableName: tableName,
 		tx:        tx,
