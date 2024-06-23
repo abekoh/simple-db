@@ -100,6 +100,18 @@ func (t Term) EquatesWithConstant(fieldName schema.FieldName) (schema.Constant, 
 	return nil, false
 }
 
+func (t Term) EquatesWithField(fieldName schema.FieldName) (schema.FieldName, bool) {
+	lhsFieldName, isLHSFieldName := t.lhs.(schema.FieldName)
+	rhsFieldName, isRHSFieldName := t.rhs.(schema.FieldName)
+	if isLHSFieldName && isRHSFieldName && lhsFieldName == fieldName {
+		return rhsFieldName, true
+	}
+	if isRHSFieldName && isLHSFieldName && rhsFieldName == fieldName {
+		return lhsFieldName, true
+	}
+	return "", false
+}
+
 type Predicate []Term
 
 func NewPredicate(terms ...Term) Predicate {
@@ -130,13 +142,22 @@ func (p Predicate) String() string {
 	return sb.String()
 }
 
-func (p Predicate) EquateWithConstant(fieldName schema.FieldName) (schema.Constant, bool) {
+func (p Predicate) EquatesWithConstant(fieldName schema.FieldName) (schema.Constant, bool) {
 	for _, term := range p {
 		if c, ok := term.EquatesWithConstant(fieldName); ok {
 			return c, true
 		}
 	}
 	return nil, false
+}
+
+func (p Predicate) EquatesWithField(fieldName schema.FieldName) (schema.FieldName, bool) {
+	for _, term := range p {
+		if fn, ok := term.EquatesWithField(fieldName); ok {
+			return fn, true
+		}
+	}
+	return "", false
 }
 
 var _ UpdateScan = (*SelectScan)(nil)
