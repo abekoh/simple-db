@@ -105,3 +105,42 @@ func (p ProductPlan) DistinctValues(fieldName schema.FieldName) int {
 func (p ProductPlan) Schema() *schema.Schema {
 	return &p.sche
 }
+
+type SelectPlan struct {
+	p    Plan
+	pred query.Predicate
+}
+
+var _ Plan = (*SelectPlan)(nil)
+
+func NewSelectPlan(p Plan, pred query.Predicate) *SelectPlan {
+	return &SelectPlan{p: p, pred: pred}
+}
+
+func (s SelectPlan) Open() (query.Scan, error) {
+	scan, err := s.p.Open()
+	if err != nil {
+		return nil, fmt.Errorf("p.Open error: %w", err)
+	}
+	return query.NewSelectScan(scan, s.pred), nil
+}
+
+func (s SelectPlan) BlockAccessed() int {
+	return s.p.BlockAccessed()
+}
+
+func (s SelectPlan) RecordsOutput() int {
+	f := 1
+	for _, t := range s.pred {
+		f *= t.ReductionFactor(s.p.DistinctValues)
+	}
+	return s.p.RecordsOutput() / f
+}
+
+func (s SelectPlan) DistinctValues(fieldName schema.FieldName) int {
+	panic("TODO")
+}
+
+func (s SelectPlan) Schema() *schema.Schema {
+	return s.p.Schema()
+}

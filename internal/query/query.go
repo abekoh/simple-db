@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/abekoh/simple-db/internal/record/schema"
@@ -67,6 +68,24 @@ func (t Term) IsSatisfied(scan Scan) (bool, error) {
 	default:
 		return false, fmt.Errorf("lhs, rhs type mismatch")
 	}
+}
+
+func (t Term) ReductionFactor(distinctValues func(fn schema.FieldName) int) int {
+	lhsFieldName, isLHSFieldName := t.lhs.(schema.FieldName)
+	rhsFieldName, isRHSFieldName := t.rhs.(schema.FieldName)
+	if isLHSFieldName && isRHSFieldName {
+		return max(distinctValues(lhsFieldName), distinctValues(rhsFieldName))
+	} else if isLHSFieldName {
+		return distinctValues(lhsFieldName)
+	} else if isRHSFieldName {
+		return distinctValues(rhsFieldName)
+	}
+	lhsConst, isLHSConst := t.lhs.(schema.Constant)
+	rhsConst, isRHSConst := t.rhs.(schema.Constant)
+	if isLHSConst && isRHSConst && lhsConst == rhsConst {
+		return 1
+	}
+	return math.MaxInt
 }
 
 type Predicate []Term
