@@ -69,14 +69,14 @@ func NewSimpleDB(ctx context.Context, dirname string) (*SimpleDB, error) {
 	return db, nil
 }
 
-func (db *SimpleDB) NewTx(ctx context.Context) (*transaction.Transaction, error) {
+func (db SimpleDB) NewTx(ctx context.Context) (*transaction.Transaction, error) {
 	return transaction.NewTransaction(ctx, db.bufMgr, db.fileMgr, db.logMgr)
 }
 
-func (db *SimpleDB) MetadataMgr() *metadata.Manager {
+func (db SimpleDB) MetadataMgr() *metadata.Manager {
 	return db.metadataMgr
 }
 
-func (db *SimpleDB) Planner() *plan.Planner {
+func (db SimpleDB) Planner() *plan.Planner {
 	return db.planner
 }
