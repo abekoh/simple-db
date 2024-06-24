@@ -69,6 +69,40 @@ func TestBasicUpdatePlanner_ExecuteCreateTable(t *testing.T) {
 	}
 }
 
+func TestBasicUpdatePlanner_ExecuteCreateView(t *testing.T) {
+	transaction.CleanupLockTable(t)
+	ctx := context.Background()
+	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.NewTx(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
+	_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = planner.ExecuteUpdate(`CREATE VIEW myview AS SELECT a FROM mytable`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	viewDef, ok, err := db.MetadataMgr().ViewDef("myview", tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("view not found")
+	}
+	if viewDef != "SELECT a FROM mytable" {
+		t.Errorf("unexpected view def: %s", viewDef)
+	}
+}
+
 func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
