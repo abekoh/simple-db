@@ -442,6 +442,14 @@ type CreateTableData struct {
 	sche  schema.Schema
 }
 
+func (d CreateTableData) Table() string {
+	return d.table
+}
+
+func (d CreateTableData) Schema() schema.Schema {
+	return d.sche
+}
+
 func (d CreateTableData) Command() {}
 
 func (p *Parser) CreateTable() (*CreateTableData, error) {
