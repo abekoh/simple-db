@@ -278,6 +278,18 @@ type QueryData struct {
 	pred   query.Predicate
 }
 
+func (d *QueryData) Fields() []string {
+	return d.fields
+}
+
+func (d *QueryData) Tables() []string {
+	return d.tables
+}
+
+func (d *QueryData) Predicate() query.Predicate {
+	return d.pred
+}
+
 func (p *Parser) Query() (*QueryData, error) {
 	q := &QueryData{}
 	tok := p.lexer.NextToken()
