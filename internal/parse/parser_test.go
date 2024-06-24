@@ -19,7 +19,7 @@ func TestParser_Query(t *testing.T) {
 			name: "SELECT full",
 			s:    "SELECT a, b FROM mytable WHERE a = 1 AND b = 'foo'",
 			want: &QueryData{
-				fields: []string{"a", "b"},
+				fields: []schema.FieldName{"a", "b"},
 				tables: []string{"mytable"},
 				pred: query.Predicate{
 					query.NewTerm(schema.FieldName("a"), schema.ConstantInt32(1)),
@@ -32,7 +32,7 @@ func TestParser_Query(t *testing.T) {
 			name: "SELECT without where",
 			s:    "SELECT a, b FROM mytable",
 			want: &QueryData{
-				fields: []string{"a", "b"},
+				fields: []schema.FieldName{"a", "b"},
 				tables: []string{"mytable"},
 			},
 			wantErr: false,
@@ -41,7 +41,7 @@ func TestParser_Query(t *testing.T) {
 			name: "SELECT only one field",
 			s:    "SELECT a FROM mytable",
 			want: &QueryData{
-				fields: []string{"a"},
+				fields: []schema.FieldName{"a"},
 				tables: []string{"mytable"},
 			},
 			wantErr: false,
@@ -74,7 +74,7 @@ func TestParser_Insert(t *testing.T) {
 			s:    "INSERT INTO mytable (a, b) VALUES (1, 'foo')",
 			want: &InsertData{
 				table:  "mytable",
-				fields: []string{"a", "b"},
+				fields: []schema.FieldName{"a", "b"},
 				values: []schema.Constant{
 					schema.ConstantInt32(1),
 					schema.ConstantStr("foo"),
@@ -241,7 +241,7 @@ func TestParser_CreateView(t *testing.T) {
 			want: &CreateViewData{
 				view: "myview",
 				query: &QueryData{
-					fields: []string{"a", "b"},
+					fields: []schema.FieldName{"a", "b"},
 					tables: []string{"mytable"},
 					pred: query.Predicate{
 						query.NewTerm(schema.FieldName("a"), schema.ConstantInt32(1)),
