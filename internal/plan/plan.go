@@ -2,6 +2,7 @@ package plan
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/abekoh/simple-db/internal/metadata"
 	"github.com/abekoh/simple-db/internal/query"
@@ -11,6 +12,7 @@ import (
 )
 
 type Plan interface {
+	fmt.Stringer
 	Open() (query.Scan, error)
 	BlockAccessed() int
 	RecordsOutput() int
@@ -67,6 +69,11 @@ func (t TablePlan) Schema() *schema.Schema {
 	return t.layout.Schema()
 }
 
+func (t TablePlan) String() string {
+	return fmt.Sprintf("Table{%s}", t.tableName)
+
+}
+
 type ProductPlan struct {
 	p1, p2 Plan
 	sche   schema.Schema
@@ -111,6 +118,10 @@ func (p ProductPlan) DistinctValues(fieldName schema.FieldName) int {
 
 func (p ProductPlan) Schema() *schema.Schema {
 	return &p.sche
+}
+
+func (p ProductPlan) String() string {
+	return fmt.Sprintf("Product(%v, %v)", p.p1, p.p2)
 }
 
 type SelectPlan struct {
@@ -161,6 +172,10 @@ func (s SelectPlan) Schema() *schema.Schema {
 	return s.p.Schema()
 }
 
+func (s SelectPlan) String() string {
+	return fmt.Sprintf("Select{%s}(%v)", s.pred, s.p)
+}
+
 type ProjectPlan struct {
 	p    Plan
 	sche schema.Schema
@@ -198,4 +213,12 @@ func (p ProjectPlan) DistinctValues(fieldName schema.FieldName) int {
 
 func (p ProjectPlan) Schema() *schema.Schema {
 	return &p.sche
+}
+
+func (p ProjectPlan) String() string {
+	fieldNames := make([]string, len(p.sche.FieldNames()))
+	for i, name := range p.sche.FieldNames() {
+		fieldNames[i] = string(name)
+	}
+	return fmt.Sprintf("Project{%s}(%v)", strings.Join(fieldNames, ","), p.p)
 }

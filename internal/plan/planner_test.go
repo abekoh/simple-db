@@ -19,17 +19,19 @@ func TestBasicQueryPlanner(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sche1 := schema.NewSchema()
-	sche1.AddInt32Field("a")
-	sche1.AddStrField("b", 9)
-	if err := db.MetadataMgr().CreateTable("mytable", sche1, tx); err != nil {
+	sche := schema.NewSchema()
+	sche.AddInt32Field("a")
+	sche.AddStrField("b", 9)
+	if err := db.MetadataMgr().CreateTable("mytable", sche, tx); err != nil {
 		t.Fatal(err)
 	}
 
 	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), nil)
-	plan, err := planner.CreateQueryPlan(`SELECT a, b FROM mytable WHERE mytable = 1`, tx)
+	plan, err := planner.CreateQueryPlan(`SELECT a, b FROM mytable WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = plan
+	if plan.String() != "Project{a,b}(Select{a=1}(Table{mytable}))" {
+		t.Errorf("unexpected plan: %s", plan.String())
+	}
 }
