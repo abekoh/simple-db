@@ -224,7 +224,19 @@ type InsertData struct {
 	values []schema.Constant
 }
 
-func (d *InsertData) Command() {}
+func (d InsertData) Command() {}
+
+func (d InsertData) Table() string {
+	return d.table
+}
+
+func (d InsertData) Fields() []string {
+	return d.fields
+}
+
+func (d InsertData) Values() []schema.Constant {
+	return d.values
+}
 
 func (p *Parser) Insert() (*InsertData, error) {
 	d := &InsertData{}

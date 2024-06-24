@@ -5,6 +5,7 @@ import (
 
 	"github.com/abekoh/simple-db/internal/metadata"
 	"github.com/abekoh/simple-db/internal/parse"
+	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
@@ -113,4 +114,58 @@ func (bp *BasicQueryPlanner) CreatePlan(d *parse.QueryData, tx *transaction.Tran
 	plan = NewProjectPlan(plan, d.Fields())
 
 	return plan, nil
+}
+
+type BasicUpdatePlanner struct {
+	mdm *metadata.Manager
+}
+
+func NewBasicUpdatePlanner(mdm *metadata.Manager) *BasicUpdatePlanner {
+	return &BasicUpdatePlanner{mdm: mdm}
+}
+
+var _ UpdatePlanner = (*BasicUpdatePlanner)(nil)
+
+func (up *BasicUpdatePlanner) ExecuteInsert(d *parse.InsertData, tx *transaction.Transaction) (int, error) {
+	plan, err := NewTablePlan(d.Table(), tx, up.mdm)
+	if err != nil {
+		return 0, fmt.Errorf("table plan error: %w", err)
+	}
+	s, err := plan.Open()
+	if err != nil {
+		return 0, fmt.Errorf("open error: %w", err)
+	}
+	updateScan, ok := s.(query.UpdateScan)
+	if !ok {
+		return 0, fmt.Errorf("table is not updateable")
+	}
+	if err := updateScan.Insert(); err != nil {
+		return 0, fmt.Errorf("insert error: %w", err)
+	}
+	panic("aa")
+}
+
+func (up *BasicUpdatePlanner) ExecuteDelete(d *parse.DeleteData, tx *transaction.Transaction) (int, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (up *BasicUpdatePlanner) ExecuteModify(d *parse.ModifyData, tx *transaction.Transaction) (int, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (up *BasicUpdatePlanner) ExecuteCreateTable(d *parse.CreateTableData, tx *transaction.Transaction) (int, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (up *BasicUpdatePlanner) ExecuteCreateView(d *parse.CreateViewData, tx *transaction.Transaction) (int, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (up *BasicUpdatePlanner) ExecuteCreateIndex(d *parse.CreateIndexData, tx *transaction.Transaction) (int, error) {
+	//TODO implement me
+	panic("implement me")
 }
