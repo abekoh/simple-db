@@ -22,7 +22,7 @@ type TablePlan struct {
 	tableName string
 	tx        *transaction.Transaction
 	layout    *record.Layout
-	statInfo  *metadata.StatInfo
+	statInfo  metadata.StatInfo
 }
 
 var _ Plan = (*TablePlan)(nil)
@@ -30,14 +30,21 @@ var _ Plan = (*TablePlan)(nil)
 func NewTablePlan(
 	tableName string,
 	tx *transaction.Transaction,
-	layout *record.Layout,
-	statInfo *metadata.StatInfo) *TablePlan {
+	mdm *metadata.Manager) (*TablePlan, error) {
+	layout, err := mdm.Layout(tableName, tx)
+	if err != nil {
+		return nil, fmt.Errorf("mdm.Layout error: %w", err)
+	}
+	statInfo, err := mdm.StatInfo(tableName, layout, tx)
+	if err != nil {
+		return nil, fmt.Errorf("mdm.StatInfo error: %w", err)
+	}
 	return &TablePlan{
 		tableName: tableName,
 		tx:        tx,
 		layout:    layout,
 		statInfo:  statInfo,
-	}
+	}, nil
 }
 
 func (t TablePlan) Open() (query.Scan, error) {
