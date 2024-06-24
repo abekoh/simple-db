@@ -58,13 +58,13 @@ func (p *Parser) tableList() ([]string, token, error) {
 	return tables, tok, nil
 }
 
-func (p *Parser) fieldList() ([]string, token, error) {
-	fields := make([]string, 0, 1)
+func (p *Parser) fieldList() ([]schema.FieldName, token, error) {
+	fields := make([]schema.FieldName, 0, 1)
 	tok := p.lexer.NextToken()
 	if tok.typ != identifier {
 		return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
 	}
-	fields = append(fields, tok.literal)
+	fields = append(fields, schema.FieldName(tok.literal))
 	for {
 		tok = p.lexer.NextToken()
 		if tok.typ != comma {
@@ -74,7 +74,7 @@ func (p *Parser) fieldList() ([]string, token, error) {
 		if tok.typ != identifier {
 			return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
 		}
-		fields = append(fields, tok.literal)
+		fields = append(fields, schema.FieldName(tok.literal))
 	}
 	return fields, tok, nil
 }
@@ -220,7 +220,7 @@ type Command interface {
 
 type InsertData struct {
 	table  string
-	fields []string
+	fields []schema.FieldName
 	values []schema.Constant
 }
 
@@ -230,7 +230,7 @@ func (d InsertData) Table() string {
 	return d.table
 }
 
-func (d InsertData) Fields() []string {
+func (d InsertData) Fields() []schema.FieldName {
 	return d.fields
 }
 
