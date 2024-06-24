@@ -3,6 +3,7 @@ package plan
 import (
 	"fmt"
 
+	"github.com/abekoh/simple-db/internal/metadata"
 	"github.com/abekoh/simple-db/internal/parse"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
@@ -59,4 +60,57 @@ func (p *Planner) ExecuteUpdate(q string, tx *transaction.Transaction) (int, err
 		return p.up.ExecuteCreateIndex(c, tx)
 	}
 	return 0, fmt.Errorf("unknown command type %v", cmd)
+}
+
+type BasicQueryPlanner struct {
+	mdm *metadata.Manager
+}
+
+func NewBasicQueryPlanner(mdm *metadata.Manager) *BasicQueryPlanner {
+	return &BasicQueryPlanner{mdm: mdm}
+}
+
+var _ QueryPlanner = (*BasicQueryPlanner)(nil)
+
+func (bp *BasicQueryPlanner) CreatePlan(d *parse.QueryData, tx *transaction.Transaction) (Plan, error) {
+	plans := make([]Plan, 0, len(d.Tables()))
+	for _, t := range d.Tables() {
+		viewDef, ok, err := bp.mdm.ViewDef(t, tx)
+		if err != nil {
+			return nil, fmt.Errorf("view  error: %w", err)
+		}
+		if ok {
+			p := parse.NewParser(viewDef)
+			viewData, err := p.Query()
+			if err != nil {
+				return nil, fmt.Errorf("view query error: %w", err)
+			}
+			vp, err := bp.CreatePlan(viewData, tx)
+			if err != nil {
+				return nil, fmt.Errorf("view plan error: %w", err)
+			}
+			plans = append(plans, vp)
+		} else {
+			tablePlan, err := NewTablePlan(t, tx, bp.mdm)
+			if err != nil {
+				return nil, fmt.Errorf("table plan error: %w", err)
+			}
+			plans = append(plans, tablePlan)
+		}
+	}
+
+	plan := plans[0]
+	var err error
+	for _, p := range plans[1:] {
+		plan, err = NewProductPlan(plan, p)
+		if err != nil {
+			return nil, fmt.Errorf("product plan error: %w", err)
+		}
+	}
+
+	plan = NewSelectPlan(plan, d.Predicate())
+
+	plan = NewProjectPlan(plan, d.Fields())
+
+	return plan, nil
 }
