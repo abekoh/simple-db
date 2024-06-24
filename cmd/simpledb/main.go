@@ -1,4 +1,4 @@
-package simpledb
+package main
 
 import (
 	"log"
