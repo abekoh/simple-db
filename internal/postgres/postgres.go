@@ -80,8 +80,8 @@ func (b *Backend) Close() error {
 	return b.conn.Close()
 }
 
-func (p *Backend) handleStartup() error {
-	startupMessage, err := p.backend.ReceiveStartupMessage()
+func (b *Backend) handleStartup() error {
+	startupMessage, err := b.backend.ReceiveStartupMessage()
 	if err != nil {
 		return fmt.Errorf("error receiving startup message: %w", err)
 	}
@@ -96,16 +96,16 @@ func (p *Backend) handleStartup() error {
 		if err != nil {
 			return fmt.Errorf("error encoding ready for query: %w", err)
 		}
-		_, err = p.conn.Write(buf)
+		_, err = b.conn.Write(buf)
 		if err != nil {
 			return fmt.Errorf("error sending ready for query: %w", err)
 		}
 	case *pgproto3.SSLRequest:
-		_, err = p.conn.Write([]byte("N"))
+		_, err = b.conn.Write([]byte("N"))
 		if err != nil {
 			return fmt.Errorf("error sending deny SSL request: %w", err)
 		}
-		return p.handleStartup()
+		return b.handleStartup()
 	default:
 		return fmt.Errorf("unknown startup message: %#v", startupMessage)
 	}
