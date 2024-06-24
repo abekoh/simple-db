@@ -44,7 +44,7 @@ func (p *Planner) ExecuteUpdate(q string, tx *transaction.Transaction) (int, err
 	ps := parse.NewParser(q)
 	cmd, err := ps.UpdateCommand()
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("parse error: %w", err)
 	}
 	switch c := cmd.(type) {
 	case *parse.InsertData:

@@ -2,6 +2,7 @@ package plan
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/record/schema"
@@ -34,4 +35,35 @@ func TestBasicQueryPlanner(t *testing.T) {
 	if plan.String() != "Project{a,b}(Select{a=1}(Table{mytable}))" {
 		t.Errorf("unexpected plan: %s", plan.String())
 	}
+}
+
+func TestBasicUpdatePlanner(t *testing.T) {
+	t.Run("CreateTable", func(t *testing.T) {
+		ctx := context.Background()
+		db, err := server.NewSimpleDB(ctx, t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx, err := db.NewTx(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
+		_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		l, err := db.MetadataMgr().Layout("mytable", tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		expectedSche := schema.NewSchema()
+		expectedSche.AddInt32Field("a")
+		expectedSche.AddStrField("b", 9)
+		if !reflect.DeepEqual(expectedSche, *l.Schema()) {
+			t.Errorf("unexpected schema: %v", l.Schema())
+		}
+	})
 }
