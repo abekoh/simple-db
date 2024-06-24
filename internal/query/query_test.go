@@ -15,7 +15,7 @@ import (
 
 func TestProductScan(t *testing.T) {
 	ctx := context.Background()
-	db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
+	db, err := simpledb.New(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func TestProductScan(t *testing.T) {
 func TestScan(t *testing.T) {
 	t.Run("SelectScan -> ProjectScan", func(t *testing.T) {
 		ctx := context.Background()
-		db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
+		db, err := simpledb.New(ctx, t.TempDir())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -238,7 +238,7 @@ func TestScan(t *testing.T) {
 	})
 	t.Run("ProductScan -> SelectScan -> ProjectScan", func(t *testing.T) {
 		ctx := context.Background()
-		db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
+		db, err := simpledb.New(ctx, t.TempDir())
 		if err != nil {
 			t.Fatal(err)
 		}

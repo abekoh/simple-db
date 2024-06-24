@@ -20,7 +20,7 @@ type SimpleDB struct {
 	planner     *plan.Planner
 }
 
-func NewSimpleDBWithParams(ctx context.Context, dirname string, blockSize int32, bufSize int) (*SimpleDB, error) {
+func NewWithParams(ctx context.Context, dirname string, blockSize int32, bufSize int) (*SimpleDB, error) {
 	fm, err := file.NewManager(dirname, blockSize)
 	if err != nil {
 		return nil, err
@@ -38,8 +38,8 @@ func NewSimpleDBWithParams(ctx context.Context, dirname string, blockSize int32,
 	}, nil
 }
 
-func NewSimpleDB(ctx context.Context, dirname string) (*SimpleDB, error) {
-	db, err := NewSimpleDBWithParams(ctx, dirname, 400, 8)
+func New(ctx context.Context, dirname string) (*SimpleDB, error) {
+	db, err := NewWithParams(ctx, dirname, 400, 8)
 	if err != nil {
 		return nil, fmt.Errorf("could not create SimpleDB: %w", err)
 	}
