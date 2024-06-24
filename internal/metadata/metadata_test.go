@@ -110,9 +110,12 @@ func TestMetadataManager(t *testing.T) {
 	if err := m.CreateView("MyView", viewDef, tx); err != nil {
 		t.Fatal(err)
 	}
-	gotViewDef, err := m.ViewDef("MyView", tx)
+	gotViewDef, ok, err := m.ViewDef("MyView", tx)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("expected true, got false")
 	}
 	if gotViewDef != viewDef {
 		t.Errorf("expected %s, got %s", "SELECT B FROM MyTable WHERE A = 1", gotViewDef)

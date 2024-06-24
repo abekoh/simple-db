@@ -328,38 +328,42 @@ func (m *ViewManager) CreateView(viewName, viewDef string, tx *transaction.Trans
 	return nil
 }
 
-func (m *ViewManager) ViewDef(viewName string, tx *transaction.Transaction) (string, error) {
-	var res string
+func (m *ViewManager) ViewDef(viewName string, tx *transaction.Transaction) (string, bool, error) {
+	var (
+		res   string
+		found bool
+	)
 	layout, err := m.tableManager.Layout("view_catalog", tx)
 	if err != nil {
-		return "", fmt.Errorf("layout error: %w", err)
+		return "", false, fmt.Errorf("layout error: %w", err)
 	}
 	scan, err := record.NewTableScan(tx, "view_catalog", layout)
 	if err != nil {
-		return "", fmt.Errorf("table scan error: %w", err)
+		return "", false, fmt.Errorf("table scan error: %w", err)
 	}
 	for {
 		if ok, err := scan.Next(); err != nil {
-			return "", fmt.Errorf("next error: %w", err)
+			return "", false, fmt.Errorf("next error: %w", err)
 		} else if !ok {
 			break
 		}
 		name, err := scan.Str("view_name")
 		if err != nil {
-			return "", fmt.Errorf("get string error: %w", err)
+			return "", false, fmt.Errorf("get string error: %w", err)
 		}
 		if name == viewName {
 			res, err = scan.Str("view_def")
 			if err != nil {
-				return "", fmt.Errorf("get string error: %w", err)
+				return "", false, fmt.Errorf("get string error: %w", err)
 			}
+			found = true
 			break
 		}
 	}
 	if err := scan.Close(); err != nil {
-		return "", fmt.Errorf("close error: %w", err)
+		return "", false, fmt.Errorf("close error: %w", err)
 	}
-	return res, nil
+	return res, found, nil
 }
 
 type IndexInfo struct {
@@ -561,12 +565,12 @@ func (m *Manager) CreateView(viewName, viewDef string, tx *transaction.Transacti
 	return nil
 }
 
-func (m *Manager) ViewDef(viewName string, tx *transaction.Transaction) (string, error) {
-	viewDef, err := m.viewManager.ViewDef(viewName, tx)
+func (m *Manager) ViewDef(viewName string, tx *transaction.Transaction) (string, bool, error) {
+	viewDef, ok, err := m.viewManager.ViewDef(viewName, tx)
 	if err != nil {
-		return "", fmt.Errorf("view def error: %w", err)
+		return "", false, fmt.Errorf("view def error: %w", err)
 	}
-	return viewDef, nil
+	return viewDef, ok, nil
 }
 
 func (m *Manager) CreateIndex(indexName, tableName, fieldName string, tx *transaction.Transaction) error {
