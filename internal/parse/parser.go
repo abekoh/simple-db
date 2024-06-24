@@ -389,6 +389,10 @@ func (d DeleteData) Table() string {
 	return d.table
 }
 
+func (d DeleteData) Predicate() query.Predicate {
+	return d.pred
+}
+
 func (d DeleteData) Command() {}
 
 func (p *Parser) Delete() (*DeleteData, error) {
