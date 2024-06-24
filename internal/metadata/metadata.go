@@ -448,7 +448,7 @@ func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatMa
 	return &IndexManager{layout: layout, tableManager: tableManager, statManager: statManager}, nil
 }
 
-func (m *IndexManager) CreateIndex(indexName, tableName, fieldName string, tx *transaction.Transaction) error {
+func (m *IndexManager) CreateIndex(indexName, tableName string, fieldName schema.FieldName, tx *transaction.Transaction) error {
 	scan, err := record.NewTableScan(tx, "index_catalog", m.layout)
 	if err != nil {
 		return fmt.Errorf("table scan error: %w", err)
@@ -462,7 +462,7 @@ func (m *IndexManager) CreateIndex(indexName, tableName, fieldName string, tx *t
 	if err := scan.SetStr("table_name", tableName); err != nil {
 		return fmt.Errorf("set string error: %w", err)
 	}
-	if err := scan.SetStr("field_name", fieldName); err != nil {
+	if err := scan.SetStr("field_name", string(fieldName)); err != nil {
 		return fmt.Errorf("set string error: %w", err)
 	}
 	if err := scan.Close(); err != nil {
@@ -573,7 +573,7 @@ func (m *Manager) ViewDef(viewName string, tx *transaction.Transaction) (string,
 	return viewDef, ok, nil
 }
 
-func (m *Manager) CreateIndex(indexName, tableName, fieldName string, tx *transaction.Transaction) error {
+func (m *Manager) CreateIndex(indexName, tableName string, fieldName schema.FieldName, tx *transaction.Transaction) error {
 	if err := m.indexManager.CreateIndex(indexName, tableName, fieldName, tx); err != nil {
 		return fmt.Errorf("create index error: %w", err)
 	}

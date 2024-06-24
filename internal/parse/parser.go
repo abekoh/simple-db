@@ -551,7 +551,19 @@ func (p *Parser) CreateView() (*CreateViewData, error) {
 type CreateIndexData struct {
 	index string
 	table string
-	field string
+	field schema.FieldName
+}
+
+func (d CreateIndexData) Index() string {
+	return d.index
+}
+
+func (d CreateIndexData) Table() string {
+	return d.table
+}
+
+func (d CreateIndexData) Field() schema.FieldName {
+	return d.field
 }
 
 func (d CreateIndexData) Command() {}
@@ -588,7 +600,7 @@ func (p *Parser) CreateIndex() (*CreateIndexData, error) {
 	if tok.typ != identifier {
 		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
 	}
-	d.field = tok.literal
+	d.field = schema.FieldName(tok.literal)
 	tok = p.lexer.NextToken()
 	if tok.typ != rparen {
 		return nil, fmt.Errorf("expected ), got %s", tok.literal)

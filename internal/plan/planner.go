@@ -245,6 +245,8 @@ func (up *BasicUpdatePlanner) ExecuteCreateView(d *parse.CreateViewData, tx *tra
 }
 
 func (up *BasicUpdatePlanner) ExecuteCreateIndex(d *parse.CreateIndexData, tx *transaction.Transaction) (int, error) {
-	//TODO implement me
-	panic("implement me")
+	if err := up.mdm.CreateIndex(d.Index(), d.Table(), d.Field(), tx); err != nil {
+		return 0, fmt.Errorf("create index error: %w", err)
+	}
+	return 0, nil
 }
