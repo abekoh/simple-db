@@ -38,6 +38,14 @@ func (b *Backend) Run() error {
 
 		switch msg.(type) {
 		case *pgproto3.Query:
+			buf, err := b.handleQuery(msg.(*pgproto3.Query))
+			if err != nil {
+				return fmt.Errorf("error handling query: %w", err)
+			}
+			_, err = b.conn.Write(buf)
+			if err != nil {
+				return fmt.Errorf("error writing query response: %w", err)
+			}
 		case *pgproto3.Terminate:
 			return nil
 		default:
@@ -109,10 +117,6 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 	buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
 	if err != nil {
 		return nil, fmt.Errorf("error encoding ready for query: %w", err)
-	}
-	_, err = b.conn.Write(buf)
-	if err != nil {
-		return nil, fmt.Errorf("error writing query response: %w", err)
 	}
 	return []byte("a"), nil
 }
