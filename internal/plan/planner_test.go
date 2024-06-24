@@ -94,4 +94,35 @@ func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
 	if c != 1 {
 		t.Errorf("unexpected count: %d", c)
 	}
+
+	plan, err := planner.CreateQueryPlan(`SELECT a, b FROM mytable WHERE a = 1`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scan, err := plan.Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer scan.Close()
+	ok, err := scan.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("no rows")
+	}
+	aVal, err := scan.Int32("a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if aVal != 1 {
+		t.Errorf("unexpected value: %d", aVal)
+	}
+	bVal, err := scan.Str("b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bVal != "foo" {
+		t.Errorf("unexpected value: %s", bVal)
+	}
 }
