@@ -76,3 +76,7 @@ func (db *SimpleDB) NewTx(ctx context.Context) (*transaction.Transaction, error)
 func (db *SimpleDB) MetadataMgr() *metadata.Manager {
 	return db.metadataMgr
 }
+
+func (db *SimpleDB) Planner() *plan.Planner {
+	return db.planner
+}
