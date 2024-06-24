@@ -4,16 +4,19 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/abekoh/simple-db/internal/simpledb"
 	"github.com/jackc/pgx/v5/pgproto3"
 )
 
 type Backend struct {
+	db      *simpledb.DB
 	backend *pgproto3.Backend
 	conn    net.Conn
 }
 
-func NewBackend(conn net.Conn) *Backend {
+func NewBackend(db *simpledb.DB, conn net.Conn) *Backend {
 	return &Backend{
+		db:      db,
 		backend: pgproto3.NewBackend(conn, conn),
 		conn:    conn,
 	}
