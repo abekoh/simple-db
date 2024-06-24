@@ -10,12 +10,11 @@ import (
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
-	"github.com/abekoh/simple-db/internal/server"
 )
 
 func TestProductScan(t *testing.T) {
 	ctx := context.Background()
-	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +159,7 @@ func TestProductScan(t *testing.T) {
 func TestScan(t *testing.T) {
 	t.Run("SelectScan -> ProjectScan", func(t *testing.T) {
 		ctx := context.Background()
-		db, err := server.NewSimpleDB(ctx, t.TempDir())
+		db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -238,7 +237,7 @@ func TestScan(t *testing.T) {
 	})
 	t.Run("ProductScan -> SelectScan -> ProjectScan", func(t *testing.T) {
 		ctx := context.Background()
-		db, err := server.NewSimpleDB(ctx, t.TempDir())
+		db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
 		if err != nil {
 			t.Fatal(err)
 		}

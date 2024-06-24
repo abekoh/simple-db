@@ -6,14 +6,13 @@ import (
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/record/schema"
-	"github.com/abekoh/simple-db/internal/server"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
 func TestBasicQueryPlanner(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
-	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +41,7 @@ func TestBasicQueryPlanner(t *testing.T) {
 func TestBasicUpdatePlanner_ExecuteCreateTable(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
-	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +71,7 @@ func TestBasicUpdatePlanner_ExecuteCreateTable(t *testing.T) {
 func TestBasicUpdatePlanner_ExecuteCreateView(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
-	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +105,7 @@ func TestBasicUpdatePlanner_ExecuteCreateView(t *testing.T) {
 func TestBasicUpdatePlanner_ExecuteCreateIndex(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
-	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +143,7 @@ func TestBasicUpdatePlanner_ExecuteCreateIndex(t *testing.T) {
 func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
-	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +201,7 @@ func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
 func TestBasicUpdatePlanner_ExecuteUpdate(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
-	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +266,7 @@ func TestBasicUpdatePlanner_ExecuteUpdate(t *testing.T) {
 func TestBasicUpdatePlanner_ExecuteDelete(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
-	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	db, err := simpledb.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
