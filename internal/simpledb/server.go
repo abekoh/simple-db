@@ -12,7 +12,7 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
-type SimpleDB struct {
+type DB struct {
 	fileMgr     *file.Manager
 	bufMgr      *buffer.Manager
 	logMgr      *log.Manager
@@ -20,7 +20,7 @@ type SimpleDB struct {
 	planner     *plan.Planner
 }
 
-func NewWithParams(ctx context.Context, dirname string, blockSize int32, bufSize int) (*SimpleDB, error) {
+func NewWithParams(ctx context.Context, dirname string, blockSize int32, bufSize int) (*DB, error) {
 	fm, err := file.NewManager(dirname, blockSize)
 	if err != nil {
 		return nil, err
@@ -31,14 +31,14 @@ func NewWithParams(ctx context.Context, dirname string, blockSize int32, bufSize
 		return nil, err
 	}
 	bm := buffer.NewManager(ctx, fm, lm, bufSize)
-	return &SimpleDB{
+	return &DB{
 		fileMgr: fm,
 		bufMgr:  bm,
 		logMgr:  lm,
 	}, nil
 }
 
-func New(ctx context.Context, dirname string) (*SimpleDB, error) {
+func New(ctx context.Context, dirname string) (*DB, error) {
 	db, err := NewWithParams(ctx, dirname, 400, 8)
 	if err != nil {
 		return nil, fmt.Errorf("could not create SimpleDB: %w", err)
@@ -69,14 +69,14 @@ func New(ctx context.Context, dirname string) (*SimpleDB, error) {
 	return db, nil
 }
 
-func (db SimpleDB) NewTx(ctx context.Context) (*transaction.Transaction, error) {
+func (db DB) NewTx(ctx context.Context) (*transaction.Transaction, error) {
 	return transaction.NewTransaction(ctx, db.bufMgr, db.fileMgr, db.logMgr)
 }
 
-func (db SimpleDB) MetadataMgr() *metadata.Manager {
+func (db DB) MetadataMgr() *metadata.Manager {
 	return db.metadataMgr
 }
 
-func (db SimpleDB) Planner() *plan.Planner {
+func (db DB) Planner() *plan.Planner {
 	return db.planner
 }
