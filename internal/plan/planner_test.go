@@ -7,9 +7,11 @@ import (
 
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/server"
+	"github.com/abekoh/simple-db/internal/transaction"
 )
 
 func TestBasicQueryPlanner(t *testing.T) {
+	transaction.CleanupLockTable(t)
 	ctx := context.Background()
 	db, err := server.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
@@ -38,6 +40,7 @@ func TestBasicQueryPlanner(t *testing.T) {
 }
 
 func TestBasicUpdatePlanner_ExecuteCreateTable(t *testing.T) {
+	transaction.CleanupLockTable(t)
 	ctx := context.Background()
 	db, err := server.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {
@@ -67,6 +70,7 @@ func TestBasicUpdatePlanner_ExecuteCreateTable(t *testing.T) {
 }
 
 func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
+	transaction.CleanupLockTable(t)
 	ctx := context.Background()
 	db, err := server.NewSimpleDB(ctx, t.TempDir())
 	if err != nil {

@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -16,13 +15,6 @@ import (
 	"github.com/abekoh/simple-db/internal/file"
 	"github.com/abekoh/simple-db/internal/log"
 )
-
-func CleanupLockTable(t *testing.T) {
-	t.Helper()
-	t.Cleanup(func() {
-		globalLockTable = sync.Map{}
-	})
-}
 
 func TestTransaction(t *testing.T) {
 	t.Parallel()

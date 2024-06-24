@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/abekoh/simple-db/internal/buffer"
@@ -785,4 +786,11 @@ func (m *concurrencyManager) loop(ctx context.Context) {
 			slog.Debug("locks released")
 		}
 	}
+}
+
+func CleanupLockTable(t *testing.T) {
+	t.Helper()
+	t.Cleanup(func() {
+		globalLockTable = sync.Map{}
+	})
 }
