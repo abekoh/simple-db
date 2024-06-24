@@ -38,36 +38,6 @@ func (b *Backend) Run() error {
 
 		switch msg.(type) {
 		case *pgproto3.Query:
-			buf, err := (&pgproto3.RowDescription{Fields: []pgproto3.FieldDescription{
-				{
-					Name:                 []byte("fortune"),
-					TableOID:             0,
-					TableAttributeNumber: 0,
-					DataTypeOID:          25,
-					DataTypeSize:         -1,
-					TypeModifier:         -1,
-					Format:               0,
-				},
-			}}).Encode(nil)
-			if err != nil {
-				return fmt.Errorf("error encoding row description: %w", err)
-			}
-			buf, err = (&pgproto3.DataRow{Values: [][]byte{[]byte("a")}}).Encode(buf)
-			if err != nil {
-				return fmt.Errorf("error encoding data row: %w", err)
-			}
-			buf, err = (&pgproto3.CommandComplete{CommandTag: []byte("SELECT 1")}).Encode(buf)
-			if err != nil {
-				return fmt.Errorf("error encoding command complete: %w", err)
-			}
-			buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
-			if err != nil {
-				return fmt.Errorf("error encoding ready for query: %w", err)
-			}
-			_, err = b.conn.Write(buf)
-			if err != nil {
-				return fmt.Errorf("error writing query response: %w", err)
-			}
 		case *pgproto3.Terminate:
 			return nil
 		default:
@@ -111,4 +81,38 @@ func (b *Backend) handleStartup() error {
 	}
 
 	return nil
+}
+
+func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
+	buf, err := (&pgproto3.RowDescription{Fields: []pgproto3.FieldDescription{
+		{
+			Name:                 []byte("fortune"),
+			TableOID:             0,
+			TableAttributeNumber: 0,
+			DataTypeOID:          25,
+			DataTypeSize:         -1,
+			TypeModifier:         -1,
+			Format:               0,
+		},
+	}}).Encode(nil)
+	if err != nil {
+		return nil, fmt.Errorf("error encoding row description: %w", err)
+	}
+	buf, err = (&pgproto3.DataRow{Values: [][]byte{[]byte("a")}}).Encode(buf)
+	if err != nil {
+		return nil, fmt.Errorf("error encoding data row: %w", err)
+	}
+	buf, err = (&pgproto3.CommandComplete{CommandTag: []byte("SELECT 1")}).Encode(buf)
+	if err != nil {
+		return nil, fmt.Errorf("error encoding command complete: %w", err)
+	}
+	buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
+	if err != nil {
+		return nil, fmt.Errorf("error encoding ready for query: %w", err)
+	}
+	_, err = b.conn.Write(buf)
+	if err != nil {
+		return nil, fmt.Errorf("error writing query response: %w", err)
+	}
+	return []byte("a"), nil
 }
