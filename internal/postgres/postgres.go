@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"context"
 	"net"
 
 	"github.com/jackc/pgx/v5/pgproto3"
@@ -19,7 +18,7 @@ func NewBackend(conn net.Conn) *Backend {
 	}
 }
 
-func (b *Backend) Run(ctx context.Context) error {
+func (b *Backend) Run() error {
 	defer b.Close()
 	return nil
 }
