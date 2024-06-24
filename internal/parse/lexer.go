@@ -189,4 +189,5 @@ func (l *Lexer) Reset() {
 	l.readCursor = 0
 	var char byte
 	l.char = char
+	l.readChar()
 }
