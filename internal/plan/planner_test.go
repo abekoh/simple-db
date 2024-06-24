@@ -37,33 +37,57 @@ func TestBasicQueryPlanner(t *testing.T) {
 	}
 }
 
-func TestBasicUpdatePlanner(t *testing.T) {
-	t.Run("CreateTable", func(t *testing.T) {
-		ctx := context.Background()
-		db, err := server.NewSimpleDB(ctx, t.TempDir())
-		if err != nil {
-			t.Fatal(err)
-		}
-		tx, err := db.NewTx(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
+func TestBasicUpdatePlanner_ExecuteCreateTable(t *testing.T) {
+	ctx := context.Background()
+	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.NewTx(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
-		_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
-		if err != nil {
-			t.Fatal(err)
-		}
+	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
+	_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		l, err := db.MetadataMgr().Layout("mytable", tx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		expectedSche := schema.NewSchema()
-		expectedSche.AddInt32Field("a")
-		expectedSche.AddStrField("b", 9)
-		if !reflect.DeepEqual(expectedSche, *l.Schema()) {
-			t.Errorf("unexpected schema: %v", l.Schema())
-		}
-	})
+	l, err := db.MetadataMgr().Layout("mytable", tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedSche := schema.NewSchema()
+	expectedSche.AddInt32Field("a")
+	expectedSche.AddStrField("b", 9)
+	if !reflect.DeepEqual(expectedSche, *l.Schema()) {
+		t.Errorf("unexpected schema: %v", l.Schema())
+	}
+}
+
+func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
+	ctx := context.Background()
+	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.NewTx(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()))
+	_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := planner.ExecuteUpdate(`INSERT INTO mytable (a, b) VALUES (1, 'foo')`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c != 1 {
+		t.Errorf("unexpected count: %d", c)
+	}
 }
