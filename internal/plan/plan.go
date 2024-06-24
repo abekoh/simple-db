@@ -153,3 +153,42 @@ func (s SelectPlan) DistinctValues(fieldName schema.FieldName) int {
 func (s SelectPlan) Schema() *schema.Schema {
 	return s.p.Schema()
 }
+
+type ProjectPlan struct {
+	p    Plan
+	sche schema.Schema
+}
+
+var _ Plan = (*ProjectPlan)(nil)
+
+func NewProjectPlan(p Plan, fieldNames []schema.FieldName) *ProjectPlan {
+	s := schema.NewSchema()
+	for _, name := range fieldNames {
+		s.Add(name, *p.Schema())
+	}
+	return &ProjectPlan{p: p, sche: s}
+}
+
+func (p ProjectPlan) Open() (query.Scan, error) {
+	s, err := p.p.Open()
+	if err != nil {
+		return nil, fmt.Errorf("p.Open error: %w", err)
+	}
+	return query.NewProjectScan(s, p.sche.FieldNames()...), nil
+}
+
+func (p ProjectPlan) BlockAccessed() int {
+	return p.p.BlockAccessed()
+}
+
+func (p ProjectPlan) RecordsOutput() int {
+	return p.p.RecordsOutput()
+}
+
+func (p ProjectPlan) DistinctValues(fieldName schema.FieldName) int {
+	return p.p.DistinctValues(fieldName)
+}
+
+func (p ProjectPlan) Schema() *schema.Schema {
+	return &p.sche
+}
