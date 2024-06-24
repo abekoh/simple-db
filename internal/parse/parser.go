@@ -16,13 +16,13 @@ func NewParser(s string) *Parser {
 	return &Parser{lexer: NewLexer(s)}
 }
 
-func (p *Parser) selectList() ([]string, token, error) {
-	fields := make([]string, 0, 1)
+func (p *Parser) selectList() ([]schema.FieldName, token, error) {
+	fields := make([]schema.FieldName, 0, 1)
 	tok := p.lexer.NextToken()
 	if tok.typ != identifier {
 		return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
 	}
-	fields = append(fields, tok.literal)
+	fields = append(fields, schema.FieldName(tok.literal))
 	for {
 		tok = p.lexer.NextToken()
 		if tok.typ != comma {
@@ -32,7 +32,7 @@ func (p *Parser) selectList() ([]string, token, error) {
 		if tok.typ != identifier {
 			return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
 		}
-		fields = append(fields, tok.literal)
+		fields = append(fields, schema.FieldName(tok.literal))
 	}
 	return fields, tok, nil
 }
@@ -273,12 +273,12 @@ func (p *Parser) Insert() (*InsertData, error) {
 }
 
 type QueryData struct {
-	fields []string
+	fields []schema.FieldName
 	tables []string
 	pred   query.Predicate
 }
 
-func (d *QueryData) Fields() []string {
+func (d *QueryData) Fields() []schema.FieldName {
 	return d.fields
 }
 
