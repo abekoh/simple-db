@@ -142,7 +142,18 @@ func (up *BasicUpdatePlanner) ExecuteInsert(d *parse.InsertData, tx *transaction
 	if err := updateScan.Insert(); err != nil {
 		return 0, fmt.Errorf("insert error: %w", err)
 	}
-	panic("aa")
+	for i, f := range d.Fields() {
+		if len(d.Values()) <= i {
+			return 0, fmt.Errorf("field and value count mismatch")
+		}
+		if err := updateScan.SetVal(f, d.Values()[i]); err != nil {
+			return 0, fmt.Errorf("set value error: %w", err)
+		}
+	}
+	if err := s.Close(); err != nil {
+		return 0, fmt.Errorf("close error: %w", err)
+	}
+	return 1, nil
 }
 
 func (up *BasicUpdatePlanner) ExecuteDelete(d *parse.DeleteData, tx *transaction.Transaction) (int, error) {
