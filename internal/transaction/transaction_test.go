@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,9 +17,17 @@ import (
 	"github.com/abekoh/simple-db/internal/log"
 )
 
+func CleanupLockTable(t *testing.T) {
+	t.Helper()
+	t.Cleanup(func() {
+		globalLockTable = sync.Map{}
+	})
+}
+
 func TestTransaction(t *testing.T) {
 	t.Parallel()
 	t.Run("Transaction", func(t *testing.T) {
+		CleanupLockTable(t)
 		must := func(t *testing.T, err error) {
 			t.Helper()
 			if err != nil {
@@ -122,6 +131,7 @@ func TestTransaction(t *testing.T) {
 		}
 	})
 	t.Run("Concurrency", func(t *testing.T) {
+		CleanupLockTable(t)
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 		fm, err := file.NewManager(t.TempDir(), 128)
 		if err != nil {
@@ -241,6 +251,7 @@ func TestTransaction(t *testing.T) {
 		}
 	})
 	t.Run("Concurrency sLock after xLock", func(t *testing.T) {
+		CleanupLockTable(t)
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 		fm, err := file.NewManager(t.TempDir(), 128)
 		if err != nil {
@@ -272,6 +283,7 @@ func TestTransaction(t *testing.T) {
 		}
 	})
 	t.Run("Recovery", func(t *testing.T) {
+		CleanupLockTable(t)
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 		tmpDir := t.TempDir()
 		blockID0 := file.NewBlockID("testfile", 0)
