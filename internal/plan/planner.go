@@ -238,8 +238,10 @@ func (up *BasicUpdatePlanner) ExecuteCreateTable(d *parse.CreateTableData, tx *t
 }
 
 func (up *BasicUpdatePlanner) ExecuteCreateView(d *parse.CreateViewData, tx *transaction.Transaction) (int, error) {
-	//TODO implement me
-	panic("implement me")
+	if err := up.mdm.CreateView(d.ViewName(), d.ViewDef(), tx); err != nil {
+		return 0, fmt.Errorf("create view error: %w", err)
+	}
+	return 0, nil
 }
 
 func (up *BasicUpdatePlanner) ExecuteCreateIndex(d *parse.CreateIndexData, tx *transaction.Transaction) (int, error) {

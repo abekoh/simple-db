@@ -3,6 +3,7 @@ package parse
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
@@ -290,16 +291,39 @@ type QueryData struct {
 	pred   query.Predicate
 }
 
-func (d *QueryData) Fields() []schema.FieldName {
+func (d QueryData) Fields() []schema.FieldName {
 	return d.fields
 }
 
-func (d *QueryData) Tables() []string {
+func (d QueryData) Tables() []string {
 	return d.tables
 }
 
-func (d *QueryData) Predicate() query.Predicate {
+func (d QueryData) Predicate() query.Predicate {
 	return d.pred
+}
+
+func (d QueryData) String() string {
+	var b strings.Builder
+	b.WriteString("SELECT ")
+	for i, f := range d.fields {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(string(f))
+	}
+	b.WriteString(" FROM ")
+	for i, t := range d.tables {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(t)
+	}
+	if d.pred != nil {
+		b.WriteString(" WHERE ")
+		b.WriteString(d.pred.String())
+	}
+	return b.String()
 }
 
 func (p *Parser) Query() (*QueryData, error) {
@@ -485,6 +509,14 @@ func (p *Parser) CreateTable() (*CreateTableData, error) {
 type CreateViewData struct {
 	view  string
 	query *QueryData
+}
+
+func (d CreateViewData) ViewName() string {
+	return d.view
+}
+
+func (d CreateViewData) ViewDef() string {
+	return d.query.String()
 }
 
 func (d CreateViewData) Command() {}
