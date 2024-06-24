@@ -10,6 +10,7 @@ import (
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
+	"github.com/abekoh/simple-db/internal/simpledb"
 )
 
 func TestProductScan(t *testing.T) {
