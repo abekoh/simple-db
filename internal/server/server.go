@@ -8,6 +8,7 @@ import (
 	"github.com/abekoh/simple-db/internal/file"
 	"github.com/abekoh/simple-db/internal/log"
 	"github.com/abekoh/simple-db/internal/metadata"
+	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
@@ -16,6 +17,7 @@ type SimpleDB struct {
 	bufMgr      *buffer.Manager
 	logMgr      *log.Manager
 	metadataMgr *metadata.Manager
+	planner     *plan.Planner
 }
 
 func NewSimpleDBWithParams(ctx context.Context, dirname string, blockSize int32, bufSize int) (*SimpleDB, error) {
@@ -57,7 +59,10 @@ func NewSimpleDB(ctx context.Context, dirname string) (*SimpleDB, error) {
 
 	}
 	db.metadataMgr = metadataMgr
-	// TODO: setup planner
+	db.planner = plan.NewPlanner(
+		plan.NewBasicQueryPlanner(metadataMgr),
+		plan.NewBasicUpdatePlanner(metadataMgr),
+	)
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("could not recover: %w", err)
 	}
