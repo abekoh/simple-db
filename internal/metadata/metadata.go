@@ -391,6 +391,14 @@ func NewIndexInfo(
 	}, nil
 }
 
+func (i *IndexInfo) IndexName() string {
+	return i.indexName
+}
+
+func (i *IndexInfo) FieldName() schema.FieldName {
+	return i.fieldName
+}
+
 func (i *IndexInfo) Open() index.Index {
 	// TODO: implement
 	return nil

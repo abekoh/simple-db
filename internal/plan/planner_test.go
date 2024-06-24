@@ -103,6 +103,44 @@ func TestBasicUpdatePlanner_ExecuteCreateView(t *testing.T) {
 	}
 }
 
+func TestBasicUpdatePlanner_ExecuteCreateIndex(t *testing.T) {
+	transaction.CleanupLockTable(t)
+	ctx := context.Background()
+	db, err := server.NewSimpleDB(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.NewTx(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
+	_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = planner.ExecuteUpdate(`CREATE INDEX myindex ON mytable (a)`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	indexInfo, err := db.MetadataMgr().IndexInfo("mytable", tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	aIndex, ok := indexInfo["a"]
+	if !ok {
+		t.Fatal("index for a not found")
+	}
+	if aIndex.IndexName() != "myindex" {
+		t.Errorf("unexpected index name: %s", aIndex.IndexName())
+	}
+	if aIndex.FieldName() != "a" {
+		t.Errorf("unexpected field name: %s", aIndex.FieldName())
+	}
+}
+
 func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
