@@ -333,9 +333,25 @@ func (p *Parser) Query() (*QueryData, error) {
 
 type ModifyData struct {
 	table string
-	field string
+	field schema.FieldName
 	value query.Expression
 	pred  query.Predicate
+}
+
+func (d ModifyData) Table() string {
+	return d.table
+}
+
+func (d ModifyData) Field() schema.FieldName {
+	return d.field
+}
+
+func (d ModifyData) Predicate() query.Predicate {
+	return d.pred
+}
+
+func (d ModifyData) Value() query.Expression {
+	return d.value
 }
 
 func (d ModifyData) Command() {}
@@ -359,7 +375,7 @@ func (p *Parser) Modify() (*ModifyData, error) {
 	if tok.typ != identifier {
 		return nil, fmt.Errorf("expected identifier, got %s", tok.literal)
 	}
-	d.field = tok.literal
+	d.field = schema.FieldName(tok.literal)
 	tok = p.lexer.NextToken()
 	if tok.typ != equal {
 		return nil, fmt.Errorf("expected =, got %s", tok.literal)

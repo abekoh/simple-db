@@ -192,8 +192,42 @@ func (up *BasicUpdatePlanner) ExecuteDelete(d *parse.DeleteData, tx *transaction
 }
 
 func (up *BasicUpdatePlanner) ExecuteModify(d *parse.ModifyData, tx *transaction.Transaction) (int, error) {
-	//TODO implement me
-	panic("implement me")
+	var plan Plan
+	plan, err := NewTablePlan(d.Table(), tx, up.mdm)
+	if err != nil {
+		return 0, fmt.Errorf("table plan error: %w", err)
+	}
+	plan = NewSelectPlan(plan, d.Predicate())
+	s, err := plan.Open()
+	if err != nil {
+		return 0, fmt.Errorf("open error: %w", err)
+	}
+	updateScan, ok := s.(query.UpdateScan)
+	if !ok {
+		return 0, fmt.Errorf("table is not updateable")
+	}
+	count := 0
+	for {
+		ok, err := updateScan.Next()
+		if err != nil {
+			return 0, fmt.Errorf("next error: %w", err)
+		}
+		if !ok {
+			break
+		}
+		val, err := d.Value().Evaluate(updateScan)
+		if err != nil {
+			return 0, fmt.Errorf("evaluate error: %w", err)
+		}
+		if err := updateScan.SetVal(d.Field(), val); err != nil {
+			return 0, fmt.Errorf("set value error: %w", err)
+		}
+		count++
+	}
+	if err := s.Close(); err != nil {
+		return 0, fmt.Errorf("close error: %w", err)
+	}
+	return count, nil
 }
 
 func (up *BasicUpdatePlanner) ExecuteCreateTable(d *parse.CreateTableData, tx *transaction.Transaction) (int, error) {
