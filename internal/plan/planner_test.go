@@ -117,7 +117,7 @@ func TestBasicUpdatePlanner_ExecuteCreateIndex(t *testing.T) {
 	}
 
 	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
-	_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,10 +168,11 @@ func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
 		t.Errorf("unexpected count: %d", c)
 	}
 
-	plan, err := planner.CreateQueryPlan(`SELECT a, b FROM mytable WHERE a = 1`, tx)
+	p, err := planner.Execute(`SELECT a, b FROM mytable WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	plan := p.(Plan)
 	scan, err := plan.Open()
 	if err != nil {
 		t.Fatal(err)
@@ -233,10 +234,11 @@ func TestBasicUpdatePlanner_ExecuteUpdate(t *testing.T) {
 		t.Errorf("unexpected count: %d", c)
 	}
 
-	plan, err := planner.CreateQueryPlan(`SELECT a, b FROM mytable WHERE a = 1`, tx)
+	p, err := planner.Execute(`SELECT a, b FROM mytable WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	plan := p.(Plan)
 	scan, err := plan.Open()
 	if err != nil {
 		t.Fatal(err)
