@@ -1,9 +1,11 @@
 package postgres
 
 import (
+	"context"
 	"fmt"
 	"net"
 
+	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/simpledb"
 	"github.com/jackc/pgx/v5/pgproto3"
 )
@@ -92,6 +94,19 @@ func (b *Backend) handleStartup() error {
 }
 
 func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
+	ctx := context.Background()
+	tx, err := b.db.NewTx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error creating new transaction: %w", err)
+	}
+	res, err := b.db.Planner().Execute(query.String, tx)
+	if err != nil {
+		return nil, fmt.Errorf("error executing query: %w", err)
+	}
+	switch r := res.(type) {
+	case plan.Plan:
+	case plan.CommandResult:
+	}
 	buf, err := (&pgproto3.RowDescription{Fields: []pgproto3.FieldDescription{
 		{
 			Name:                 []byte("fortune"),

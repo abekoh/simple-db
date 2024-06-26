@@ -15,9 +15,23 @@ type Result interface {
 	Result()
 }
 
-type CommandResult int
+type CommandResult struct {
+	Type  CommandType
+	Count int
+}
 
 func (CommandResult) Result() {}
+
+type CommandType int
+
+const (
+	Insert CommandType = iota
+	Delete
+	Update
+	CreateTable
+	CreateView
+	CreateIndex
+)
 
 type Plan interface {
 	Result

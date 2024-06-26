@@ -164,7 +164,7 @@ func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c != CommandResult(1) {
+	if c.(CommandResult).Count != 1 {
 		t.Errorf("unexpected count: %d", c)
 	}
 
@@ -223,14 +223,14 @@ func TestBasicUpdatePlanner_ExecuteUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c != CommandResult(1) {
+	if c.(CommandResult).Count != 1 {
 		t.Errorf("unexpected count: %d", c)
 	}
 	c, err = planner.Execute(`UPDATE mytable SET b = 'bar' WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c != CommandResult(1) {
+	if c.(CommandResult).Count != 1 {
 		t.Errorf("unexpected count: %d", c)
 	}
 
@@ -289,14 +289,14 @@ func TestBasicUpdatePlanner_ExecuteDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c != CommandResult(1) {
+	if c.(CommandResult).Count != 1 {
 		t.Errorf("unexpected count: %d", c)
 	}
 	c, err = planner.Execute(`DELETE FROM mytable WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c != CommandResult(1) {
+	if c.(CommandResult).Count != 1 {
 		t.Errorf("unexpected count: %d", c)
 	}
 

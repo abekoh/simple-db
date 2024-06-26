@@ -43,22 +43,22 @@ func (p *Planner) Execute(q string, tx *transaction.Transaction) (Result, error)
 		return r, err
 	case *parse.InsertData:
 		r, err := p.up.ExecuteInsert(c, tx)
-		return CommandResult(r), err
+		return CommandResult{Type: Insert, Count: r}, err
 	case *parse.DeleteData:
 		r, err := p.up.ExecuteDelete(c, tx)
-		return CommandResult(r), err
+		return CommandResult{Type: Delete, Count: r}, err
 	case *parse.ModifyData:
 		r, err := p.up.ExecuteModify(c, tx)
-		return CommandResult(r), err
+		return CommandResult{Type: Update, Count: r}, err
 	case *parse.CreateTableData:
 		r, err := p.up.ExecuteCreateTable(c, tx)
-		return CommandResult(r), err
+		return CommandResult{Type: CreateTable, Count: r}, err
 	case *parse.CreateViewData:
 		r, err := p.up.ExecuteCreateView(c, tx)
-		return CommandResult(r), err
+		return CommandResult{Type: CreateView, Count: r}, err
 	case *parse.CreateIndexData:
 		r, err := p.up.ExecuteCreateIndex(c, tx)
-		return CommandResult(r), err
+		return CommandResult{Type: CreateIndex, Count: r}, err
 	}
 	return nil, fmt.Errorf("unknown command type %v", d)
 }
