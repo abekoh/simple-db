@@ -2,12 +2,15 @@ package postgres
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"net"
 
 	"github.com/abekoh/simple-db/internal/plan"
+	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/simpledb"
 	"github.com/jackc/pgx/v5/pgproto3"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Backend struct {
@@ -107,23 +110,69 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 	var buf []byte
 	switch r := res.(type) {
 	case plan.Plan:
-		buf, err := (&pgproto3.RowDescription{Fields: []pgproto3.FieldDescription{
-			{
-				Name:                 []byte("fortune"),
+		sche := r.Schema()
+		fieldNames := sche.FieldNames()
+		fields := make([]pgproto3.FieldDescription, len(fieldNames))
+		for i, fieldName := range fieldNames {
+			var dataTypeOID uint32
+			var dataTypeSize int16
+			switch sche.Typ(fieldName) {
+			case schema.Integer32:
+				dataTypeOID = pgtype.Int4OID
+				dataTypeSize = int16(sche.Length(fieldName))
+			case schema.Varchar:
+				dataTypeOID = pgtype.TextOID
+				dataTypeSize = -1
+			default:
+				return nil, fmt.Errorf("unsupported field type: %v", sche.Typ(fieldName))
+			}
+			fields[i] = pgproto3.FieldDescription{
+				Name:                 []byte(fieldName),
 				TableOID:             0,
 				TableAttributeNumber: 0,
-				DataTypeOID:          25,
-				DataTypeSize:         -1,
+				DataTypeOID:          dataTypeOID,
+				DataTypeSize:         dataTypeSize,
 				TypeModifier:         -1,
 				Format:               0,
-			},
-		}}).Encode(nil)
+			}
+		}
+		buf, err := (&pgproto3.RowDescription{Fields: fields}).Encode(buf)
 		if err != nil {
 			return nil, fmt.Errorf("error encoding row description: %w", err)
 		}
-		buf, err = (&pgproto3.DataRow{Values: [][]byte{[]byte("a")}}).Encode(buf)
+
+		scan, err := r.Open()
 		if err != nil {
-			return nil, fmt.Errorf("error encoding data row: %w", err)
+			return nil, fmt.Errorf("error opening plan: %w", err)
+		}
+		defer scan.Close()
+		for {
+			ok, err := scan.Next()
+			if err != nil {
+				return nil, fmt.Errorf("error scanning: %w", err)
+			}
+			if !ok {
+				break
+			}
+			values := make([][]byte, len(fieldNames))
+			for i, fieldName := range fieldNames {
+				val, err := scan.Val(fieldName)
+				if err != nil {
+					return nil, fmt.Errorf("error getting value: %w", err)
+				}
+				var row []byte
+				switch v := val.(type) {
+				case schema.ConstantInt32:
+					binary.BigEndian.PutUint32(row, uint32(v))
+				case schema.ConstantStr:
+					row = []byte(v)
+				}
+				values[i] = row
+			}
+			buf, err = (&pgproto3.DataRow{Values: values}).Encode(buf)
+			if err != nil {
+				return nil, fmt.Errorf("error encoding data row: %w", err)
+			}
 		}
 	case plan.CommandResult:
 		var commandTag []byte
