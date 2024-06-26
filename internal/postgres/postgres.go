@@ -103,35 +103,54 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
 	}
+
+	var buf []byte
 	switch r := res.(type) {
 	case plan.Plan:
+		buf, err := (&pgproto3.RowDescription{Fields: []pgproto3.FieldDescription{
+			{
+				Name:                 []byte("fortune"),
+				TableOID:             0,
+				TableAttributeNumber: 0,
+				DataTypeOID:          25,
+				DataTypeSize:         -1,
+				TypeModifier:         -1,
+				Format:               0,
+			},
+		}}).Encode(nil)
+		if err != nil {
+			return nil, fmt.Errorf("error encoding row description: %w", err)
+		}
+		buf, err = (&pgproto3.DataRow{Values: [][]byte{[]byte("a")}}).Encode(buf)
+		if err != nil {
+			return nil, fmt.Errorf("error encoding data row: %w", err)
+		}
 	case plan.CommandResult:
-	}
-	buf, err := (&pgproto3.RowDescription{Fields: []pgproto3.FieldDescription{
-		{
-			Name:                 []byte("fortune"),
-			TableOID:             0,
-			TableAttributeNumber: 0,
-			DataTypeOID:          25,
-			DataTypeSize:         -1,
-			TypeModifier:         -1,
-			Format:               0,
-		},
-	}}).Encode(nil)
-	if err != nil {
-		return nil, fmt.Errorf("error encoding row description: %w", err)
-	}
-	buf, err = (&pgproto3.DataRow{Values: [][]byte{[]byte("a")}}).Encode(buf)
-	if err != nil {
-		return nil, fmt.Errorf("error encoding data row: %w", err)
-	}
-	buf, err = (&pgproto3.CommandComplete{CommandTag: []byte("SELECT 1")}).Encode(buf)
-	if err != nil {
-		return nil, fmt.Errorf("error encoding command complete: %w", err)
+		var commandTag []byte
+		switch r.Type {
+		case plan.Insert:
+			commandTag = []byte(fmt.Sprintf("INSERT 0 %d", r.Count))
+		case plan.Delete:
+			commandTag = []byte(fmt.Sprintf("DELETE %d", r.Count))
+		case plan.Update:
+			commandTag = []byte(fmt.Sprintf("UPDATE %d", r.Count))
+		case plan.CreateTable:
+			commandTag = []byte(fmt.Sprintf("SELECT %d", r.Count))
+		case plan.CreateView:
+			commandTag = []byte(fmt.Sprintf("SELECT %d", r.Count))
+		case plan.CreateIndex:
+			commandTag = []byte(fmt.Sprintf("SELECT %d", r.Count))
+		}
+		buf, err = (&pgproto3.CommandComplete{CommandTag: commandTag}).Encode(buf)
+		if err != nil {
+			return nil, fmt.Errorf("error encoding command complete: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("unknown result type: %#v", res)
 	}
 	buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
 	if err != nil {
 		return nil, fmt.Errorf("error encoding ready for query: %w", err)
 	}
-	return []byte("a"), nil
+	return buf, nil
 }
