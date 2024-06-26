@@ -31,12 +31,12 @@ func TestBasicQueryPlanner(t *testing.T) {
 	}
 
 	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), nil)
-	plan, err := planner.CreateQueryPlan(`SELECT a, b FROM mytable WHERE a = 1`, tx)
+	plan, err := planner.Execute(`SELECT a, b FROM mytable WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if plan.String() != "Project{a,b}(Select{a=1}(Table{mytable}))" {
-		t.Errorf("unexpected plan: %s", plan.String())
+	if plan.(Plan).String() != "Project{a,b}(Select{a=1}(Table{mytable}))" {
+		t.Errorf("unexpected plan: %s", plan.(Plan).String())
 	}
 }
 
@@ -53,7 +53,7 @@ func TestBasicUpdatePlanner_ExecuteCreateTable(t *testing.T) {
 	}
 
 	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
-	_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,11 +83,11 @@ func TestBasicUpdatePlanner_ExecuteCreateView(t *testing.T) {
 	}
 
 	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
-	_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = planner.ExecuteUpdate(`CREATE VIEW myview AS SELECT a FROM mytable`, tx)
+	_, err = planner.Execute(`CREATE VIEW myview AS SELECT a FROM mytable`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +121,7 @@ func TestBasicUpdatePlanner_ExecuteCreateIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = planner.ExecuteUpdate(`CREATE INDEX myindex ON mytable (a)`, tx)
+	_, err = planner.Execute(`CREATE INDEX myindex ON mytable (a)`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,16 +155,16 @@ func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
 	}
 
 	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()))
-	_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	c, err := planner.ExecuteUpdate(`INSERT INTO mytable (a, b) VALUES (1, 'foo')`, tx)
+	c, err := planner.Execute(`INSERT INTO mytable (a, b) VALUES (1, 'foo')`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c != 1 {
+	if c != CommandResult(1) {
 		t.Errorf("unexpected count: %d", c)
 	}
 
@@ -213,23 +213,23 @@ func TestBasicUpdatePlanner_ExecuteUpdate(t *testing.T) {
 	}
 
 	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()))
-	_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	c, err := planner.ExecuteUpdate(`INSERT INTO mytable (a, b) VALUES (1, 'foo')`, tx)
+	c, err := planner.Execute(`INSERT INTO mytable (a, b) VALUES (1, 'foo')`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c != 1 {
+	if c != CommandResult(1) {
 		t.Errorf("unexpected count: %d", c)
 	}
-	c, err = planner.ExecuteUpdate(`UPDATE mytable SET b = 'bar' WHERE a = 1`, tx)
+	c, err = planner.Execute(`UPDATE mytable SET b = 'bar' WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c != 1 {
+	if c != CommandResult(1) {
 		t.Errorf("unexpected count: %d", c)
 	}
 
@@ -278,30 +278,31 @@ func TestBasicUpdatePlanner_ExecuteDelete(t *testing.T) {
 	}
 
 	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()))
-	_, err = planner.ExecuteUpdate(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	c, err := planner.ExecuteUpdate(`INSERT INTO mytable (a, b) VALUES (1, 'foo')`, tx)
+	c, err := planner.Execute(`INSERT INTO mytable (a, b) VALUES (1, 'foo')`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c != 1 {
+	if c != CommandResult(1) {
 		t.Errorf("unexpected count: %d", c)
 	}
-	c, err = planner.ExecuteUpdate(`DELETE FROM mytable WHERE a = 1`, tx)
+	c, err = planner.Execute(`DELETE FROM mytable WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c != 1 {
+	if c != CommandResult(1) {
 		t.Errorf("unexpected count: %d", c)
 	}
 
-	plan, err := planner.CreateQueryPlan(`SELECT a, b FROM mytable WHERE a = 1`, tx)
+	p, err := planner.Execute(`SELECT a, b FROM mytable WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	plan := p.(Plan)
 	scan, err := plan.Open()
 	if err != nil {
 		t.Fatal(err)

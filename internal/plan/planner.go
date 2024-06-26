@@ -64,6 +64,8 @@ func (p *Planner) Execute(q string, tx *transaction.Transaction) (Result, error)
 	return nil, fmt.Errorf("unknown command type %v", d)
 }
 
+// CreateQueryPlan creates a query plan for the specified query.
+// Deprecated: Use Execute instead.
 func (p *Planner) CreateQueryPlan(q string, tx *transaction.Transaction) (Plan, error) {
 	ps := parse.NewParser(q)
 	qd, err := ps.Query()
@@ -73,6 +75,8 @@ func (p *Planner) CreateQueryPlan(q string, tx *transaction.Transaction) (Plan, 
 	return p.qp.CreatePlan(qd, tx)
 }
 
+// ExecuteUpdate executes the specified update command.
+// Deprecated: Use Execute instead.
 func (p *Planner) ExecuteUpdate(q string, tx *transaction.Transaction) (int, error) {
 	ps := parse.NewParser(q)
 	d, err := ps.ToData()
