@@ -11,7 +11,16 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
+type Result interface {
+	Result()
+}
+
+type CommandResult int
+
+func (CommandResult) Result() {}
+
 type Plan interface {
+	Result
 	fmt.Stringer
 	Open() (query.Scan, error)
 	BlockAccessed() int
@@ -48,6 +57,8 @@ func NewTablePlan(
 		statInfo:  statInfo,
 	}, nil
 }
+
+func (TablePlan) Result() {}
 
 func (t TablePlan) Open() (query.Scan, error) {
 	return record.NewTableScan(t.tx, t.tableName, t.layout)
@@ -87,6 +98,8 @@ func NewProductPlan(p1, p2 Plan) (*ProductPlan, error) {
 	s.AddAll(*p2.Schema())
 	return &ProductPlan{p1: p1, p2: p2, sche: s}, nil
 }
+
+func (ProductPlan) Result() {}
 
 func (p ProductPlan) Open() (query.Scan, error) {
 	s1, err := p.p1.Open()
@@ -134,6 +147,8 @@ var _ Plan = (*SelectPlan)(nil)
 func NewSelectPlan(p Plan, pred query.Predicate) *SelectPlan {
 	return &SelectPlan{p: p, pred: pred}
 }
+
+func (SelectPlan) Result() {}
 
 func (s SelectPlan) Open() (query.Scan, error) {
 	scan, err := s.p.Open()
@@ -190,6 +205,8 @@ func NewProjectPlan(p Plan, fieldNames []schema.FieldName) *ProjectPlan {
 	}
 	return &ProjectPlan{p: p, sche: s}
 }
+
+func (ProjectPlan) Result() {}
 
 func (p ProjectPlan) Open() (query.Scan, error) {
 	s, err := p.p.Open()

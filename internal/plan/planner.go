@@ -31,6 +31,39 @@ func NewPlanner(qp QueryPlanner, up UpdatePlanner) *Planner {
 	return &Planner{qp: qp, up: up}
 }
 
+func (p *Planner) Execute(q string, tx *transaction.Transaction) (Result, error) {
+	ps := parse.NewParser(q)
+	d, err := ps.ToData()
+	if err != nil {
+		return nil, fmt.Errorf("parse error: %w", err)
+	}
+	switch c := d.(type) {
+	case *parse.QueryData:
+		r, err := p.qp.CreatePlan(c, tx)
+		return r, err
+	case *parse.InsertData:
+		r, err := p.up.ExecuteInsert(c, tx)
+		return CommandResult(r), err
+	case *parse.DeleteData:
+		r, err := p.up.ExecuteDelete(c, tx)
+		return CommandResult(r), err
+	case *parse.ModifyData:
+		r, err := p.up.ExecuteModify(c, tx)
+		return CommandResult(r), err
+	case *parse.CreateTableData:
+		r, err := p.up.ExecuteCreateTable(c, tx)
+		return CommandResult(r), err
+	case *parse.CreateViewData:
+		r, err := p.up.ExecuteCreateView(c, tx)
+		return CommandResult(r), err
+	case *parse.CreateIndexData:
+		//return p.up.ExecuteCreateIndex(c, tx)
+		r, err := p.up.ExecuteCreateIndex(c, tx)
+		return CommandResult(r), err
+	}
+	return nil, fmt.Errorf("unknown command type %v", d)
+}
+
 func (p *Planner) CreateQueryPlan(q string, tx *transaction.Transaction) (Plan, error) {
 	ps := parse.NewParser(q)
 	qd, err := ps.Query()
@@ -42,11 +75,11 @@ func (p *Planner) CreateQueryPlan(q string, tx *transaction.Transaction) (Plan, 
 
 func (p *Planner) ExecuteUpdate(q string, tx *transaction.Transaction) (int, error) {
 	ps := parse.NewParser(q)
-	cmd, err := ps.UpdateCommand()
+	d, err := ps.ToData()
 	if err != nil {
 		return 0, fmt.Errorf("parse error: %w", err)
 	}
-	switch c := cmd.(type) {
+	switch c := d.(type) {
 	case *parse.InsertData:
 		return p.up.ExecuteInsert(c, tx)
 	case *parse.DeleteData:
@@ -60,7 +93,7 @@ func (p *Planner) ExecuteUpdate(q string, tx *transaction.Transaction) (int, err
 	case *parse.CreateIndexData:
 		return p.up.ExecuteCreateIndex(c, tx)
 	}
-	return 0, fmt.Errorf("unknown command type %v", cmd)
+	return 0, fmt.Errorf("unknown command type %v", d)
 }
 
 type BasicQueryPlanner struct {

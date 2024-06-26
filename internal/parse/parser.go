@@ -215,8 +215,8 @@ func (p *Parser) fieldDefs() (schema.Schema, token, error) {
 	return s, tk, nil
 }
 
-type Command interface {
-	Command()
+type Data interface {
+	Data()
 }
 
 type InsertData struct {
@@ -225,7 +225,7 @@ type InsertData struct {
 	values []schema.Constant
 }
 
-func (d InsertData) Command() {}
+func (d InsertData) Data() {}
 
 func (d InsertData) Table() string {
 	return d.table
@@ -290,6 +290,8 @@ type QueryData struct {
 	tables []string
 	pred   query.Predicate
 }
+
+func (d QueryData) Data() {}
 
 func (d QueryData) Fields() []schema.FieldName {
 	return d.fields
@@ -378,7 +380,7 @@ func (d ModifyData) Value() query.Expression {
 	return d.value
 }
 
-func (d ModifyData) Command() {}
+func (d ModifyData) Data() {}
 
 func (p *Parser) Modify() (*ModifyData, error) {
 	d := &ModifyData{}
@@ -433,7 +435,7 @@ func (d DeleteData) Predicate() query.Predicate {
 	return d.pred
 }
 
-func (d DeleteData) Command() {}
+func (d DeleteData) Data() {}
 
 func (p *Parser) Delete() (*DeleteData, error) {
 	d := &DeleteData{}
@@ -474,7 +476,7 @@ func (d CreateTableData) Schema() schema.Schema {
 	return d.sche
 }
 
-func (d CreateTableData) Command() {}
+func (d CreateTableData) Data() {}
 
 func (p *Parser) CreateTable() (*CreateTableData, error) {
 	d := &CreateTableData{}
@@ -519,7 +521,7 @@ func (d CreateViewData) ViewDef() string {
 	return d.query.String()
 }
 
-func (d CreateViewData) Command() {}
+func (d CreateViewData) Data() {}
 
 func (p *Parser) CreateView() (*CreateViewData, error) {
 	d := &CreateViewData{}
@@ -566,7 +568,7 @@ func (d CreateIndexData) Field() schema.FieldName {
 	return d.field
 }
 
-func (d CreateIndexData) Command() {}
+func (d CreateIndexData) Data() {}
 
 func (p *Parser) CreateIndex() (*CreateIndexData, error) {
 	d := &CreateIndexData{}
@@ -608,9 +610,12 @@ func (p *Parser) CreateIndex() (*CreateIndexData, error) {
 	return d, nil
 }
 
-func (p *Parser) UpdateCommand() (Command, error) {
+func (p *Parser) ToData() (Data, error) {
 	tok := p.lexer.NextToken()
 	switch tok.typ {
+	case selectTok:
+		p.lexer.Reset()
+		return p.Query()
 	case insert:
 		p.lexer.Reset()
 		return p.Insert()
