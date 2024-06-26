@@ -57,47 +57,10 @@ func (p *Planner) Execute(q string, tx *transaction.Transaction) (Result, error)
 		r, err := p.up.ExecuteCreateView(c, tx)
 		return CommandResult(r), err
 	case *parse.CreateIndexData:
-		//return p.up.ExecuteCreateIndex(c, tx)
 		r, err := p.up.ExecuteCreateIndex(c, tx)
 		return CommandResult(r), err
 	}
 	return nil, fmt.Errorf("unknown command type %v", d)
-}
-
-// CreateQueryPlan creates a query plan for the specified query.
-// Deprecated: Use Execute instead.
-func (p *Planner) CreateQueryPlan(q string, tx *transaction.Transaction) (Plan, error) {
-	ps := parse.NewParser(q)
-	qd, err := ps.Query()
-	if err != nil {
-		return nil, err
-	}
-	return p.qp.CreatePlan(qd, tx)
-}
-
-// ExecuteUpdate executes the specified update command.
-// Deprecated: Use Execute instead.
-func (p *Planner) ExecuteUpdate(q string, tx *transaction.Transaction) (int, error) {
-	ps := parse.NewParser(q)
-	d, err := ps.ToData()
-	if err != nil {
-		return 0, fmt.Errorf("parse error: %w", err)
-	}
-	switch c := d.(type) {
-	case *parse.InsertData:
-		return p.up.ExecuteInsert(c, tx)
-	case *parse.DeleteData:
-		return p.up.ExecuteDelete(c, tx)
-	case *parse.ModifyData:
-		return p.up.ExecuteModify(c, tx)
-	case *parse.CreateTableData:
-		return p.up.ExecuteCreateTable(c, tx)
-	case *parse.CreateViewData:
-		return p.up.ExecuteCreateView(c, tx)
-	case *parse.CreateIndexData:
-		return p.up.ExecuteCreateIndex(c, tx)
-	}
-	return 0, fmt.Errorf("unknown command type %v", d)
 }
 
 type BasicQueryPlanner struct {
