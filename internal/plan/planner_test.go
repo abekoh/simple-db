@@ -1,10 +1,11 @@
-package plan
+package plan_test
 
 import (
 	"context"
 	"reflect"
 	"testing"
 
+	. "github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/simpledb"
 	"github.com/abekoh/simple-db/internal/transaction"
