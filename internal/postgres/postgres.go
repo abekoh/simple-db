@@ -167,6 +167,7 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 				var row []byte
 				switch v := val.(type) {
 				case schema.ConstantInt32:
+					row = make([]byte, 4)
 					binary.BigEndian.PutUint32(row, uint32(v))
 				case schema.ConstantStr:
 					row = []byte(v)
