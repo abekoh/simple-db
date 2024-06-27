@@ -140,7 +140,7 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 				Format:               0,
 			}
 		}
-		buf, err := (&pgproto3.RowDescription{Fields: fields}).Encode(buf)
+		buf, err = (&pgproto3.RowDescription{Fields: fields}).Encode(buf)
 		if err != nil {
 			return nil, fmt.Errorf("error encoding row description: %w", err)
 		}
