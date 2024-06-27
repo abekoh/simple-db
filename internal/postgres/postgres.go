@@ -106,6 +106,7 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
 	}
+	tx.Recover()
 
 	var buf []byte
 	switch r := res.(type) {

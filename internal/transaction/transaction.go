@@ -22,13 +22,14 @@ func nextTxNumber() int32 {
 }
 
 type Transaction struct {
-	bm      *buffer.Manager
-	fm      *file.Manager
-	lm      *log.Manager
-	txNum   int32
-	bufMap  map[file.BlockID]*buffer.Buffer
-	bufPins []file.BlockID
-	concMgr concurrencyManager
+	bm        *buffer.Manager
+	fm        *file.Manager
+	lm        *log.Manager
+	txNum     int32
+	bufMap    map[file.BlockID]*buffer.Buffer
+	bufPins   []file.BlockID
+	concMgr   concurrencyManager
+	completed bool
 }
 
 func NewTransaction(
@@ -53,6 +54,9 @@ func NewTransaction(
 }
 
 func (t *Transaction) Commit() error {
+	if t.completed {
+		return fmt.Errorf("transaction already completed")
+	}
 	if err := t.bm.FlushAll(t.txNum); err != nil {
 		return fmt.Errorf("could not flush: %w", err)
 	}
@@ -65,10 +69,14 @@ func (t *Transaction) Commit() error {
 	}
 	t.concMgr.release()
 	t.unpinAll()
+	t.completed = true
 	return nil
 }
 
 func (t *Transaction) Rollback() error {
+	if t.completed {
+		return fmt.Errorf("transaction already completed")
+	}
 	for r := range t.lm.Iterator() {
 		lr := NewLogRecord(r)
 		if lr == nil {
@@ -95,6 +103,7 @@ func (t *Transaction) Rollback() error {
 	}
 	t.concMgr.release()
 	t.unpinAll()
+	t.completed = true
 	return nil
 }
 
