@@ -69,6 +69,9 @@ func TestPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer rows.Close()
+	if rows.Err() != nil {
+		t.Fatal(rows.Err())
+	}
 
 	type Row struct {
 		ID   int
