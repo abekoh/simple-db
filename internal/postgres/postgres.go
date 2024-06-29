@@ -53,6 +53,7 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("error handling query: %w", err)
 				break
 			}
+			break
 		case *pgproto3.Parse:
 			if len(m.Name) == 0 {
 				err = fmt.Errorf("empty statement name")
@@ -120,21 +121,21 @@ func (b *Backend) Run() error {
 			err = fmt.Errorf("received not supported message: %#v", m)
 			break
 		}
-	}
 
-	if err != nil {
-		buf, err = (&pgproto3.ErrorResponse{Message: err.Error()}).Encode(nil)
 		if err != nil {
-			return fmt.Errorf("error encoding error response: %w", err)
+			buf, err = (&pgproto3.ErrorResponse{Message: err.Error()}).Encode(nil)
+			if err != nil {
+				return fmt.Errorf("error encoding error response: %w", err)
+			}
 		}
-	}
-	buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
-	if err != nil {
-		return fmt.Errorf("error encoding ready for query: %w", err)
-	}
-	_, err = b.conn.Write(buf)
-	if err != nil {
-		return fmt.Errorf("error writing parse complete: %w", err)
+		buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
+		if err != nil {
+			return fmt.Errorf("error encoding ready for query: %w", err)
+		}
+		_, err = b.conn.Write(buf)
+		if err != nil {
+			return fmt.Errorf("error writing parse complete: %w", err)
+		}
 	}
 	return nil
 }
