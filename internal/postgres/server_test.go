@@ -90,7 +90,10 @@ func TestPostgres(t *testing.T) {
 	if len(resRows) != 2 {
 		t.Errorf("unexpected rows: %v", resRows)
 	}
-	if !reflect.DeepEqual(resRows, []Row{}) {
+	if !reflect.DeepEqual(resRows, []Row{
+		{ID: 1, Name: "foo"},
+		{ID: 3, Name: "HOGE"},
+	}) {
 		t.Errorf("unexpected rows: %v", resRows)
 	}
 
