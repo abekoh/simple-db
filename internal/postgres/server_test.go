@@ -24,5 +24,12 @@ func TestPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = conn
+
+	tag, err := conn.Exec(ctx, "CREATE TABLE mytable (id INT, name VARCHAR(10))")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag.String() != "CREATE TABLE" {
+		t.Errorf("unexpected tag: %s", tag)
+	}
 }
