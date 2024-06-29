@@ -26,25 +26,25 @@ func RunServer(ctx context.Context, cfg Config) error {
 	}
 	slog.InfoContext(ctx, "Listening", "addr", listen.Addr())
 
+	dir := cfg.Dir
+	if dir == "" {
+		dir, err = os.MkdirTemp(os.TempDir(), "simpledb")
+		if err != nil {
+			fmt.Errorf("could not create temp dir: %w", err)
+		}
+	}
+
+	db, err := simpledb.New(ctx, dir)
+	if err != nil {
+		return fmt.Errorf("could not create SimpleDB: %w", err)
+	}
+
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
 			return fmt.Errorf("could not accept connection: %w", err)
 		}
 		slog.InfoContext(ctx, "Accepted connection", "remote_addr", conn.RemoteAddr())
-
-		dir := cfg.Dir
-		if dir == "" {
-			dir, err = os.MkdirTemp(os.TempDir(), "simpledb")
-			if err != nil {
-				fmt.Errorf("could not create temp dir: %w", err)
-			}
-		}
-
-		db, err := simpledb.New(ctx, dir)
-		if err != nil {
-			return fmt.Errorf("could not create SimpleDB: %w", err)
-		}
 
 		b := NewBackend(db, conn)
 
