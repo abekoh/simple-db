@@ -99,7 +99,7 @@ func (s *Schema) AddAll(schema Schema) {
 
 func (s *Schema) FieldNames() []FieldName {
 	names := make([]FieldName, 0, len(s.fieldsMap))
-	for name := range s.fieldsMap {
+	for _, name := range s.fields {
 		names = append(names, name)
 	}
 	return names
