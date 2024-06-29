@@ -60,6 +60,14 @@ func (b *Backend) Run() error {
 			if err != nil {
 				return fmt.Errorf("error encoding parse complete: %w", err)
 			}
+			buf, err = (&pgproto3.NoData{}).Encode(buf)
+			if err != nil {
+				return fmt.Errorf("error encoding no data: %w", err)
+			}
+			buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
+			if err != nil {
+				return fmt.Errorf("error encoding ready for query: %w", err)
+			}
 			_, err = b.conn.Write(buf)
 			if err != nil {
 				return fmt.Errorf("error writing parse complete: %w", err)
