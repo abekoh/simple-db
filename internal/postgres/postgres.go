@@ -35,10 +35,7 @@ func (b *Backend) Run() error {
 		return fmt.Errorf("error handling startup: %w", err)
 	}
 
-	var (
-		buf         []byte
-		cachedQuery string
-	)
+	var cachedQuery string
 	for {
 		msg, err := b.backend.Receive()
 		if err != nil {
@@ -46,6 +43,7 @@ func (b *Backend) Run() error {
 			break
 		}
 
+		var buf []byte
 		switch m := msg.(type) {
 		case *pgproto3.Query:
 			buf, err = b.handleQuery(buf, m.String)
