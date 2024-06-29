@@ -33,7 +33,11 @@ func (m *Manager) Bind(name string, args ...[]byte) (string, error) {
 		return "", fmt.Errorf("unknown statement: %s", name)
 	}
 	sql := replaceStmt(stmt)
-	return fmt.Sprintf(sql, args...), nil
+	anyArgs := make([]any, 0, len(args))
+	for _, arg := range args {
+		anyArgs = append(anyArgs, arg)
+	}
+	return fmt.Sprintf(sql, anyArgs...), nil
 
 }
 
