@@ -9,6 +9,7 @@ import (
 	"github.com/abekoh/simple-db/internal/log"
 	"github.com/abekoh/simple-db/internal/metadata"
 	"github.com/abekoh/simple-db/internal/plan"
+	"github.com/abekoh/simple-db/internal/statement"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
@@ -18,6 +19,7 @@ type DB struct {
 	logMgr      *log.Manager
 	metadataMgr *metadata.Manager
 	planner     *plan.Planner
+	stmtMgr     *statement.Manager
 }
 
 func NewWithParams(ctx context.Context, dirname string, blockSize int32, bufSize int) (*DB, error) {
@@ -63,6 +65,7 @@ func New(ctx context.Context, dirname string) (*DB, error) {
 		plan.NewBasicQueryPlanner(metadataMgr),
 		plan.NewBasicUpdatePlanner(metadataMgr),
 	)
+	db.stmtMgr = statement.NewManager()
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("could not recover: %w", err)
 	}
@@ -79,4 +82,8 @@ func (db DB) MetadataMgr() *metadata.Manager {
 
 func (db DB) Planner() *plan.Planner {
 	return db.planner
+}
+
+func (db DB) StmtMgr() *statement.Manager {
+	return db.stmtMgr
 }

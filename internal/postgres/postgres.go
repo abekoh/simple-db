@@ -52,16 +52,17 @@ func (b *Backend) Run() error {
 				return fmt.Errorf("error writing query response: %w", err)
 			}
 		case *pgproto3.Parse:
-			if len(m.ParameterOIDs) > 0 {
-				return fmt.Errorf("parameterized queries not supported")
+			if len(m.Name) == 0 {
+				return fmt.Errorf("empty statement name")
 			}
-			buf, err := b.handleQuery(m.Query)
+			b.db.StmtMgr().Add(m.Name, m.Query)
+			buf, err := (&pgproto3.ParseComplete{}).Encode(nil)
 			if err != nil {
-				return fmt.Errorf("error handling query: %w", err)
+				return fmt.Errorf("error encoding parse complete: %w", err)
 			}
 			_, err = b.conn.Write(buf)
 			if err != nil {
-				return fmt.Errorf("error writing query response: %w", err)
+				return fmt.Errorf("error writing parse complete: %w", err)
 			}
 		case *pgproto3.Terminate:
 			return nil

@@ -25,7 +25,7 @@ func TestPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pgCfg.DefaultQueryExecMode = pgx.QueryExecModeExec
+	//pgCfg.DefaultQueryExecMode = pgx.QueryExecModeExec
 	conn, err := pgx.ConnectConfig(ctx, pgCfg)
 	if err != nil {
 		t.Fatal(err)
