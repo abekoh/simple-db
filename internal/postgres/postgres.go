@@ -181,9 +181,6 @@ func (b *Backend) handleQuery(query string) ([]byte, error) {
 				switch v := val.(type) {
 				case schema.ConstantInt32:
 					row = []byte(strconv.Itoa(int(v)))
-					if len(row) < 4 {
-						row = append(row, make([]byte, 4-len(row))...)
-					}
 				case schema.ConstantStr:
 					row = []byte(v)
 				}
