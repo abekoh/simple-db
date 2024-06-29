@@ -37,6 +37,7 @@ func (b *Backend) Run() error {
 
 	var cachedQuery string
 	for {
+		readyForQuery := false
 		msg, err := b.backend.Receive()
 		if err != nil {
 			err = fmt.Errorf("error receiving message: %w", err)
@@ -51,7 +52,7 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("error handling query: %w", err)
 				break
 			}
-			break
+			readyForQuery = true
 		case *pgproto3.Parse:
 			if len(m.Name) == 0 {
 				err = fmt.Errorf("empty statement name")
@@ -106,6 +107,7 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("error encoding no data: %w", err)
 				break
 			}
+			readyForQuery = true
 		case *pgproto3.Execute:
 			if len(cachedQuery) == 0 {
 				err = fmt.Errorf("no query to execute")
@@ -129,10 +131,13 @@ func (b *Backend) Run() error {
 			if err != nil {
 				return fmt.Errorf("error encoding error response: %w", err)
 			}
+			readyForQuery = true
 		}
-		buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
-		if err != nil {
-			return fmt.Errorf("error encoding ready for query: %w", err)
+		if readyForQuery {
+			buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
+			if err != nil {
+				return fmt.Errorf("error encoding ready for query: %w", err)
+			}
 		}
 		_, err = b.conn.Write(buf)
 		if err != nil {
