@@ -76,7 +76,7 @@ func TestPostgres(t *testing.T) {
 	defer rows.Close()
 
 	type Row struct {
-		ID   int
+		ID   int32
 		Name string
 	}
 	resRows := make([]Row, 0)
