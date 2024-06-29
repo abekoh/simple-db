@@ -21,7 +21,12 @@ func TestPostgres(t *testing.T) {
 		}
 	}()
 
-	conn, err := pgx.Connect(ctx, "postgres://127.0.0.1:54329/postgres")
+	pgCfg, err := pgx.ParseConfig("postgres://127.0.0.1:54329/postgres")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pgCfg.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	conn, err := pgx.ConnectConfig(ctx, pgCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
