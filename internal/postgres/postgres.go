@@ -35,7 +35,10 @@ func (b *Backend) Run() error {
 		return fmt.Errorf("error handling startup: %w", err)
 	}
 
-	var buf []byte
+	var (
+		buf         []byte
+		cachedQuery string
+	)
 	for {
 		msg, err := b.backend.Receive()
 		if err != nil {
@@ -56,26 +59,63 @@ func (b *Backend) Run() error {
 				break
 			}
 			b.db.StmtMgr().Add(m.Name, m.Query)
-			buf, err = (&pgproto3.ParseComplete{}).Encode(nil)
+			buf, err = (&pgproto3.ParseComplete{}).Encode(buf)
 			if err != nil {
 				err = fmt.Errorf("error encoding parse complete: %w", err)
 				break
 			}
+		case *pgproto3.Bind:
+			bound, err := b.db.StmtMgr().Bind(m.PreparedStatement, m.Parameters...)
+			if err != nil {
+				err = fmt.Errorf("error binding statement: %w", err)
+				break
+			}
+			cachedQuery = bound
+			buf, err = (&pgproto3.BindComplete{}).Encode(buf)
+			if err != nil {
+				err = fmt.Errorf("error encoding bind complete: %w", err)
+				break
+			}
+		case *pgproto3.Describe:
+			if len(m.Name) == 0 {
+				buf, err = (&pgproto3.NoData{}).Encode(buf)
+				if err != nil {
+					err = fmt.Errorf("error encoding no data: %w", err)
+					break
+				}
+				continue
+			}
+			_, err := b.db.StmtMgr().Get(m.Name)
+			if err != nil {
+				err = fmt.Errorf("error getting statement: %w", err)
+				break
+			}
+			buf, err = (&pgproto3.ParameterDescription{
+				ParameterOIDs: make([]uint32, 0), // TODO: implement
+			}).Encode(buf)
+			if err != nil {
+				err = fmt.Errorf("error encoding parameter description: %w", err)
+				break
+			}
+		case *pgproto3.Sync:
 			buf, err = (&pgproto3.NoData{}).Encode(buf)
 			if err != nil {
 				err = fmt.Errorf("error encoding no data: %w", err)
 				break
 			}
-		case *pgproto3.Bind:
-			binded, err := b.db.StmtMgr().Bind(m.PreparedStatement, m.Parameters...)
-			if err != nil {
-				err = fmt.Errorf("error binding statement: %w", err)
+		case *pgproto3.Execute:
+			if len(cachedQuery) == 0 {
+				err = fmt.Errorf("no query to execute")
 				break
 			}
-			_ = binded
-			// todo
+			buf, err = b.handleQuery(buf, cachedQuery)
+			if err != nil {
+				err = fmt.Errorf("error handling query: %w", err)
+				break
+			}
+			cachedQuery = ""
 		case *pgproto3.Terminate:
-			return nil
+			break
 		default:
 			err = fmt.Errorf("received not supported message: %#v", m)
 			break

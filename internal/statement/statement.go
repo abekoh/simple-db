@@ -19,6 +19,14 @@ func (m *Manager) Add(name, sql string) {
 	m.statements[name] = sql
 }
 
+func (m *Manager) Get(name string) (string, error) {
+	stmt, ok := m.statements[name]
+	if !ok {
+		return "", fmt.Errorf("unknown statement: %s", name)
+	}
+	return stmt, nil
+}
+
 func (m *Manager) Bind(name string, args ...[]byte) (string, error) {
 	stmt, ok := m.statements[name]
 	if !ok {
