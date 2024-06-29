@@ -90,9 +90,14 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("error getting statement: %w", err)
 				break
 			}
-			paramOIDs := make([]uint32, len(stmt.ParamOIDs))
-			for i, oid := range stmt.ParamOIDs {
-				paramOIDs[i] = oid
+			paramOIDs := make([]uint32, len(stmt.FieldTypes))
+			for i, fieldType := range stmt.FieldTypes {
+				switch fieldType {
+				case schema.Integer32:
+					paramOIDs[i] = pgtype.Int4OID
+				case schema.Varchar:
+					paramOIDs[i] = pgtype.TextOID
+				}
 			}
 			buf, err = (&pgproto3.ParameterDescription{
 				ParameterOIDs: paramOIDs,

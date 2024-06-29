@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"strings"
 	"sync/atomic"
+
+	"github.com/abekoh/simple-db/internal/record/schema"
 )
 
 type Statement struct {
-	Raw       string
-	Format    string
-	ParamOIDs []uint32
+	Raw        string
+	Format     string
+	FieldTypes []schema.FieldType
 }
 
 type Manager struct {
@@ -33,9 +35,9 @@ func (m *Manager) Add(name, sql string) {
 		paramsOIDs[i] = m.oidCounter.Add(1)
 	}
 	m.statements[name] = Statement{
-		Raw:       sql,
-		Format:    format,
-		ParamOIDs: paramsOIDs,
+		Raw:    sql,
+		Format: format,
+		// FIXME: FieldTypes
 	}
 }
 
