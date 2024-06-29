@@ -11,17 +11,17 @@ import (
 func TestPostgres(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	//cfg := Config{
-	//	Dir:     t.TempDir(),
-	//	Address: "127.0.0.1:54329",
-	//}
-	//go func() {
-	//	if err := RunServer(ctx, cfg); err != nil {
-	//		t.Error(err)
-	//	}
-	//}()
+	cfg := Config{
+		Dir:     t.TempDir(),
+		Address: "127.0.0.1:54329",
+	}
+	go func() {
+		if err := RunServer(ctx, cfg); err != nil {
+			t.Error(err)
+		}
+	}()
 
-	pgCfg, err := pgx.ParseConfig("postgres://postgres@127.0.0.1:5432/postgres")
+	pgCfg, err := pgx.ParseConfig("postgres://postgres@127.0.0.1:54329/postgres")
 	if err != nil {
 		t.Fatal(err)
 	}
