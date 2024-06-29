@@ -150,6 +150,7 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 			return nil, fmt.Errorf("error opening plan: %w", err)
 		}
 		defer scan.Close()
+		count := 0
 		for {
 			ok, err := scan.Next()
 			if err != nil {
@@ -178,6 +179,11 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 			if err != nil {
 				return nil, fmt.Errorf("error encoding data row: %w", err)
 			}
+			count++
+		}
+		buf, err = (&pgproto3.CommandComplete{CommandTag: []byte(fmt.Sprintf("SELECT %d", count))}).Encode(buf)
+		if err != nil {
+			return nil, fmt.Errorf("error encoding command complete: %w", err)
 		}
 	case plan.CommandResult:
 		var commandTag []byte
