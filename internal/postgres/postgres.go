@@ -41,9 +41,21 @@ func (b *Backend) Run() error {
 			return fmt.Errorf("error receiving message: %w", err)
 		}
 
-		switch msg.(type) {
+		switch m := msg.(type) {
 		case *pgproto3.Query:
-			buf, err := b.handleQuery(msg.(*pgproto3.Query))
+			buf, err := b.handleQuery(m.String)
+			if err != nil {
+				return fmt.Errorf("error handling query: %w", err)
+			}
+			_, err = b.conn.Write(buf)
+			if err != nil {
+				return fmt.Errorf("error writing query response: %w", err)
+			}
+		case *pgproto3.Parse:
+			if len(m.ParameterOIDs) > 0 {
+				return fmt.Errorf("parameterized queries not supported")
+			}
+			buf, err := b.handleQuery(m.Query)
 			if err != nil {
 				return fmt.Errorf("error handling query: %w", err)
 			}
@@ -96,13 +108,13 @@ func (b *Backend) handleStartup() error {
 	return nil
 }
 
-func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
+func (b *Backend) handleQuery(query string) ([]byte, error) {
 	ctx := context.Background()
 	tx, err := b.db.NewTx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error creating new transaction: %w", err)
 	}
-	res, err := b.db.Planner().Execute(query.String, tx)
+	res, err := b.db.Planner().Execute(query, tx)
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
 	}
