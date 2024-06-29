@@ -24,14 +24,14 @@ func RunServer(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("could not listen on %s: %w", address, err)
 	}
-	slog.InfoContext(ctx, "Listening on %s", listen.Addr())
+	slog.InfoContext(ctx, "Listening", "addr", listen.Addr())
 
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
 			return fmt.Errorf("could not accept connection: %w", err)
 		}
-		slog.InfoContext(ctx, "Accepted connection from %s", conn.RemoteAddr())
+		slog.InfoContext(ctx, "Accepted connection", "remote_addr", conn.RemoteAddr())
 
 		dir := cfg.Dir
 		if dir == "" {
@@ -53,7 +53,7 @@ func RunServer(ctx context.Context, cfg Config) error {
 			if err != nil {
 				fmt.Errorf("error running backend: %w", err)
 			}
-			slog.InfoContext(ctx, "Closed connection from %s", conn.RemoteAddr())
+			slog.InfoContext(ctx, "Closed connection", "remote_addr", conn.RemoteAddr())
 		}()
 	}
 }
