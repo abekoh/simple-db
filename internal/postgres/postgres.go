@@ -123,7 +123,7 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 			switch sche.Typ(fieldName) {
 			case schema.Integer32:
 				dataTypeOID = pgtype.Int4OID
-				dataTypeSize = int16(sche.Length(fieldName))
+				dataTypeSize = 4
 			case schema.Varchar:
 				dataTypeOID = pgtype.TextOID
 				dataTypeSize = -1
