@@ -39,42 +39,55 @@ func (b *Backend) Run() error {
 	for {
 		msg, err := b.backend.Receive()
 		if err != nil {
-			return fmt.Errorf("error receiving message: %w", err)
+			err = fmt.Errorf("error receiving message: %w", err)
+			break
 		}
 
 		switch m := msg.(type) {
 		case *pgproto3.Query:
 			buf, err = b.handleQuery(buf, m.String)
 			if err != nil {
-				return fmt.Errorf("error handling query: %w", err)
+				err = fmt.Errorf("error handling query: %w", err)
+				break
 			}
 		case *pgproto3.Parse:
 			if len(m.Name) == 0 {
-				return fmt.Errorf("empty statement name")
+				err = fmt.Errorf("empty statement name")
+				break
 			}
 			b.db.StmtMgr().Add(m.Name, m.Query)
 			buf, err = (&pgproto3.ParseComplete{}).Encode(nil)
 			if err != nil {
-				return fmt.Errorf("error encoding parse complete: %w", err)
+				err = fmt.Errorf("error encoding parse complete: %w", err)
+				break
 			}
 			buf, err = (&pgproto3.NoData{}).Encode(buf)
 			if err != nil {
-				return fmt.Errorf("error encoding no data: %w", err)
+				err = fmt.Errorf("error encoding no data: %w", err)
+				break
 			}
 		case *pgproto3.Bind:
 			binded, err := b.db.StmtMgr().Bind(m.PreparedStatement, m.Parameters...)
 			if err != nil {
-				return fmt.Errorf("error binding statement: %w", err)
+				err = fmt.Errorf("error binding statement: %w", err)
+				break
 			}
 			_ = binded
 			// todo
 		case *pgproto3.Terminate:
 			return nil
 		default:
-			return fmt.Errorf("received message other than Query from client: %#v", msg)
+			err = fmt.Errorf("received not supported message: %#v", m)
+			break
 		}
 	}
 
+	if err != nil {
+		buf, err = (&pgproto3.ErrorResponse{Message: err.Error()}).Encode(nil)
+		if err != nil {
+			return fmt.Errorf("error encoding error response: %w", err)
+		}
+	}
 	buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
 	if err != nil {
 		return fmt.Errorf("error encoding ready for query: %w", err)
