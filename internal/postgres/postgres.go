@@ -2,9 +2,9 @@ package postgres
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/record/schema"
@@ -168,8 +168,10 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 				var row []byte
 				switch v := val.(type) {
 				case schema.ConstantInt32:
-					row = make([]byte, 4)
-					binary.LittleEndian.PutUint32(row, uint32(v))
+					row = []byte(strconv.Itoa(int(v)))
+					if len(row) < 4 {
+						row = append(row, make([]byte, 4-len(row))...)
+					}
 				case schema.ConstantStr:
 					row = []byte(v)
 				}
