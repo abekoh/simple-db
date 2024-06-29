@@ -189,7 +189,7 @@ func (b *Backend) handleQuery(query *pgproto3.Query) ([]byte, error) {
 		case plan.Update:
 			commandTag = []byte(fmt.Sprintf("UPDATE %d", r.Count))
 		case plan.CreateTable:
-			commandTag = []byte(fmt.Sprintf("SELECT %d", r.Count))
+			commandTag = []byte("CREATE TABLE")
 		case plan.CreateView:
 			commandTag = []byte(fmt.Sprintf("SELECT %d", r.Count))
 		case plan.CreateIndex:
