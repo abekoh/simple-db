@@ -84,13 +84,17 @@ func (b *Backend) Run() error {
 				}
 				continue
 			}
-			_, err := b.db.StmtMgr().Get(m.Name)
+			stmt, err := b.db.StmtMgr().Get(m.Name)
 			if err != nil {
 				err = fmt.Errorf("error getting statement: %w", err)
 				break
 			}
+			paramOIDs := make([]uint32, len(stmt.ParamOIDs))
+			for i, oid := range stmt.ParamOIDs {
+				paramOIDs[i] = oid
+			}
 			buf, err = (&pgproto3.ParameterDescription{
-				ParameterOIDs: make([]uint32, 0), // TODO: implement
+				ParameterOIDs: paramOIDs,
 			}).Encode(buf)
 			if err != nil {
 				err = fmt.Errorf("error encoding parameter description: %w", err)
