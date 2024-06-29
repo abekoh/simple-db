@@ -39,12 +39,12 @@ func TestPostgres(t *testing.T) {
 		t.Errorf("unexpected tag: %s", tag)
 	}
 
-	for _, query := range []string{
-		"INSERT INTO mytable (id, name) VALUES (1, 'foo')",
-		"INSERT INTO mytable (id, name) VALUES (2, 'bar')",
-		"INSERT INTO mytable (id, name) VALUES (3, 'baz')",
+	for _, args := range [][]any{
+		{1, "foo"},
+		{2, "bar"},
+		{3, "baz"},
 	} {
-		tag, err = conn.Exec(ctx, query)
+		tag, err = conn.Exec(ctx, "INSERT INTO mytable (id, name) VALUES ($1, $2)", args...)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -96,5 +96,4 @@ func TestPostgres(t *testing.T) {
 	}) {
 		t.Errorf("unexpected rows: %v", resRows)
 	}
-
 }
