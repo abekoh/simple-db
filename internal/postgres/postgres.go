@@ -35,6 +35,7 @@ func (b *Backend) Run() error {
 		return fmt.Errorf("error handling startup: %w", err)
 	}
 
+	var buf []byte
 	for {
 		msg, err := b.backend.Receive()
 		if err != nil {
@@ -43,34 +44,22 @@ func (b *Backend) Run() error {
 
 		switch m := msg.(type) {
 		case *pgproto3.Query:
-			buf, err := b.handleQuery(m.String)
+			buf, err = b.handleQuery(buf, m.String)
 			if err != nil {
 				return fmt.Errorf("error handling query: %w", err)
-			}
-			_, err = b.conn.Write(buf)
-			if err != nil {
-				return fmt.Errorf("error writing query response: %w", err)
 			}
 		case *pgproto3.Parse:
 			if len(m.Name) == 0 {
 				return fmt.Errorf("empty statement name")
 			}
 			b.db.StmtMgr().Add(m.Name, m.Query)
-			buf, err := (&pgproto3.ParseComplete{}).Encode(nil)
+			buf, err = (&pgproto3.ParseComplete{}).Encode(nil)
 			if err != nil {
 				return fmt.Errorf("error encoding parse complete: %w", err)
 			}
 			buf, err = (&pgproto3.NoData{}).Encode(buf)
 			if err != nil {
 				return fmt.Errorf("error encoding no data: %w", err)
-			}
-			buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
-			if err != nil {
-				return fmt.Errorf("error encoding ready for query: %w", err)
-			}
-			_, err = b.conn.Write(buf)
-			if err != nil {
-				return fmt.Errorf("error writing parse complete: %w", err)
 			}
 		case *pgproto3.Bind:
 			binded, err := b.db.StmtMgr().Bind(m.PreparedStatement, m.Parameters...)
@@ -85,6 +74,16 @@ func (b *Backend) Run() error {
 			return fmt.Errorf("received message other than Query from client: %#v", msg)
 		}
 	}
+
+	buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
+	if err != nil {
+		return fmt.Errorf("error encoding ready for query: %w", err)
+	}
+	_, err = b.conn.Write(buf)
+	if err != nil {
+		return fmt.Errorf("error writing parse complete: %w", err)
+	}
+	return nil
 }
 
 func (b *Backend) Close() error {
@@ -124,7 +123,7 @@ func (b *Backend) handleStartup() error {
 	return nil
 }
 
-func (b *Backend) handleQuery(query string) ([]byte, error) {
+func (b *Backend) handleQuery(buf []byte, query string) ([]byte, error) {
 	ctx := context.Background()
 	tx, err := b.db.NewTx(ctx)
 	if err != nil {
@@ -139,7 +138,6 @@ func (b *Backend) handleQuery(query string) ([]byte, error) {
 		return nil, fmt.Errorf("error committing transaction: %w", err)
 	}
 
-	var buf []byte
 	switch r := res.(type) {
 	case plan.Plan:
 		sche := r.Schema()
@@ -234,10 +232,6 @@ func (b *Backend) handleQuery(query string) ([]byte, error) {
 		}
 	default:
 		return nil, fmt.Errorf("unknown result type: %#v", res)
-	}
-	buf, err = (&pgproto3.ReadyForQuery{TxStatus: 'I'}).Encode(buf)
-	if err != nil {
-		return nil, fmt.Errorf("error encoding ready for query: %w", err)
 	}
 	return buf, nil
 }
