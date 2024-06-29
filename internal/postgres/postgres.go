@@ -72,6 +72,13 @@ func (b *Backend) Run() error {
 			if err != nil {
 				return fmt.Errorf("error writing parse complete: %w", err)
 			}
+		case *pgproto3.Bind:
+			binded, err := b.db.StmtMgr().Bind(m.PreparedStatement, m.Parameters...)
+			if err != nil {
+				return fmt.Errorf("error binding statement: %w", err)
+			}
+			_ = binded
+			// todo
 		case *pgproto3.Terminate:
 			return nil
 		default:
