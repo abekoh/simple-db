@@ -161,19 +161,16 @@ type Valuable interface {
 	Val(fieldName FieldName) (Constant, error)
 }
 
-type Placeholder struct {
-	index     int
-	fieldType FieldType
-}
-
-func NewPlaceholder(index int, fieldType FieldType) Placeholder {
-	return Placeholder{index: index, fieldType: fieldType}
-}
+type Placeholder int
 
 func (p Placeholder) String() string {
-	return fmt.Sprintf("$%d", p.index)
+	return fmt.Sprintf("$%d", p)
 }
 
 func (p Placeholder) Val() any {
 	panic("don't use placeholder as value")
+}
+
+func (p Placeholder) Evaluate(v Valuable) (Constant, error) {
+	return nil, fmt.Errorf("placeholder cannot be evaluated")
 }
