@@ -97,4 +97,12 @@ func TestPostgres(t *testing.T) {
 	}) {
 		t.Errorf("unexpected rows: %v", resRows)
 	}
+
+	var queryRow Row
+	if err := conn.QueryRow(ctx, "SELECT id, name FROM mytable WHERE id = $1", 3).Scan(&queryRow.ID, &queryRow.Name); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(queryRow, Row{ID: 3, Name: "HOGE"}) {
+		t.Errorf("unexpected row: %v", queryRow)
+	}
 }
