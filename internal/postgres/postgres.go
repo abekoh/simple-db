@@ -9,6 +9,7 @@ import (
 	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/simpledb"
+	"github.com/abekoh/simple-db/internal/transaction"
 	"github.com/jackc/pgx/v5/pgproto3"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -47,7 +48,7 @@ func (b *Backend) Run() error {
 		var buf []byte
 		switch m := msg.(type) {
 		case *pgproto3.Query:
-			buf, err = b.handleQuery(buf, m.String)
+			buf, err = b.handleQuery(buf, m.String, nil)
 			if err != nil {
 				err = fmt.Errorf("error handling query: %w", err)
 				break
@@ -120,7 +121,7 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("no query to execute")
 				break
 			}
-			buf, err = b.handleQuery(buf, cachedQuery)
+			buf, err = b.handleQuery(buf, cachedQuery, nil)
 			if err != nil {
 				err = fmt.Errorf("error handling query: %w", err)
 				break
@@ -191,19 +192,28 @@ func (b *Backend) handleStartup() error {
 	return nil
 }
 
-func (b *Backend) handleQuery(buf []byte, query string) ([]byte, error) {
-	ctx := context.Background()
-	tx, err := b.db.NewTx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error creating new transaction: %w", err)
+func (b *Backend) handleQuery(buf []byte, query string, tx *transaction.Transaction) ([]byte, error) {
+	oneQueryTx := false
+	if tx == nil {
+		ctx := context.Background()
+		x, err := b.db.NewTx(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error creating new transaction: %w", err)
+		}
+		defer x.Rollback()
+		tx = x
+		oneQueryTx = true
 	}
+
 	res, err := b.db.Planner().Execute(query, tx)
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
 	}
-	defer tx.Rollback()
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("error committing transaction: %w", err)
+
+	if oneQueryTx {
+		if err := tx.Commit(); err != nil {
+			return nil, fmt.Errorf("error committing transaction: %w", err)
+		}
 	}
 
 	switch r := res.(type) {
