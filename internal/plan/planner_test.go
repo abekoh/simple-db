@@ -40,6 +40,43 @@ func TestBasicQueryPlanner(t *testing.T) {
 	}
 }
 
+func TestBasicQueryPlanner_Prepared(t *testing.T) {
+	transaction.CleanupLockTable(t)
+	ctx := context.Background()
+	db, err := simpledb.New(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.NewTx(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sche := schema.NewSchema()
+	sche.AddInt32Field("a")
+	sche.AddStrField("b", 9)
+	if err := db.MetadataMgr().CreateTable("mytable", sche, tx); err != nil {
+		t.Fatal(err)
+	}
+
+	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), nil)
+	prepared, err := planner.Prepare(`SELECT a, b FROM mytable WHERE a = $1 AND b = $2`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prepared.(Plan).String() != "Project{a,b}(Select{a=$1 AND b=$2}(Table{mytable}))" {
+		t.Errorf("unexpected prepared: %s", prepared.(Plan).String())
+	}
+
+	p, err := planner.BindAndExecute(prepared, map[int]any{1: int32(1), 2: "foo"}, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.(Plan).String() != "Project{a,b}(Select{a=1 AND b=foo}(Table{mytable}))" {
+		t.Errorf("unexpected plan: %s", p.(Plan).String())
+	}
+}
+
 func TestBasicUpdatePlanner_ExecuteCreateTable(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
