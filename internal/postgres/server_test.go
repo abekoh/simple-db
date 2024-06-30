@@ -54,7 +54,7 @@ func TestPostgres(t *testing.T) {
 		}
 	}
 
-	tag, err = conn.Exec(ctx, "UPDATE mytable SET name = 'HOGE' WHERE id = 3")
+	tag, err = conn.Exec(ctx, "UPDATE mytable SET name = 'HOGE' WHERE id = $1", 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestPostgres(t *testing.T) {
 		t.Errorf("unexpected tag: %s", tag)
 	}
 
-	tag, err = conn.Exec(ctx, "DELETE FROM mytable WHERE id = 2")
+	tag, err = conn.Exec(ctx, "DELETE FROM mytable WHERE id = $1", 2)
 	if err != nil {
 		t.Fatal(err)
 	}
