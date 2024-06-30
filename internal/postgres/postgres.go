@@ -86,7 +86,10 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("error getting statement: %w", err)
 				break
 			}
-			bound, err = prepared.SwapParams(m.Parameters)
+			params := make(map[int]schema.Constant)
+			//for i, v := range m.Parameters {
+			//}
+			bound, err = prepared.SwapParams(params)
 			if err != nil {
 				err = fmt.Errorf("error swapping params: %w", err)
 				break
