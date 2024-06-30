@@ -37,7 +37,7 @@ func (b *Backend) Run() error {
 		return fmt.Errorf("error handling startup: %w", err)
 	}
 
-	var cachedQuery string
+	var bound statement.Bound
 	for {
 		readyForQuery := false
 		msg, err := b.backend.Receive()
@@ -60,13 +60,37 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("empty statement name")
 				break
 			}
+			tx, err := b.db.NewTx(context.Background())
+			if err != nil {
+				err = fmt.Errorf("error creating new transaction: %w", err)
+				break
+			}
+			prepared, err := b.db.Planner().Prepare(m.Query, tx)
+			if err != nil {
+				err = fmt.Errorf("error preparing statement: %w", err)
+				break
+			}
+			b.db.StmtMgr().Add(m.Name, prepared)
 			buf, err = (&pgproto3.ParseComplete{}).Encode(buf)
 			if err != nil {
 				err = fmt.Errorf("error encoding parse complete: %w", err)
 				break
 			}
 		case *pgproto3.Bind:
-			cachedQuery = "" // TODO
+			if len(m.PreparedStatement) == 0 {
+				err = fmt.Errorf("empty prepared statement name")
+				break
+			}
+			prepared, err := b.db.StmtMgr().Get(m.PreparedStatement)
+			if err != nil {
+				err = fmt.Errorf("error getting statement: %w", err)
+				break
+			}
+			bound, err = prepared.SwapParams(m.Parameters)
+			if err != nil {
+				err = fmt.Errorf("error swapping params: %w", err)
+				break
+			}
 			buf, err = (&pgproto3.BindComplete{}).Encode(buf)
 			if err != nil {
 				err = fmt.Errorf("error encoding bind complete: %w", err)
@@ -117,16 +141,16 @@ func (b *Backend) Run() error {
 			}
 			readyForQuery = true
 		case *pgproto3.Execute:
-			if len(cachedQuery) == 0 {
+			if bound == nil {
 				err = fmt.Errorf("no query to execute")
 				break
 			}
-			buf, err = b.handleQuery(buf, cachedQuery, nil)
+			buf, err = b.handleBound(buf, bound, nil)
 			if err != nil {
 				err = fmt.Errorf("error handling query: %w", err)
 				break
 			}
-			cachedQuery = ""
+			bound = nil
 		case *pgproto3.Terminate:
 			break
 		default:
