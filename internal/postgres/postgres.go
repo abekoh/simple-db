@@ -142,9 +142,9 @@ func (b *Backend) Run() error {
 			for i, fieldType := range placeholders {
 				switch fieldType {
 				case schema.Integer32:
-					paramOIDs[i] = pgtype.Int4OID
+					paramOIDs[i-1] = pgtype.Int4OID
 				case schema.Varchar:
-					paramOIDs[i] = pgtype.TextOID
+					paramOIDs[i-1] = pgtype.TextOID
 				}
 			}
 			buf, err = (&pgproto3.ParameterDescription{
