@@ -72,13 +72,14 @@ func TestParser_Insert(t *testing.T) {
 	}{
 		{
 			name: "INSERT",
-			s:    "INSERT INTO mytable (a, b) VALUES (1, 'foo')",
+			s:    "INSERT INTO mytable (a, b, c) VALUES (1, 'foo', $1)",
 			want: &InsertData{
 				table:  "mytable",
-				fields: []schema.FieldName{"a", "b"},
+				fields: []schema.FieldName{"a", "b", "c"},
 				values: []schema.Constant{
 					schema.ConstantInt32(1),
 					schema.ConstantStr("foo"),
+					schema.Placeholder(1),
 				},
 			},
 			wantErr: false,
