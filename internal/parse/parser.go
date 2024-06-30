@@ -419,6 +419,12 @@ type ModifyData struct {
 	pred  query.Predicate
 }
 
+type BoundModifyData struct {
+	ModifyData
+}
+
+func (d BoundModifyData) Bound() {}
+
 func (d ModifyData) Table() string {
 	return d.table
 }
@@ -475,6 +481,56 @@ func (p *Parser) Modify() (*ModifyData, error) {
 		d.pred = pred
 	}
 	return d, nil
+}
+
+func (d ModifyData) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+	sche, err := findSchema(d.table)
+	if err != nil {
+		return nil
+	}
+	placeholders := make(map[int]schema.FieldType)
+	if p, ok := d.value.(schema.Placeholder); ok {
+		placeholders[int(p)] = sche.Typ(d.field)
+	}
+	for _, t := range d.pred {
+		lhs, rhs := t.Expressions()
+		if p, ok := lhs.(schema.Placeholder); ok {
+			if fn, ok := rhs.(schema.FieldName); ok {
+				placeholders[int(p)] = sche.Typ(fn)
+			}
+		}
+		if p, ok := rhs.(schema.Placeholder); ok {
+			if fn, ok := lhs.(schema.FieldName); ok {
+				placeholders[int(p)] = sche.Typ(fn)
+			}
+		}
+	}
+	return placeholders
+}
+
+func (d ModifyData) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+	var value query.Expression
+	if p, ok := d.value.(schema.Placeholder); ok {
+		val, ok := params[int(p)]
+		if !ok {
+			return nil, fmt.Errorf("missing parameter: %d", p)
+		}
+		value = val
+	} else {
+		value = d.value
+	}
+	pred, err := d.pred.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("pred.SwapParams error: %w", err)
+	}
+	return &BoundModifyData{
+		ModifyData{
+			table: d.table,
+			field: d.field,
+			value: value,
+			pred:  pred,
+		},
+	}, nil
 }
 
 type DeleteData struct {
