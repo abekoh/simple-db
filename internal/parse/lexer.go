@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -9,24 +10,25 @@ type tokenType string
 const (
 	identifier tokenType = "IDENTIFIER"
 
-	selectTok tokenType = "SELECT"
-	from      tokenType = "FROM"
-	and       tokenType = "AND"
-	where     tokenType = "WHERE"
-	insert    tokenType = "INSERT"
-	into      tokenType = "INTO"
-	values    tokenType = "VALUES"
-	deleteTok tokenType = "DELETE"
-	update    tokenType = "UPDATE"
-	set       tokenType = "SET"
-	create    tokenType = "CREATE"
-	table     tokenType = "TABLE"
-	intTok    tokenType = "INT"
-	varchar   tokenType = "VARCHAR"
-	view      tokenType = "VIEW"
-	as        tokenType = "AS"
-	index     tokenType = "INDEX"
-	on        tokenType = "ON"
+	selectTok   tokenType = "SELECT"
+	from        tokenType = "FROM"
+	and         tokenType = "AND"
+	where       tokenType = "WHERE"
+	insert      tokenType = "INSERT"
+	into        tokenType = "INTO"
+	values      tokenType = "VALUES"
+	deleteTok   tokenType = "DELETE"
+	update      tokenType = "UPDATE"
+	set         tokenType = "SET"
+	create      tokenType = "CREATE"
+	table       tokenType = "TABLE"
+	intTok      tokenType = "INT"
+	varchar     tokenType = "VARCHAR"
+	view        tokenType = "VIEW"
+	as          tokenType = "AS"
+	index       tokenType = "INDEX"
+	on          tokenType = "ON"
+	placeholder tokenType = "PLACEHOLDER"
 
 	number    tokenType = "NUMBER"
 	stringTok tokenType = "STRING"
@@ -110,6 +112,9 @@ func (l *Lexer) NextToken() token {
 		tok := token{typ: stringTok, literal: l.readString()}
 		l.readChar()
 		return tok
+	case '$':
+		l.readChar()
+		return token{typ: placeholder, literal: fmt.Sprintf("$%s", l.readNumber())}
 	case 0:
 		return token{typ: eof, literal: ""}
 	default:

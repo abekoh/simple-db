@@ -41,7 +41,7 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			input: `INSERT INTO mytable (a, b) VALUES (1, 'foo')`,
+			input: `INSERT INTO mytable (a, b) VALUES (1, 'foo', $1)`,
 			want: []token{
 				{typ: insert, literal: "INSERT"},
 				{typ: into, literal: "INTO"},
@@ -56,6 +56,8 @@ func TestLexer(t *testing.T) {
 				{typ: number, literal: "1"},
 				{typ: comma, literal: ","},
 				{typ: stringTok, literal: "foo"},
+				{typ: comma, literal: ","},
+				{typ: placeholder, literal: "$1"},
 				{typ: rparen, literal: ")"},
 				{typ: eof, literal: ""},
 			},
