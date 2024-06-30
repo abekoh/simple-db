@@ -68,7 +68,11 @@ func TestBasicQueryPlanner_Prepared(t *testing.T) {
 		t.Errorf("unexpected prepared: %s", prepared.(Plan).String())
 	}
 
-	p, err := planner.BindAndExecute(prepared, map[int]any{1: int32(1), 2: "foo"}, tx)
+	b, err := planner.Bind(prepared, map[int]any{1: int32(1), 2: "foo"}, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := planner.ExecuteBound(b, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +264,11 @@ func TestBasicUpdatePlanner_ExecuteInsert_Prepared(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := planner.BindAndExecute(prepared, map[int]any{1: int32(1), 2: "foo"}, tx)
+	b, err := planner.Bind(prepared, map[int]any{1: int32(1), 2: "foo"}, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := planner.ExecuteBound(b, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,7 +404,11 @@ func TestBasicUpdatePlanner_ExecuteUpdate_Prepared(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err = planner.BindAndExecute(prepared, map[int]any{1: "bar", 2: int32(1)}, tx)
+	b, err := planner.Bind(prepared, map[int]any{1: "bar", 2: int32(1)}, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err = planner.ExecuteBound(b, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -518,7 +530,11 @@ func TestBasicUpdatePlanner_ExecuteDelete_Prepared(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err = planner.BindAndExecute(prepared, map[int]any{1: int32(1)}, tx)
+	b, err := planner.Bind(prepared, map[int]any{1: int32(1)}, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err = planner.ExecuteBound(b, tx)
 	if err != nil {
 		t.Fatal(err)
 	}

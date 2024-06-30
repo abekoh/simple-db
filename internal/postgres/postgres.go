@@ -198,9 +198,9 @@ func (b *Backend) handleQuery(buf []byte, query string, tx *transaction.Transact
 	}, tx)
 }
 
-func (b *Backend) handlePrepared(buf []byte, prepared statement.Prepared, rawParams map[int]any, tx *transaction.Transaction) ([]byte, error) {
+func (b *Backend) handleBound(buf []byte, bound statement.Bound, tx *transaction.Transaction) ([]byte, error) {
 	return b.execute(buf, func() (plan.Result, error) {
-		return b.db.Planner().BindAndExecute(prepared, rawParams, tx)
+		return b.db.Planner().ExecuteBound(bound, tx)
 	}, tx)
 }
 

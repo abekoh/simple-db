@@ -86,7 +86,7 @@ func (p *Planner) Prepare(q string, tx *transaction.Transaction) (statement.Prep
 	return nil, fmt.Errorf("unknown command type %v", d)
 }
 
-func (p *Planner) BindAndExecute(pre statement.Prepared, rawParams map[int]any, tx *transaction.Transaction) (Result, error) {
+func (p *Planner) Bind(pre statement.Prepared, rawParams map[int]any, tx *transaction.Transaction) (statement.Bound, error) {
 	placeholders := pre.Placeholders(func(tableName string) (*schema.Schema, error) {
 		l, err := p.mdm.Layout(tableName, tx)
 		if err != nil {
@@ -113,6 +113,10 @@ func (p *Planner) BindAndExecute(pre statement.Prepared, rawParams map[int]any, 
 	if err != nil {
 		return nil, fmt.Errorf("swap params error: %w", err)
 	}
+	return bound, nil
+}
+
+func (p *Planner) ExecuteBound(bound statement.Bound, tx *transaction.Transaction) (Result, error) {
 	switch b := bound.(type) {
 	case Plan:
 		return b, nil
