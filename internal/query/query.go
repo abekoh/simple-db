@@ -41,6 +41,10 @@ func NewTerm(lhs, rhs Expression) Term {
 	return Term{lhs: lhs, rhs: rhs}
 }
 
+func (t Term) Expressions() (lhs, rhs Expression) {
+	return t.lhs, t.rhs
+}
+
 func (t Term) String() string {
 	return fmt.Sprintf("%v=%v", t.lhs, t.rhs)
 }
@@ -116,6 +120,32 @@ type Predicate []Term
 
 func NewPredicate(terms ...Term) Predicate {
 	return terms
+}
+
+func (p Predicate) SwapParams(params map[int]Expression) (Predicate, error) {
+	swapExpression := func(expr Expression) (Expression, error) {
+		if placeholder, ok := expr.(schema.Placeholder); ok {
+			val, ok := params[int(placeholder)]
+			if !ok {
+				return nil, fmt.Errorf("missing parameter: %d", placeholder)
+			}
+			return val, nil
+		}
+		return expr, nil
+	}
+	swapped := make(Predicate, len(p))
+	for i, term := range p {
+		lhs, err := swapExpression(term.lhs)
+		if err != nil {
+			return nil, fmt.Errorf("lhs swap error: %w", err)
+		}
+		rhs, err := swapExpression(term.rhs)
+		if err != nil {
+			return nil, fmt.Errorf("rhs swap error: %w", err)
+		}
+		swapped[i] = NewTerm(lhs, rhs)
+	}
+	return swapped, nil
 }
 
 func (p Predicate) IsSatisfied(scan Scan) (bool, error) {

@@ -15,6 +15,15 @@ type Result interface {
 	Result()
 }
 
+type Prepared interface {
+	Placeholders() map[int]schema.FieldType
+	SwapParams(params map[int]query.Expression) (Bound, error)
+}
+
+type Bound interface {
+	Bound()
+}
+
 type CommandResult struct {
 	Type  CommandType
 	Count int
@@ -36,6 +45,7 @@ const (
 type Plan interface {
 	Result
 	fmt.Stringer
+	Prepared
 	Open() (query.Scan, error)
 	BlockAccessed() int
 	RecordsOutput() int
@@ -96,7 +106,14 @@ func (t TablePlan) Schema() *schema.Schema {
 
 func (t TablePlan) String() string {
 	return fmt.Sprintf("Table{%s}", t.tableName)
+}
 
+func (t TablePlan) Placeholders() map[int]schema.FieldType {
+	return nil
+}
+
+func (t TablePlan) SwapParams(params map[int]query.Expression) (Bound, error) {
+	return BoundPlan{Plan: t}, nil
 }
 
 type ProductPlan struct {
@@ -149,6 +166,32 @@ func (p ProductPlan) Schema() *schema.Schema {
 
 func (p ProductPlan) String() string {
 	return fmt.Sprintf("Product(%v, %v)", p.p1, p.p2)
+}
+
+func (p ProductPlan) Placeholders() map[int]schema.FieldType {
+	placeholders := p.p1.Placeholders()
+	for k, v := range p.p2.Placeholders() {
+		placeholders[k] = v
+	}
+	return placeholders
+}
+
+func (p ProductPlan) SwapParams(params map[int]query.Expression) (Bound, error) {
+	b1, err := p.p1.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p1.SwapParams error: %w", err)
+	}
+	b2, err := p.p2.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p2.SwapParams error: %w", err)
+	}
+	return &BoundPlan{
+		Plan: &ProductPlan{
+			p1:   b1.(Plan),
+			p2:   b2.(Plan),
+			sche: p.sche,
+		},
+	}, nil
 }
 
 type SelectPlan struct {
@@ -205,6 +248,37 @@ func (s SelectPlan) String() string {
 	return fmt.Sprintf("Select{%s}(%v)", s.pred, s.p)
 }
 
+func (s SelectPlan) Placeholders() map[int]schema.FieldType {
+	placeholders := make(map[int]schema.FieldType)
+	for _, t := range s.pred {
+		lhs, rhs := t.Expressions()
+		if p, ok := lhs.(schema.Placeholder); ok {
+			if fn, ok := rhs.(schema.FieldName); ok {
+				placeholders[int(p)] = s.Schema().Typ(fn)
+			}
+		}
+		if p, ok := rhs.(schema.Placeholder); ok {
+			if fn, ok := lhs.(schema.FieldName); ok {
+				placeholders[int(p)] = s.Schema().Typ(fn)
+			}
+		}
+	}
+	return placeholders
+}
+
+func (s SelectPlan) SwapParams(params map[int]query.Expression) (Bound, error) {
+	pred, err := s.pred.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("pred.SwapParams error: %w", err)
+	}
+	return &BoundPlan{
+		Plan: &SelectPlan{
+			p:    s.p,
+			pred: pred,
+		},
+	}, nil
+}
+
 type ProjectPlan struct {
 	p    Plan
 	sche schema.Schema
@@ -253,3 +327,23 @@ func (p ProjectPlan) String() string {
 	}
 	return fmt.Sprintf("Project{%s}(%v)", strings.Join(fieldNames, ","), p.p)
 }
+
+func (p ProjectPlan) Placeholders() map[int]schema.FieldType {
+	return p.p.Placeholders()
+}
+
+func (p ProjectPlan) SwapParams(params map[int]query.Expression) (Bound, error) {
+	b, err := p.p.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p.SwapParams error: %w", err)
+	}
+	return &BoundPlan{Plan: &ProjectPlan{p: b.(Plan), sche: p.sche}}, nil
+}
+
+type BoundPlan struct {
+	Plan
+}
+
+var _ Plan = (*BoundPlan)(nil)
+
+func (BoundPlan) Bound() {}
