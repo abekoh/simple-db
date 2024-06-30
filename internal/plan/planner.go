@@ -76,6 +76,8 @@ func (p *Planner) Prepare(q string, tx *transaction.Transaction) (statement.Prep
 	case *parse.QueryData:
 		r, err := p.qp.CreatePlan(c, tx)
 		return r, err
+	case *parse.InsertData:
+		return c, nil
 	}
 	return nil, fmt.Errorf("unknown command type %v", d)
 }
