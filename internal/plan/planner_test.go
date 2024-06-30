@@ -488,3 +488,59 @@ func TestBasicUpdatePlanner_ExecuteDelete(t *testing.T) {
 		t.Fatal("unexpected rows")
 	}
 }
+
+func TestBasicUpdatePlanner_ExecuteDelete_Prepared(t *testing.T) {
+	transaction.CleanupLockTable(t)
+	ctx := context.Background()
+	db, err := simpledb.New(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.NewTx(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()), db.MetadataMgr())
+	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := planner.Execute(`INSERT INTO mytable (a, b) VALUES (1, 'foo')`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.(CommandResult).Count != 1 {
+		t.Errorf("unexpected count: %d", c)
+	}
+	prepared, err := planner.Prepare(`DELETE FROM mytable WHERE a = $1`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err = planner.BindAndExecute(prepared, map[int]any{1: int32(1)}, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.(CommandResult).Count != 1 {
+		t.Errorf("unexpected count: %d", c)
+	}
+
+	p, err := planner.Execute(`SELECT a, b FROM mytable WHERE a = 1`, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan := p.(Plan)
+	scan, err := plan.Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer scan.Close()
+	ok, err := scan.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Fatal("unexpected rows")
+	}
+}

@@ -542,6 +542,12 @@ type DeleteData struct {
 	pred  query.Predicate
 }
 
+type BoundDeleteData struct {
+	DeleteData
+}
+
+func (d BoundDeleteData) Bound() {}
+
 func (d DeleteData) Table() string {
 	return d.table
 }
@@ -576,6 +582,41 @@ func (p *Parser) Delete() (*DeleteData, error) {
 		d.pred = pred
 	}
 	return d, nil
+}
+
+func (d DeleteData) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+	sche, err := findSchema(d.table)
+	if err != nil {
+		return nil
+	}
+	placeholders := make(map[int]schema.FieldType)
+	for _, t := range d.pred {
+		lhs, rhs := t.Expressions()
+		if p, ok := lhs.(schema.Placeholder); ok {
+			if fn, ok := rhs.(schema.FieldName); ok {
+				placeholders[int(p)] = sche.Typ(fn)
+			}
+		}
+		if p, ok := rhs.(schema.Placeholder); ok {
+			if fn, ok := lhs.(schema.FieldName); ok {
+				placeholders[int(p)] = sche.Typ(fn)
+			}
+		}
+	}
+	return placeholders
+}
+
+func (d DeleteData) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+	pred, err := d.pred.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("pred.SwapParams error: %w", err)
+	}
+	return &BoundDeleteData{
+		DeleteData{
+			table: d.table,
+			pred:  pred,
+		},
+	}, nil
 }
 
 type CreateTableData struct {
