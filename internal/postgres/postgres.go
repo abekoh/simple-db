@@ -94,13 +94,16 @@ func (b *Backend) Run() error {
 				case pgx.TextFormatCode:
 					params[i] = schema.ConstantStr(v)
 				case pgx.BinaryFormatCode:
-					n, err := strconv.Atoi(string(v))
-					if err != nil {
-						err = fmt.Errorf("error converting binary parameter: %w", err)
+					if len(v) != 4 {
+						err = fmt.Errorf("invalid binary parameter length: %d", len(v))
 						break
 					}
-					params[i] = schema.ConstantInt32(int32(n))
+					n := int32(v[0])<<24 | int32(v[1])<<16 | int32(v[2])<<8 | int32(v[3])
+					params[i] = schema.ConstantInt32(n)
 				}
+			}
+			if err != nil {
+				break
 			}
 			bound, err = prepared.SwapParams(params)
 			if err != nil {
