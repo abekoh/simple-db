@@ -6,6 +6,7 @@ import (
 	"github.com/abekoh/simple-db/internal/metadata"
 	"github.com/abekoh/simple-db/internal/parse"
 	"github.com/abekoh/simple-db/internal/query"
+	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
@@ -77,8 +78,32 @@ func (p *Planner) Prepare(q string, tx *transaction.Transaction) (Prepared, erro
 	return nil, fmt.Errorf("unknown command type %v", d)
 }
 
-func (p *Planner) BindAndExecute(q string, pre Prepared, tx *transaction.Transaction) (Prepared, error) {
-	panic("implement me")
+func (p *Planner) BindAndExecute(pre Prepared, rawParams map[int]any, tx *transaction.Transaction) (Result, error) {
+	placeholders := pre.Placeholders()
+	params := make(map[int]query.Expression)
+	for k, v := range rawParams {
+		fieldType, ok := placeholders[k]
+		if !ok {
+			return nil, fmt.Errorf("missing placeholder: %d", k)
+		}
+		switch fieldType {
+		case schema.Varchar:
+			params[k] = schema.ConstantStr(v.(string))
+		case schema.Integer32:
+			params[k] = schema.ConstantInt32(v.(int32))
+		default:
+			return nil, fmt.Errorf("unsupported field type: %v", fieldType)
+		}
+	}
+	bound, err := pre.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("swap params error: %w", err)
+	}
+	switch b := bound.(type) {
+	case Plan:
+		return b, nil
+	}
+	return nil, fmt.Errorf("unknown bound type %v", bound)
 }
 
 type BasicQueryPlanner struct {
