@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
+	"github.com/abekoh/simple-db/internal/statement"
 )
 
 type Parser struct {
@@ -318,7 +318,7 @@ func (d InsertData) Placeholders(findSchema func(tableName string) (*schema.Sche
 	return placeholders
 }
 
-func (d InsertData) SwapParams(params map[int]query.Expression) (plan.Bound, error) {
+func (d InsertData) SwapParams(params map[int]query.Expression) (statement.Bound, error) {
 	values := make([]schema.Constant, len(d.values))
 	for i, v := range d.values {
 		if p, ok := v.(schema.Placeholder); ok {

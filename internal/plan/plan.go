@@ -8,20 +8,12 @@ import (
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
+	"github.com/abekoh/simple-db/internal/statement"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
 type Result interface {
 	Result()
-}
-
-type Prepared interface {
-	Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType
-	SwapParams(params map[int]query.Expression) (Bound, error)
-}
-
-type Bound interface {
-	Bound()
 }
 
 type CommandResult struct {
@@ -45,7 +37,7 @@ const (
 type Plan interface {
 	Result
 	fmt.Stringer
-	Prepared
+	statement.Prepared
 	Open() (query.Scan, error)
 	BlockAccessed() int
 	RecordsOutput() int
@@ -112,7 +104,7 @@ func (t TablePlan) Placeholders(findSchema func(tableName string) (*schema.Schem
 	return nil
 }
 
-func (t TablePlan) SwapParams(params map[int]query.Expression) (Bound, error) {
+func (t TablePlan) SwapParams(params map[int]query.Expression) (statement.Bound, error) {
 	return BoundPlan{Plan: t}, nil
 }
 
@@ -176,7 +168,7 @@ func (p ProductPlan) Placeholders(findSchema func(tableName string) (*schema.Sch
 	return placeholders
 }
 
-func (p ProductPlan) SwapParams(params map[int]query.Expression) (Bound, error) {
+func (p ProductPlan) SwapParams(params map[int]query.Expression) (statement.Bound, error) {
 	b1, err := p.p1.SwapParams(params)
 	if err != nil {
 		return nil, fmt.Errorf("p1.SwapParams error: %w", err)
@@ -266,7 +258,7 @@ func (s SelectPlan) Placeholders(findSchema func(tableName string) (*schema.Sche
 	return placeholders
 }
 
-func (s SelectPlan) SwapParams(params map[int]query.Expression) (Bound, error) {
+func (s SelectPlan) SwapParams(params map[int]query.Expression) (statement.Bound, error) {
 	pred, err := s.pred.SwapParams(params)
 	if err != nil {
 		return nil, fmt.Errorf("pred.SwapParams error: %w", err)
@@ -332,7 +324,7 @@ func (p ProjectPlan) Placeholders(findSchema func(tableName string) (*schema.Sch
 	return p.p.Placeholders(findSchema)
 }
 
-func (p ProjectPlan) SwapParams(params map[int]query.Expression) (Bound, error) {
+func (p ProjectPlan) SwapParams(params map[int]query.Expression) (statement.Bound, error) {
 	b, err := p.p.SwapParams(params)
 	if err != nil {
 		return nil, fmt.Errorf("p.SwapParams error: %w", err)

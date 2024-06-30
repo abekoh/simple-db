@@ -7,6 +7,7 @@ import (
 	"github.com/abekoh/simple-db/internal/parse"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
+	"github.com/abekoh/simple-db/internal/statement"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
@@ -65,7 +66,7 @@ func (p *Planner) Execute(q string, tx *transaction.Transaction) (Result, error)
 	return nil, fmt.Errorf("unknown command type %v", d)
 }
 
-func (p *Planner) Prepare(q string, tx *transaction.Transaction) (Prepared, error) {
+func (p *Planner) Prepare(q string, tx *transaction.Transaction) (statement.Prepared, error) {
 	ps := parse.NewParser(q)
 	d, err := ps.ToData()
 	if err != nil {
@@ -79,7 +80,7 @@ func (p *Planner) Prepare(q string, tx *transaction.Transaction) (Prepared, erro
 	return nil, fmt.Errorf("unknown command type %v", d)
 }
 
-func (p *Planner) BindAndExecute(pre Prepared, rawParams map[int]any, tx *transaction.Transaction) (Result, error) {
+func (p *Planner) BindAndExecute(pre statement.Prepared, rawParams map[int]any, tx *transaction.Transaction) (Result, error) {
 	placeholders := pre.Placeholders(func(tableName string) (*schema.Schema, error) {
 		l, err := p.mdm.Layout(tableName, tx)
 		if err != nil {
