@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
 )
@@ -237,6 +238,12 @@ type InsertData struct {
 	values []schema.Constant
 }
 
+type BoundInsertData struct {
+	InsertData
+}
+
+func (d BoundInsertData) Bound() {}
+
 func (d InsertData) Data() {}
 
 func (d InsertData) Table() string {
@@ -295,6 +302,42 @@ func (p *Parser) Insert() (*InsertData, error) {
 		return nil, fmt.Errorf("expected ), got %s", tok.literal)
 	}
 	return d, nil
+}
+
+func (d InsertData) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+	sche, err := findSchema(d.table)
+	if err != nil {
+		return nil
+	}
+	placeholders := make(map[int]schema.FieldType)
+	for i, v := range d.values {
+		if p, ok := v.(schema.Placeholder); ok {
+			placeholders[int(p)] = sche.Typ(d.fields[i])
+		}
+	}
+	return placeholders
+}
+
+func (d InsertData) SwapParams(params map[int]query.Expression) (plan.Bound, error) {
+	values := make([]schema.Constant, len(d.values))
+	for i, v := range d.values {
+		if p, ok := v.(schema.Placeholder); ok {
+			val, ok := params[int(p)]
+			if !ok {
+				return nil, fmt.Errorf("missing parameter: %d", p)
+			}
+			values[i] = val
+		} else {
+			values[i] = v
+		}
+	}
+	return &BoundInsertData{
+		InsertData{
+			table:  d.table,
+			fields: d.fields,
+			values: values,
+		},
+	}, nil
 }
 
 type QueryData struct {
