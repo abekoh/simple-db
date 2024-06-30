@@ -515,7 +515,11 @@ func (d ModifyData) SwapParams(params map[int]schema.Constant) (statement.Bound,
 		if !ok {
 			return nil, fmt.Errorf("missing parameter: %d", p)
 		}
-		value = val
+		e, ok := val.(query.Expression)
+		if !ok {
+			return nil, fmt.Errorf("parameter is not an expression: %v", val)
+		}
+		value = e
 	} else {
 		value = d.value
 	}
