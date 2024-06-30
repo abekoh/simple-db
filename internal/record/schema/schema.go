@@ -160,3 +160,16 @@ func (v ConstantStr) Evaluate(Valuable) (Constant, error) {
 type Valuable interface {
 	Val(fieldName FieldName) (Constant, error)
 }
+
+type Placeholder struct {
+	index     int
+	fieldType FieldType
+}
+
+func (p Placeholder) String() string {
+	return fmt.Sprintf("$%d", p.index)
+}
+
+func (p Placeholder) Val() any {
+	panic("don't use placeholder as value")
+}
