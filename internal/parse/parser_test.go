@@ -19,12 +19,12 @@ func TestParser_Query(t *testing.T) {
 			name: "SELECT full",
 			s:    "SELECT a, b, c FROM mytable WHERE a = 1 AND b = 'foo' AND c = $1",
 			want: &QueryData{
-				fields: []schema.FieldName{"a", "b"},
+				fields: []schema.FieldName{"a", "b", "c"},
 				tables: []string{"mytable"},
 				pred: query.Predicate{
 					query.NewTerm(schema.FieldName("a"), schema.ConstantInt32(1)),
 					query.NewTerm(schema.FieldName("b"), schema.ConstantStr("foo")),
-					query.NewTerm(schema.FieldName("b"), schema.Placeholder(1)),
+					query.NewTerm(schema.FieldName("c"), schema.Placeholder(1)),
 				},
 			},
 			wantErr: false,

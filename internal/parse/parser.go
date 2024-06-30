@@ -147,6 +147,12 @@ func (p *Parser) expression() (query.Expression, token, error) {
 		return schema.ConstantInt32(i), tok, nil
 	case stringTok:
 		return schema.ConstantStr(tok.literal), tok, nil
+	case placeholder:
+		i, err := strconv.Atoi(tok.literal[1:])
+		if err != nil {
+			return nil, tok, fmt.Errorf("failed to parse number: %w", err)
+		}
+		return schema.Placeholder(i), tok, nil
 	}
 	return nil, tok, fmt.Errorf("unexpected token %s", tok.literal)
 }
@@ -162,6 +168,12 @@ func (p *Parser) constant() (schema.Constant, token, error) {
 		return schema.ConstantInt32(i), tok, nil
 	case stringTok:
 		return schema.ConstantStr(tok.literal), tok, nil
+	case placeholder:
+		i, err := strconv.Atoi(tok.literal[1:])
+		if err != nil {
+			return nil, tok, fmt.Errorf("failed to parse number: %w", err)
+		}
+		return schema.Placeholder(i), tok, nil
 	}
 	return nil, tok, fmt.Errorf("unexpected token %s", tok.literal)
 }
