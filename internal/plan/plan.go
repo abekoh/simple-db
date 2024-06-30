@@ -16,7 +16,7 @@ type Result interface {
 }
 
 type Prepared interface {
-	Placeholders() map[int]schema.FieldType
+	Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType
 	SwapParams(params map[int]query.Expression) (Bound, error)
 }
 
@@ -108,7 +108,7 @@ func (t TablePlan) String() string {
 	return fmt.Sprintf("Table{%s}", t.tableName)
 }
 
-func (t TablePlan) Placeholders() map[int]schema.FieldType {
+func (t TablePlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
 	return nil
 }
 
@@ -168,9 +168,9 @@ func (p ProductPlan) String() string {
 	return fmt.Sprintf("Product(%v, %v)", p.p1, p.p2)
 }
 
-func (p ProductPlan) Placeholders() map[int]schema.FieldType {
-	placeholders := p.p1.Placeholders()
-	for k, v := range p.p2.Placeholders() {
+func (p ProductPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+	placeholders := p.p1.Placeholders(findSchema)
+	for k, v := range p.p2.Placeholders(findSchema) {
 		placeholders[k] = v
 	}
 	return placeholders
@@ -248,7 +248,7 @@ func (s SelectPlan) String() string {
 	return fmt.Sprintf("Select{%s}(%v)", s.pred, s.p)
 }
 
-func (s SelectPlan) Placeholders() map[int]schema.FieldType {
+func (s SelectPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
 	placeholders := make(map[int]schema.FieldType)
 	for _, t := range s.pred {
 		lhs, rhs := t.Expressions()
@@ -328,8 +328,8 @@ func (p ProjectPlan) String() string {
 	return fmt.Sprintf("Project{%s}(%v)", strings.Join(fieldNames, ","), p.p)
 }
 
-func (p ProjectPlan) Placeholders() map[int]schema.FieldType {
-	return p.p.Placeholders()
+func (p ProjectPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+	return p.p.Placeholders(findSchema)
 }
 
 func (p ProjectPlan) SwapParams(params map[int]query.Expression) (Bound, error) {
