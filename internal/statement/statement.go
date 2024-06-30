@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
 )
 
@@ -77,7 +76,7 @@ func replaceStmt(s string) (int, string) {
 
 type Prepared interface {
 	Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType
-	SwapParams(params map[int]query.Expression) (Bound, error)
+	SwapParams(params map[int]schema.Constant) (Bound, error)
 }
 
 type Bound interface {

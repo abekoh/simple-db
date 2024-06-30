@@ -88,7 +88,7 @@ func (p *Planner) BindAndExecute(pre statement.Prepared, rawParams map[int]any, 
 		}
 		return l.Schema(), nil
 	})
-	params := make(map[int]query.Expression)
+	params := make(map[int]schema.Constant)
 	for k, v := range rawParams {
 		fieldType, ok := placeholders[k]
 		if !ok {

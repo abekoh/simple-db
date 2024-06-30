@@ -122,14 +122,18 @@ func NewPredicate(terms ...Term) Predicate {
 	return terms
 }
 
-func (p Predicate) SwapParams(params map[int]Expression) (Predicate, error) {
+func (p Predicate) SwapParams(params map[int]schema.Constant) (Predicate, error) {
 	swapExpression := func(expr Expression) (Expression, error) {
 		if placeholder, ok := expr.(schema.Placeholder); ok {
 			val, ok := params[int(placeholder)]
 			if !ok {
 				return nil, fmt.Errorf("missing parameter: %d", placeholder)
 			}
-			return val, nil
+			e, err := val.(Expression)
+			if !err {
+				return nil, fmt.Errorf("parameter is not an expression: %v", val)
+			}
+			return e, nil
 		}
 		return expr, nil
 	}
