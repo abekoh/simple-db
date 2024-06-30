@@ -58,19 +58,14 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("empty statement name")
 				break
 			}
-			b.db.StmtMgr().Add(m.Name, m.Query)
+			// TODO: prepare
 			buf, err = (&pgproto3.ParseComplete{}).Encode(buf)
 			if err != nil {
 				err = fmt.Errorf("error encoding parse complete: %w", err)
 				break
 			}
 		case *pgproto3.Bind:
-			bound, err := b.db.StmtMgr().Bind(m.PreparedStatement, m.Parameters...)
-			if err != nil {
-				err = fmt.Errorf("error binding statement: %w", err)
-				break
-			}
-			cachedQuery = bound
+			cachedQuery = "" // TODO
 			buf, err = (&pgproto3.BindComplete{}).Encode(buf)
 			if err != nil {
 				err = fmt.Errorf("error encoding bind complete: %w", err)
@@ -85,13 +80,20 @@ func (b *Backend) Run() error {
 				}
 				continue
 			}
-			stmt, err := b.db.StmtMgr().Get(m.Name)
+			prepared, err := b.db.StmtMgr().Get(m.Name)
 			if err != nil {
 				err = fmt.Errorf("error getting statement: %w", err)
 				break
 			}
-			paramOIDs := make([]uint32, len(stmt.FieldTypes))
-			for i, fieldType := range stmt.FieldTypes {
+			placeholders := prepared.Placeholders(func(tableName string) (*schema.Schema, error) {
+				l, err := b.db.MetadataMgr().Layout(tableName, nil) // TODO
+				if err != nil {
+					return nil, fmt.Errorf("layout error: %w", err)
+				}
+				return l.Schema(), nil
+			})
+			paramOIDs := make([]uint32, len(placeholders))
+			for i, fieldType := range placeholders {
 				switch fieldType {
 				case schema.Integer32:
 					paramOIDs[i] = pgtype.Int4OID
