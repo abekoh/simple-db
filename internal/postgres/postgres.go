@@ -126,8 +126,13 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("error getting statement: %w", err)
 				break
 			}
+			tx, err := b.db.NewTx(context.Background())
+			if err != nil {
+				err = fmt.Errorf("error creating new transaction: %w", err)
+				break
+			}
 			placeholders := prepared.Placeholders(func(tableName string) (*schema.Schema, error) {
-				l, err := b.db.MetadataMgr().Layout(tableName, nil) // TODO
+				l, err := b.db.MetadataMgr().Layout(tableName, tx)
 				if err != nil {
 					return nil, fmt.Errorf("layout error: %w", err)
 				}
