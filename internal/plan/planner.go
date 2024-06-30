@@ -24,12 +24,13 @@ type UpdatePlanner interface {
 }
 
 type Planner struct {
-	qp QueryPlanner
-	up UpdatePlanner
+	qp  QueryPlanner
+	up  UpdatePlanner
+	mdm *metadata.Manager
 }
 
-func NewPlanner(qp QueryPlanner, up UpdatePlanner) *Planner {
-	return &Planner{qp: qp, up: up}
+func NewPlanner(qp QueryPlanner, up UpdatePlanner, mdm *metadata.Manager) *Planner {
+	return &Planner{qp: qp, up: up, mdm: mdm}
 }
 
 func (p *Planner) Execute(q string, tx *transaction.Transaction) (Result, error) {
@@ -79,7 +80,13 @@ func (p *Planner) Prepare(q string, tx *transaction.Transaction) (Prepared, erro
 }
 
 func (p *Planner) BindAndExecute(pre Prepared, rawParams map[int]any, tx *transaction.Transaction) (Result, error) {
-	placeholders := pre.Placeholders()
+	placeholders := pre.Placeholders(func(tableName string) (*schema.Schema, error) {
+		l, err := p.mdm.Layout(tableName, tx)
+		if err != nil {
+			return nil, fmt.Errorf("layout error: %w", err)
+		}
+		return l.Schema(), nil
+	})
 	params := make(map[int]query.Expression)
 	for k, v := range rawParams {
 		fieldType, ok := placeholders[k]
