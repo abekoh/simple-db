@@ -166,6 +166,10 @@ type Placeholder struct {
 	fieldType FieldType
 }
 
+func NewPlaceholder(index int, fieldType FieldType) Placeholder {
+	return Placeholder{index: index, fieldType: fieldType}
+}
+
 func (p Placeholder) String() string {
 	return fmt.Sprintf("$%d", p.index)
 }
