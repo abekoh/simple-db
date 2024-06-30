@@ -9,6 +9,7 @@ import (
 	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/simpledb"
+	"github.com/abekoh/simple-db/internal/statement"
 	"github.com/abekoh/simple-db/internal/transaction"
 	"github.com/jackc/pgx/v5/pgproto3"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -59,7 +60,6 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("empty statement name")
 				break
 			}
-			// TODO: prepare
 			buf, err = (&pgproto3.ParseComplete{}).Encode(buf)
 			if err != nil {
 				err = fmt.Errorf("error encoding parse complete: %w", err)
@@ -193,6 +193,18 @@ func (b *Backend) handleStartup() error {
 }
 
 func (b *Backend) handleQuery(buf []byte, query string, tx *transaction.Transaction) ([]byte, error) {
+	return b.execute(buf, func() (plan.Result, error) {
+		return b.db.Planner().Execute(query, tx)
+	}, tx)
+}
+
+func (b *Backend) handlePrepared(buf []byte, prepared statement.Prepared, rawParams map[int]any, tx *transaction.Transaction) ([]byte, error) {
+	return b.execute(buf, func() (plan.Result, error) {
+		return b.db.Planner().BindAndExecute(prepared, rawParams, tx)
+	}, tx)
+}
+
+func (b *Backend) execute(buf []byte, exec func() (plan.Result, error), tx *transaction.Transaction) ([]byte, error) {
 	oneQueryTx := false
 	if tx == nil {
 		ctx := context.Background()
@@ -205,7 +217,7 @@ func (b *Backend) handleQuery(buf []byte, query string, tx *transaction.Transact
 		oneQueryTx = true
 	}
 
-	res, err := b.db.Planner().Execute(query, tx)
+	res, err := exec()
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
 	}
