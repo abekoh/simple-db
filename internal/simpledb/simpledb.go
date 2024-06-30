@@ -64,6 +64,7 @@ func New(ctx context.Context, dirname string) (*DB, error) {
 	db.planner = plan.NewPlanner(
 		plan.NewBasicQueryPlanner(metadataMgr),
 		plan.NewBasicUpdatePlanner(metadataMgr),
+		metadataMgr,
 	)
 	db.stmtMgr = statement.NewManager()
 	if err := tx.Commit(); err != nil {

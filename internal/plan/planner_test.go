@@ -30,7 +30,7 @@ func TestBasicQueryPlanner(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), nil)
+	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), nil, db.MetadataMgr())
 	plan, err := planner.Execute(`SELECT a, b FROM mytable WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestBasicQueryPlanner_Prepared(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), nil)
+	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), nil, db.MetadataMgr())
 	prepared, err := planner.Prepare(`SELECT a, b FROM mytable WHERE a = $1 AND b = $2`, tx)
 	if err != nil {
 		t.Fatal(err)
@@ -89,7 +89,7 @@ func TestBasicUpdatePlanner_ExecuteCreateTable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
+	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()), db.MetadataMgr())
 	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +119,7 @@ func TestBasicUpdatePlanner_ExecuteCreateView(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
+	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()), db.MetadataMgr())
 	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +153,7 @@ func TestBasicUpdatePlanner_ExecuteCreateIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()))
+	planner := NewPlanner(nil, NewBasicUpdatePlanner(db.MetadataMgr()), db.MetadataMgr())
 	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
@@ -191,7 +191,7 @@ func TestBasicUpdatePlanner_ExecuteInsert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()))
+	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()), db.MetadataMgr())
 	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
@@ -250,7 +250,7 @@ func TestBasicUpdatePlanner_ExecuteUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()))
+	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()), db.MetadataMgr())
 	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
@@ -316,7 +316,7 @@ func TestBasicUpdatePlanner_ExecuteDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()))
+	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), NewBasicUpdatePlanner(db.MetadataMgr()), db.MetadataMgr())
 	_, err = planner.Execute(`CREATE TABLE mytable (a INT, b VARCHAR(9))`, tx)
 	if err != nil {
 		t.Fatal(err)
