@@ -78,6 +78,8 @@ func (p *Planner) Prepare(q string, tx *transaction.Transaction) (statement.Prep
 		return r, err
 	case *parse.InsertData:
 		return c, nil
+	case *parse.ModifyData:
+		return c, nil
 	}
 	return nil, fmt.Errorf("unknown command type %v", d)
 }
@@ -115,6 +117,9 @@ func (p *Planner) BindAndExecute(pre statement.Prepared, rawParams map[int]any, 
 	case *parse.BoundInsertData:
 		r, err := p.up.ExecuteInsert(&b.InsertData, tx)
 		return CommandResult{Type: Insert, Count: r}, err
+	case *parse.BoundModifyData:
+		r, err := p.up.ExecuteModify(&b.ModifyData, tx)
+		return CommandResult{Type: Update, Count: r}, err
 	}
 	return nil, fmt.Errorf("unknown bound type %v", bound)
 }
