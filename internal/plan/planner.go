@@ -110,6 +110,9 @@ func (p *Planner) BindAndExecute(pre statement.Prepared, rawParams map[int]any, 
 	switch b := bound.(type) {
 	case Plan:
 		return b, nil
+	case *parse.BoundInsertData:
+		r, err := p.up.ExecuteInsert(&b.InsertData, tx)
+		return CommandResult{Type: Insert, Count: r}, err
 	}
 	return nil, fmt.Errorf("unknown bound type %v", bound)
 }
