@@ -11,6 +11,7 @@ import (
 	"github.com/abekoh/simple-db/internal/simpledb"
 	"github.com/abekoh/simple-db/internal/statement"
 	"github.com/abekoh/simple-db/internal/transaction"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgproto3"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -87,8 +88,20 @@ func (b *Backend) Run() error {
 				break
 			}
 			params := make(map[int]schema.Constant)
-			//for i, v := range m.Parameters {
-			//}
+			for i, v := range m.Parameters {
+				format := m.ParameterFormatCodes[i]
+				switch format {
+				case pgx.TextFormatCode:
+					params[i] = schema.ConstantStr(v)
+				case pgx.BinaryFormatCode:
+					n, err := strconv.Atoi(string(v))
+					if err != nil {
+						err = fmt.Errorf("error converting binary parameter: %w", err)
+						break
+					}
+					params[i] = schema.ConstantInt32(int32(n))
+				}
+			}
 			bound, err = prepared.SwapParams(params)
 			if err != nil {
 				err = fmt.Errorf("error swapping params: %w", err)
