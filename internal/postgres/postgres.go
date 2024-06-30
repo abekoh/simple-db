@@ -233,18 +233,18 @@ func (b *Backend) handleStartup() error {
 }
 
 func (b *Backend) handleQuery(buf []byte, query string, tx *transaction.Transaction) ([]byte, error) {
-	return b.execute(buf, func() (plan.Result, error) {
-		return b.db.Planner().Execute(query, tx)
+	return b.execute(buf, func(t *transaction.Transaction) (plan.Result, error) {
+		return b.db.Planner().Execute(query, t)
 	}, tx)
 }
 
 func (b *Backend) handleBound(buf []byte, bound statement.Bound, tx *transaction.Transaction) ([]byte, error) {
-	return b.execute(buf, func() (plan.Result, error) {
-		return b.db.Planner().ExecuteBound(bound, tx)
+	return b.execute(buf, func(t *transaction.Transaction) (plan.Result, error) {
+		return b.db.Planner().ExecuteBound(bound, t)
 	}, tx)
 }
 
-func (b *Backend) execute(buf []byte, exec func() (plan.Result, error), tx *transaction.Transaction) ([]byte, error) {
+func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (plan.Result, error), tx *transaction.Transaction) ([]byte, error) {
 	oneQueryTx := false
 	if tx == nil {
 		ctx := context.Background()
@@ -257,7 +257,7 @@ func (b *Backend) execute(buf []byte, exec func() (plan.Result, error), tx *tran
 		oneQueryTx = true
 	}
 
-	res, err := exec()
+	res, err := exec(tx)
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %w", err)
 	}

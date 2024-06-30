@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func TestPostgres(t *testing.T) {
@@ -22,7 +21,7 @@ func TestPostgres(t *testing.T) {
 		}
 	}()
 
-	pgCfg, err := pgx.ParseConfig("postgres://postgres@127.0.0.1:5432/postgres")
+	pgCfg, err := pgx.ParseConfig("postgres://postgres@127.0.0.1:54329/postgres")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,15 +31,15 @@ func TestPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//tag, err := conn.Exec(ctx, "CREATE TABLE mytable (id INT, name VARCHAR(10))")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//if tag.String() != "CREATE TABLE" {
-	//	t.Errorf("unexpected tag: %s", tag)
-	//}
+	tag, err := conn.Exec(ctx, "CREATE TABLE mytable (id INT, name VARCHAR(10))")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag.String() != "CREATE TABLE" {
+		t.Errorf("unexpected tag: %s", tag)
+	}
 
-	var tag pgconn.CommandTag
+	//var tag pgconn.CommandTag
 	for _, args := range [][]any{
 		{1, "foo"},
 		{2, "bar"},
