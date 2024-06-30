@@ -63,6 +63,24 @@ func (p *Planner) Execute(q string, tx *transaction.Transaction) (Result, error)
 	return nil, fmt.Errorf("unknown command type %v", d)
 }
 
+func (p *Planner) Prepare(q string, tx *transaction.Transaction) (Prepared, error) {
+	ps := parse.NewParser(q)
+	d, err := ps.ToData()
+	if err != nil {
+		return nil, fmt.Errorf("parse error: %w", err)
+	}
+	switch c := d.(type) {
+	case *parse.QueryData:
+		r, err := p.qp.CreatePlan(c, tx)
+		return r, err
+	}
+	return nil, fmt.Errorf("unknown command type %v", d)
+}
+
+func (p *Planner) BindAndExecute(q string, pre Prepared, tx *transaction.Transaction) (Prepared, error) {
+	panic("implement me")
+}
+
 type BasicQueryPlanner struct {
 	mdm *metadata.Manager
 }
