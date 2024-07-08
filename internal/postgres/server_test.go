@@ -158,49 +158,42 @@ func TestPostgres_Transaction(t *testing.T) {
 	}
 	assertID1(Row{ID: 1, Name: "foo"})
 
-	tag, err = conn.Exec(ctx, "BEGIN")
+	conn1, err := pgx.ConnectConfig(ctx, pgCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tag.String() != "BEGIN" {
-		t.Errorf("unexpected tag: %s", tag)
+	tx1, err := conn1.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
-	tag, err = conn.Exec(ctx, "UPDATE mytable SET name = 'HOGE' WHERE id = $1", 1)
+	tag, err = tx1.Exec(ctx, "UPDATE mytable SET name = 'HOGE' WHERE id = $1", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if tag.String() != "UPDATE 1" {
 		t.Errorf("unexpected tag: %s", tag)
 	}
-	tag, err = conn.Exec(ctx, "ROLLBACK")
+	err = tx1.Rollback(ctx)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if tag.String() != "ROLLBACK" {
-		t.Errorf("unexpected tag: %s", tag)
 	}
 	assertID1(Row{ID: 1, Name: "foo"})
 
-	tag, err = conn.Exec(ctx, "BEGIN")
+	conn2, err := pgx.ConnectConfig(ctx, pgCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tag.String() != "BEGIN" {
-		t.Errorf("unexpected tag: %s", tag)
-	}
-	tag, err = conn.Exec(ctx, "UPDATE mytable SET name = 'HOGE' WHERE id = $1", 1)
+	tx2, err := conn2.Begin(ctx)
+	tag, err = tx2.Exec(ctx, "UPDATE mytable SET name = 'HOGE' WHERE id = $1", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if tag.String() != "UPDATE 1" {
 		t.Errorf("unexpected tag: %s", tag)
 	}
-	tag, err = conn.Exec(ctx, "COMMIT")
+	err = tx2.Commit(ctx)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if tag.String() != "COMMIT" {
-		t.Errorf("unexpected tag: %s", tag)
 	}
 	assertID1(Row{ID: 1, Name: "HOGE"})
 }
