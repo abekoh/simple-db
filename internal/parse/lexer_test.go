@@ -107,6 +107,27 @@ func TestLexer(t *testing.T) {
 				{typ: eof, literal: ""},
 			},
 		},
+		{
+			input: `BEGIN`,
+			want: []token{
+				{typ: begin, literal: "BEGIN"},
+				{typ: eof, literal: ""},
+			},
+		},
+		{
+			input: `COMMIT`,
+			want: []token{
+				{typ: commit, literal: "COMMIT"},
+				{typ: eof, literal: ""},
+			},
+		},
+		{
+			input: `ROLLBACK`,
+			want: []token{
+				{typ: rollback, literal: "ROLLBACK"},
+				{typ: eof, literal: ""},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {

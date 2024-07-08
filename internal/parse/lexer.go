@@ -29,6 +29,9 @@ const (
 	index       tokenType = "INDEX"
 	on          tokenType = "ON"
 	placeholder tokenType = "PLACEHOLDER"
+	begin       tokenType = "BEGIN"
+	commit      tokenType = "COMMIT"
+	rollback    tokenType = "ROLLBACK"
 
 	number    tokenType = "NUMBER"
 	stringTok tokenType = "STRING"
@@ -62,6 +65,9 @@ var keywords = map[tokenType]struct{}{
 	as:        {},
 	index:     {},
 	on:        {},
+	begin:     {},
+	commit:    {},
+	rollback:  {},
 }
 
 func lookupToken(ident string) tokenType {
