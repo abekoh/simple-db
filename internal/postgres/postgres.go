@@ -38,7 +38,10 @@ func (b *Backend) Run() error {
 		return fmt.Errorf("error handling startup: %w", err)
 	}
 
-	var bound statement.Bound
+	var (
+		bound statement.Bound
+		tx    *transaction.Transaction
+	)
 	for {
 		readyForQuery := false
 		msg, err := b.backend.Receive()
@@ -50,7 +53,7 @@ func (b *Backend) Run() error {
 		var buf []byte
 		switch m := msg.(type) {
 		case *pgproto3.Query:
-			buf, err = b.handleQuery(buf, m.String, nil)
+			buf, tx, err = b.handleQuery(buf, m.String, tx)
 			if err != nil {
 				err = fmt.Errorf("error handling query: %w", err)
 				break
@@ -169,7 +172,7 @@ func (b *Backend) Run() error {
 				err = fmt.Errorf("no query to execute")
 				break
 			}
-			buf, err = b.handleBound(buf, bound, nil)
+			buf, tx, err = b.handleBound(buf, bound, tx)
 			if err != nil {
 				err = fmt.Errorf("error handling query: %w", err)
 				break
@@ -240,40 +243,40 @@ func (b *Backend) handleStartup() error {
 	return nil
 }
 
-func (b *Backend) handleQuery(buf []byte, query string, tx *transaction.Transaction) ([]byte, error) {
+func (b *Backend) handleQuery(buf []byte, query string, tx *transaction.Transaction) ([]byte, *transaction.Transaction, error) {
 	return b.execute(buf, func(t *transaction.Transaction) (plan.Result, error) {
 		return b.db.Planner().Execute(query, t)
 	}, tx)
 }
 
-func (b *Backend) handleBound(buf []byte, bound statement.Bound, tx *transaction.Transaction) ([]byte, error) {
+func (b *Backend) handleBound(buf []byte, bound statement.Bound, tx *transaction.Transaction) ([]byte, *transaction.Transaction, error) {
 	return b.execute(buf, func(t *transaction.Transaction) (plan.Result, error) {
 		return b.db.Planner().ExecuteBound(bound, t)
 	}, tx)
 }
 
-func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (plan.Result, error), tx *transaction.Transaction) ([]byte, error) {
-	oneQueryTx := false
+func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (plan.Result, error), tx *transaction.Transaction) ([]byte, *transaction.Transaction, error) {
+	oneQueryTx := tx == nil
+
 	if tx == nil {
 		ctx := context.Background()
 		x, err := b.db.NewTx(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("error creating new transaction: %w", err)
+			return nil, nil, fmt.Errorf("error creating new transaction: %w", err)
 		}
-		defer x.Rollback()
 		tx = x
-		oneQueryTx = true
 	}
+
+	defer func() {
+		if oneQueryTx && tx != nil {
+			tx.Rollback()
+			tx = nil
+		}
+	}()
 
 	res, err := exec(tx)
 	if err != nil {
-		return nil, fmt.Errorf("error executing query: %w", err)
-	}
-
-	if oneQueryTx {
-		if err := tx.Commit(); err != nil {
-			return nil, fmt.Errorf("error committing transaction: %w", err)
-		}
+		return nil, nil, fmt.Errorf("error executing query: %w", err)
 	}
 
 	switch r := res.(type) {
@@ -292,7 +295,7 @@ func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (pla
 				dataTypeOID = pgtype.TextOID
 				dataTypeSize = -1
 			default:
-				return nil, fmt.Errorf("unsupported field type: %v", sche.Typ(fieldName))
+				return nil, nil, fmt.Errorf("unsupported field type: %v", sche.Typ(fieldName))
 			}
 			fields[i] = pgproto3.FieldDescription{
 				Name:                 []byte(fieldName),
@@ -306,19 +309,19 @@ func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (pla
 		}
 		buf, err = (&pgproto3.RowDescription{Fields: fields}).Encode(buf)
 		if err != nil {
-			return nil, fmt.Errorf("error encoding row description: %w", err)
+			return nil, nil, fmt.Errorf("error encoding row description: %w", err)
 		}
 
 		scan, err := r.Open()
 		if err != nil {
-			return nil, fmt.Errorf("error opening plan: %w", err)
+			return nil, nil, fmt.Errorf("error opening plan: %w", err)
 		}
 		defer scan.Close()
 		count := 0
 		for {
 			ok, err := scan.Next()
 			if err != nil {
-				return nil, fmt.Errorf("error scanning: %w", err)
+				return nil, nil, fmt.Errorf("error scanning: %w", err)
 			}
 			if !ok {
 				break
@@ -327,7 +330,7 @@ func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (pla
 			for i, fieldName := range fieldNames {
 				val, err := scan.Val(fieldName)
 				if err != nil {
-					return nil, fmt.Errorf("error getting value: %w", err)
+					return nil, nil, fmt.Errorf("error getting value: %w", err)
 				}
 				var row []byte
 				switch v := val.(type) {
@@ -340,13 +343,13 @@ func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (pla
 			}
 			buf, err = (&pgproto3.DataRow{Values: values}).Encode(buf)
 			if err != nil {
-				return nil, fmt.Errorf("error encoding data row: %w", err)
+				return nil, nil, fmt.Errorf("error encoding data row: %w", err)
 			}
 			count++
 		}
 		buf, err = (&pgproto3.CommandComplete{CommandTag: []byte(fmt.Sprintf("SELECT %d", count))}).Encode(buf)
 		if err != nil {
-			return nil, fmt.Errorf("error encoding command complete: %w", err)
+			return nil, nil, fmt.Errorf("error encoding command complete: %w", err)
 		}
 	case plan.CommandResult:
 		var commandTag []byte
@@ -363,13 +366,38 @@ func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (pla
 			commandTag = []byte(fmt.Sprintf("SELECT %d", r.Count))
 		case plan.CreateIndex:
 			commandTag = []byte(fmt.Sprintf("SELECT %d", r.Count))
+		case plan.Begin:
+			commandTag = []byte("BEGIN")
+			oneQueryTx = false
+		case plan.Commit:
+			commandTag = []byte("COMMIT")
+			if err := tx.Commit(); err != nil {
+				return nil, nil, fmt.Errorf("error committing transaction: %w", err)
+			}
+			tx = nil
+			oneQueryTx = false
+		case plan.Rollback:
+			commandTag = []byte("ROLLBACK")
+			if err := tx.Rollback(); err != nil {
+				return nil, nil, fmt.Errorf("error rolling back transaction: %w", err)
+			}
+			tx = nil
+			oneQueryTx = false
 		}
 		buf, err = (&pgproto3.CommandComplete{CommandTag: commandTag}).Encode(buf)
 		if err != nil {
-			return nil, fmt.Errorf("error encoding command complete: %w", err)
+			return nil, nil, fmt.Errorf("error encoding command complete: %w", err)
 		}
 	default:
-		return nil, fmt.Errorf("unknown result type: %#v", res)
+		return nil, nil, fmt.Errorf("unknown result type: %#v", res)
 	}
-	return buf, nil
+
+	if oneQueryTx {
+		if err := tx.Commit(); err != nil {
+			return nil, nil, fmt.Errorf("error committing transaction: %w", err)
+		}
+		tx = nil
+	}
+
+	return buf, tx, nil
 }

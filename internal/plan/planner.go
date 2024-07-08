@@ -41,6 +41,12 @@ func (p *Planner) Execute(q string, tx *transaction.Transaction) (Result, error)
 		return nil, fmt.Errorf("parse error: %w", err)
 	}
 	switch c := d.(type) {
+	case *parse.BeginData:
+		return CommandResult{Type: Begin}, nil
+	case *parse.CommitData:
+		return CommandResult{Type: Commit}, nil
+	case *parse.RollbackData:
+		return CommandResult{Type: Rollback}, nil
 	case *parse.QueryData:
 		r, err := p.qp.CreatePlan(c, tx)
 		return r, err

@@ -769,6 +769,12 @@ func (p *Parser) CreateIndex() (*CreateIndexData, error) {
 func (p *Parser) ToData() (Data, error) {
 	tok := p.lexer.NextToken()
 	switch tok.typ {
+	case begin:
+		return &BeginData{}, nil
+	case rollback:
+		return &RollbackData{}, nil
+	case commit:
+		return &CommitData{}, nil
 	case selectTok:
 		p.lexer.Reset()
 		return p.Query()
@@ -797,3 +803,15 @@ func (p *Parser) ToData() (Data, error) {
 	}
 	return nil, fmt.Errorf("unexpected token %s", tok.literal)
 }
+
+type BeginData struct{}
+
+func (BeginData) Data() {}
+
+type CommitData struct{}
+
+func (CommitData) Data() {}
+
+type RollbackData struct{}
+
+func (RollbackData) Data() {}

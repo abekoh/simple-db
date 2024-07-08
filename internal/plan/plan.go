@@ -32,6 +32,9 @@ const (
 	CreateTable
 	CreateView
 	CreateIndex
+	Begin
+	Commit
+	Rollback
 )
 
 type Plan interface {
