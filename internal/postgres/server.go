@@ -25,6 +25,10 @@ func RunServer(ctx context.Context, cfg Config) error {
 		return fmt.Errorf("could not listen on %s: %w", address, err)
 	}
 	slog.InfoContext(ctx, "Listening", "addr", listen.Addr())
+	go func() {
+		<-ctx.Done()
+		listen.Close()
+	}()
 
 	dir := cfg.Dir
 	if dir == "" {

@@ -5,27 +5,26 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/abekoh/simple-db/internal/transaction"
 	"github.com/jackc/pgx/v5"
 )
 
 func TestPostgres(t *testing.T) {
+	transaction.CleanupLockTable(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Cleanup(cancel)
 	cfg := Config{
 		Dir:     t.TempDir(),
 		Address: "127.0.0.1:54329",
 	}
 	go func() {
-		if err := RunServer(ctx, cfg); err != nil {
-			t.Error(err)
-		}
+		_ = RunServer(ctx, cfg)
 	}()
 
 	pgCfg, err := pgx.ParseConfig("postgres://postgres@127.0.0.1:54329/postgres")
 	if err != nil {
 		t.Fatal(err)
 	}
-	//pgCfg.DefaultQueryExecMode = pgx.QueryExecModeExec
 	conn, err := pgx.ConnectConfig(ctx, pgCfg)
 	if err != nil {
 		t.Fatal(err)
@@ -39,7 +38,6 @@ func TestPostgres(t *testing.T) {
 		t.Errorf("unexpected tag: %s", tag)
 	}
 
-	//var tag pgconn.CommandTag
 	for _, args := range [][]any{
 		{1, "foo"},
 		{2, "bar"},
@@ -105,4 +103,104 @@ func TestPostgres(t *testing.T) {
 	if !reflect.DeepEqual(queryRow, Row{ID: 3, Name: "HOGE"}) {
 		t.Errorf("unexpected row: %v", queryRow)
 	}
+}
+
+func TestPostgres_Transaction(t *testing.T) {
+	transaction.CleanupLockTable(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	cfg := Config{
+		Dir:     t.TempDir(),
+		Address: "127.0.0.1:54329",
+	}
+	go func() {
+		_ = RunServer(ctx, cfg)
+	}()
+
+	pgCfg, err := pgx.ParseConfig("postgres://postgres@127.0.0.1:54329/postgres")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, err := pgx.ConnectConfig(ctx, pgCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tag, err := conn.Exec(ctx, "CREATE TABLE mytable (id INT, name VARCHAR(10))")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag.String() != "CREATE TABLE" {
+		t.Errorf("unexpected tag: %s", tag)
+	}
+
+	type Row struct {
+		ID   int32
+		Name string
+	}
+
+	assertID1 := func(expected Row) {
+		var queryRow Row
+		if err := conn.QueryRow(ctx, "SELECT id, name FROM mytable WHERE id = $1", 1).Scan(&queryRow.ID, &queryRow.Name); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(queryRow, expected) {
+			t.Errorf("unexpected row: %v", queryRow)
+		}
+	}
+
+	tag, err = conn.Exec(ctx, "INSERT INTO mytable (id, name) VALUES ($1, $2)", 1, "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag.String() != "INSERT 0 1" {
+		t.Errorf("unexpected tag: %s", tag)
+	}
+	assertID1(Row{ID: 1, Name: "foo"})
+
+	tag, err = conn.Exec(ctx, "BEGIN")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag.String() != "BEGIN" {
+		t.Errorf("unexpected tag: %s", tag)
+	}
+	tag, err = conn.Exec(ctx, "UPDATE mytable SET name = 'HOGE' WHERE id = $1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag.String() != "UPDATE 1" {
+		t.Errorf("unexpected tag: %s", tag)
+	}
+	tag, err = conn.Exec(ctx, "ROLLBACK")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag.String() != "ROLLBACK" {
+		t.Errorf("unexpected tag: %s", tag)
+	}
+	assertID1(Row{ID: 1, Name: "foo"})
+
+	tag, err = conn.Exec(ctx, "BEGIN")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag.String() != "BEGIN" {
+		t.Errorf("unexpected tag: %s", tag)
+	}
+	tag, err = conn.Exec(ctx, "UPDATE mytable SET name = 'HOGE' WHERE id = $1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag.String() != "UPDATE 1" {
+		t.Errorf("unexpected tag: %s", tag)
+	}
+	tag, err = conn.Exec(ctx, "COMMIT")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag.String() != "COMMIT" {
+		t.Errorf("unexpected tag: %s", tag)
+	}
+	assertID1(Row{ID: 1, Name: "HOGE"})
 }
