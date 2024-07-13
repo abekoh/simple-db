@@ -198,14 +198,11 @@ func (s SelectScan) BeforeFirst() error {
 }
 
 func (s SelectScan) Next() (bool, error) {
-	for {
-		ok, err := s.idx.Next()
-		if err != nil {
-			return false, fmt.Errorf("index.Next error: %w", err)
-		}
-		if !ok {
-			return false, nil
-		}
+	ok, err := s.idx.Next()
+	if err != nil {
+		return false, fmt.Errorf("index.Next error: %w", err)
+	}
+	if ok {
 		rid, err := s.idx.DataRID()
 		if err != nil {
 			return false, fmt.Errorf("index.DataRID error: %w", err)
@@ -214,6 +211,7 @@ func (s SelectScan) Next() (bool, error) {
 			return false, fmt.Errorf("tableScan.MoveToRID error: %w", err)
 		}
 	}
+	return ok, nil
 }
 
 func (s SelectScan) Int32(fieldName schema.FieldName) (int32, error) {
