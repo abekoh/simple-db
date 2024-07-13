@@ -8,14 +8,17 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
-type Index interface {
-	BeforeFirst(searchKey schema.Constant) error
-	Next() (bool, error)
-	DataRID() (schema.RID, error)
-	Insert(dataVal schema.Constant, dataRID schema.RID) error
-	Delete(dataVal schema.Constant, dataRID schema.RID) error
-	Close() error
-}
+type (
+	Index interface {
+		BeforeFirst(searchKey schema.Constant) error
+		Next() (bool, error)
+		DataRID() (schema.RID, error)
+		Insert(dataVal schema.Constant, dataRID schema.RID) error
+		Delete(dataVal schema.Constant, dataRID schema.RID) error
+		Close() error
+	}
+	Initializer = func(tx *transaction.Transaction, idxName string, layout *record.Layout) Index
+)
 
 const (
 	blockFld = "block"
@@ -36,6 +39,8 @@ type HashIndex struct {
 func NewHashIndex(tx *transaction.Transaction, idxName string, layout *record.Layout) *HashIndex {
 	return &HashIndex{tx: tx, idxName: idxName, layout: layout}
 }
+
+var _ Index = (*HashIndex)(nil)
 
 func (h *HashIndex) BeforeFirst(searchKey schema.Constant) error {
 	if err := h.Close(); err != nil {
