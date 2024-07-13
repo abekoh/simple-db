@@ -487,8 +487,8 @@ func (m *IndexManager) CreateIndex(indexName, tableName string, fieldName schema
 	return nil
 }
 
-func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) (map[string]IndexInfo, error) {
-	res := make(map[string]IndexInfo)
+func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) (map[schema.FieldName]IndexInfo, error) {
+	res := make(map[schema.FieldName]IndexInfo)
 	scan, err := record.NewTableScan(tx, "index_catalog", m.layout)
 	if err != nil {
 		return nil, fmt.Errorf("table scan error: %w", err)
@@ -523,7 +523,7 @@ func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) 
 		if err != nil {
 			return nil, fmt.Errorf("new index info error: %w", err)
 		}
-		res[fieldName] = *indexInfo
+		res[schema.FieldName(fieldName)] = *indexInfo
 	}
 	if err := scan.Close(); err != nil {
 		return nil, fmt.Errorf("close error: %w", err)
@@ -603,7 +603,7 @@ func (m *Manager) CreateIndex(indexName, tableName string, fieldName schema.Fiel
 	return nil
 }
 
-func (m *Manager) IndexInfo(tableName string, tx *transaction.Transaction) (map[string]IndexInfo, error) {
+func (m *Manager) IndexInfo(tableName string, tx *transaction.Transaction) (map[schema.FieldName]IndexInfo, error) {
 	res, err := m.indexManager.IndexInfo(tableName, tx)
 	if err != nil {
 		return nil, fmt.Errorf("index info error: %w", err)
