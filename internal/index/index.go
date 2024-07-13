@@ -36,7 +36,7 @@ type HashIndex struct {
 	tableScan *record.TableScan
 }
 
-func NewHashIndex(tx *transaction.Transaction, idxName string, layout *record.Layout) *HashIndex {
+func NewHashIndex(tx *transaction.Transaction, idxName string, layout *record.Layout) Index {
 	return &HashIndex{tx: tx, idxName: idxName, layout: layout}
 }
 

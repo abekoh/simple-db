@@ -373,6 +373,7 @@ type IndexInfo struct {
 	tableSchema *schema.Schema
 	indexLayout *record.Layout
 	statInfo    StatInfo
+	initializer index.Initializer
 }
 
 func NewIndexInfo(
@@ -381,6 +382,7 @@ func NewIndexInfo(
 	tableSchema *schema.Schema,
 	tx *transaction.Transaction,
 	statInfo StatInfo,
+	initializer index.Initializer,
 ) (*IndexInfo, error) {
 	return &IndexInfo{
 		indexName:   indexName,
@@ -400,8 +402,7 @@ func (i *IndexInfo) FieldName() schema.FieldName {
 }
 
 func (i *IndexInfo) Open() index.Index {
-	// TODO: implement
-	return nil
+	return i.initializer(i.tx, i.indexName, i.indexLayout)
 }
 
 func (i *IndexInfo) BlockAccessed() int {
@@ -437,9 +438,10 @@ type IndexManager struct {
 	layout       *record.Layout
 	tableManager *TableManager
 	statManager  *StatManager
+	cfg          *IndexConfig
 }
 
-func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatManager, tx *transaction.Transaction) (*IndexManager, error) {
+func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatManager, tx *transaction.Transaction, cfg *Config) (*IndexManager, error) {
 	if isNew {
 		s := schema.NewSchema()
 		s.AddStrField("index_name", maxTableNameLength)
@@ -507,7 +509,11 @@ func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) 
 		if err != nil {
 			return nil, fmt.Errorf("stat error: %w", err)
 		}
-		indexInfo, err := NewIndexInfo(indexName, schema.FieldName(fieldName), tableLayout.Schema(), tx, statInfo)
+		initializer := m.cfg.IndexInitailizer
+		if initializer == nil {
+			initializer = index.NewHashIndex
+		}
+		indexInfo, err := NewIndexInfo(indexName, schema.FieldName(fieldName), tableLayout.Schema(), tx, statInfo, initializer)
 		if err != nil {
 			return nil, fmt.Errorf("new index info error: %w", err)
 		}
@@ -526,7 +532,7 @@ type Manager struct {
 	statManager  *StatManager
 }
 
-func NewManager(isNew bool, tx *transaction.Transaction) (*Manager, error) {
+func NewManager(isNew bool, tx *transaction.Transaction, cfg *Config) (*Manager, error) {
 	tableManager, err := NewTableManager(isNew, tx)
 	if err != nil {
 		return nil, fmt.Errorf("new table manager error: %w", err)
@@ -539,7 +545,7 @@ func NewManager(isNew bool, tx *transaction.Transaction) (*Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new stat manager error: %w", err)
 	}
-	indexManager, err := NewIndexManager(isNew, tableManager, statManager, tx)
+	indexManager, err := NewIndexManager(isNew, tableManager, statManager, tx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("new index manager error: %w", err)
 	}
@@ -602,4 +608,12 @@ func (m *Manager) StatInfo(tableName string, layout *record.Layout, tx *transact
 		return StatInfo{}, fmt.Errorf("stat error: %w", err)
 	}
 	return statInfo, nil
+}
+
+type Config struct {
+	Index *IndexConfig
+}
+
+type IndexConfig struct {
+	IndexInitailizer index.Initializer
 }

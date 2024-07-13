@@ -34,7 +34,7 @@ func TestMetadataManager(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m, err := NewManager(true, tx)
+	m, err := NewManager(true, tx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

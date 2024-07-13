@@ -40,7 +40,7 @@ func NewWithParams(ctx context.Context, dirname string, blockSize int32, bufSize
 	}, nil
 }
 
-func New(ctx context.Context, dirname string) (*DB, error) {
+func NewWithConfig(ctx context.Context, dirname string, cfg *Config) (*DB, error) {
 	db, err := NewWithParams(ctx, dirname, 400, 8)
 	if err != nil {
 		return nil, fmt.Errorf("could not create SimpleDB: %w", err)
@@ -55,7 +55,7 @@ func New(ctx context.Context, dirname string) (*DB, error) {
 			return nil, fmt.Errorf("could not recover: %w", err)
 		}
 	}
-	metadataMgr, err := metadata.NewManager(isNew, tx)
+	metadataMgr, err := metadata.NewManager(isNew, tx, cfg.Metadata)
 	if err != nil {
 		return nil, fmt.Errorf("could not create SimpleDB: %w", err)
 
@@ -73,6 +73,10 @@ func New(ctx context.Context, dirname string) (*DB, error) {
 	return db, nil
 }
 
+func New(ctx context.Context, dirname string) (*DB, error) {
+	return NewWithConfig(ctx, dirname, nil)
+}
+
 func (db DB) NewTx(ctx context.Context) (*transaction.Transaction, error) {
 	return transaction.NewTransaction(ctx, db.bufMgr, db.fileMgr, db.logMgr)
 }
@@ -87,4 +91,8 @@ func (db DB) Planner() *plan.Planner {
 
 func (db DB) StmtMgr() *statement.Manager {
 	return db.stmtMgr
+}
+
+type Config struct {
+	Metadata *metadata.Config
 }
