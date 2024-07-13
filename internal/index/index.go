@@ -211,6 +211,7 @@ func (s SelectScan) Next() (bool, error) {
 			return false, fmt.Errorf("index.DataRID error: %w", err)
 		}
 		if err := s.tableScan.MoveToRID(rid); err != nil {
+			return false, fmt.Errorf("tableScan.MoveToRID error: %w", err)
 		}
 	}
 }
