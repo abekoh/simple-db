@@ -342,3 +342,55 @@ type BoundPlan struct {
 var _ Plan = (*BoundPlan)(nil)
 
 func (BoundPlan) Bound() {}
+
+type IndexSelectPlan struct {
+	p         Plan
+	indexInfo *metadata.IndexInfo
+	val       schema.Constant
+}
+
+func NewIndexSelectPlan(p Plan, indexInfo *metadata.IndexInfo, val schema.Constant) *IndexSelectPlan {
+	return &IndexSelectPlan{p: p, indexInfo: indexInfo, val: val}
+}
+
+var _ Plan = (*IndexSelectPlan)(nil)
+
+func (i IndexSelectPlan) Result() {}
+
+func (i IndexSelectPlan) String() string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (i IndexSelectPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+	return nil
+}
+
+func (i IndexSelectPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+	return BoundPlan{Plan: i}, nil
+}
+
+func (i IndexSelectPlan) Open() (query.Scan, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (i IndexSelectPlan) BlockAccessed() int {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (i IndexSelectPlan) RecordsOutput() int {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (i IndexSelectPlan) DistinctValues(fieldName schema.FieldName) int {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (i IndexSelectPlan) Schema() *schema.Schema {
+	//TODO implement me
+	panic("implement me")
+}
