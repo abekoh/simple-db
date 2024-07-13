@@ -206,3 +206,11 @@ func (p Placeholder) Val() any {
 func (p Placeholder) Evaluate(v Valuable) (Constant, error) {
 	return nil, fmt.Errorf("placeholder cannot be evaluated")
 }
+
+func (p Placeholder) HashCode() int {
+	panic("don't use placeholder as value")
+}
+
+func (p Placeholder) Equals(Constant) bool {
+	panic("don't use placeholder as value")
+}
