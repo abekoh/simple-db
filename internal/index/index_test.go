@@ -101,79 +101,79 @@ func TestIndexScan(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		sche1 := schema.NewSchema()
-		sche1.AddStrField("A", 9)
+		lhsSche := schema.NewSchema()
+		lhsSche.AddStrField("A", 9)
 		fieldB := schema.NewField(schema.Varchar, 9)
-		sche1.AddField("B", fieldB)
-		layout1 := record.NewLayoutSchema(sche1)
-		ts1, err := record.NewTableScan(tx, "T1", layout1)
+		lhsSche.AddField("B", fieldB)
+		lhsLayout := record.NewLayoutSchema(lhsSche)
+		lhsTableS1, err := record.NewTableScan(tx, "T1", lhsLayout)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := ts1.BeforeFirst(); err != nil {
+		if err := lhsTableS1.BeforeFirst(); err != nil {
 			t.Fatal(err)
 		}
 		n := 5
 		for i := 0; i < n; i++ {
-			if err := ts1.Insert(); err != nil {
+			if err := lhsTableS1.Insert(); err != nil {
 				t.Fatal(err)
 			}
-			if err := ts1.SetStr("A", fmt.Sprintf("aaa%d", i)); err != nil {
+			if err := lhsTableS1.SetStr("A", fmt.Sprintf("aaa%d", i)); err != nil {
 				t.Fatal(err)
 			}
-			if err := ts1.SetStr("B", fmt.Sprintf("bbb%d", i)); err != nil {
+			if err := lhsTableS1.SetStr("B", fmt.Sprintf("bbb%d", i)); err != nil {
 				t.Fatal(err)
 			}
 		}
-		if err := ts1.Close(); err != nil {
+		if err := lhsTableS1.Close(); err != nil {
 			t.Fatal(err)
 		}
 
-		sche2 := schema.NewSchema()
-		sche2.AddField("B", fieldB)
-		sche2.AddStrField("C", 9)
-		layout2 := record.NewLayoutSchema(sche2)
-		ts2, err := record.NewTableScan(tx, "T2", layout2)
+		rhsSche := schema.NewSchema()
+		rhsSche.AddField("B", fieldB)
+		rhsSche.AddStrField("C", 9)
+		rhsLayout := record.NewLayoutSchema(rhsSche)
+		rhsTableS1, err := record.NewTableScan(tx, "T2", rhsLayout)
 		if err != nil {
 			t.Fatal(err)
 		}
 		idxLayout := index.NewIndexLayout(fieldB)
-		idx1 := cfg.Initializer(tx, "I", idxLayout)
-		if err := ts2.BeforeFirst(); err != nil {
+		rhsIdx1 := cfg.Initializer(tx, "I", idxLayout)
+		if err := rhsTableS1.BeforeFirst(); err != nil {
 			t.Fatal(err)
 		}
 		for i := 0; i < n; i++ {
-			if err := ts2.Insert(); err != nil {
+			if err := rhsTableS1.Insert(); err != nil {
 				t.Fatal(err)
 			}
 			rec := schema.ConstantStr(fmt.Sprintf("bbb%d", i))
-			if err := ts2.SetVal("B", rec); err != nil {
+			if err := rhsTableS1.SetVal("B", rec); err != nil {
 				t.Fatal(err)
 			}
-			if err := idx1.Insert(rec, ts2.RID()); err != nil {
+			if err := rhsIdx1.Insert(rec, rhsTableS1.RID()); err != nil {
 				t.Fatal(err)
 			}
-			if err := ts2.SetStr("C", fmt.Sprintf("ccc%d", i)); err != nil {
+			if err := rhsTableS1.SetStr("C", fmt.Sprintf("ccc%d", i)); err != nil {
 				t.Fatal(err)
 			}
 		}
-		if err := ts2.Close(); err != nil {
+		if err := rhsTableS1.Close(); err != nil {
 			t.Fatal(err)
 		}
-		if err := idx1.Close(); err != nil {
+		if err := rhsIdx1.Close(); err != nil {
 			t.Fatal(err)
 		}
 
-		s1p, err := record.NewTableScan(tx, "T1", layout1)
+		lhsTableS2, err := record.NewTableScan(tx, "T1", lhsLayout)
 		if err != nil {
 			t.Fatal(err)
 		}
-		s2p, err := record.NewTableScan(tx, "T2", layout2)
+		rhsTableS2, err := record.NewTableScan(tx, "T2", rhsLayout)
 		if err != nil {
 			t.Fatal(err)
 		}
 		idx2 := cfg.Initializer(tx, "I", idxLayout)
-		joinS, err := index.NewJoinScan(s1p, s2p, idx2, "B")
+		joinS, err := index.NewJoinScan(lhsTableS2, rhsTableS2, idx2, "B")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -204,11 +204,11 @@ func TestIndexScan(t *testing.T) {
 		if len(got) != n {
 			t.Errorf("got %d, want %d", len(got), n)
 		}
-		expected := `bbb0, ddd0
-bbb1, ddd1
-bbb2, ddd2
-bbb3, ddd3
-bbb4, ddd4`
+		expected := `aaa0, bbb0, ccc0
+aaa1, bbb1, ccc1
+aaa2, bbb2, ccc2
+aaa3, bbb3, ccc3
+aaa4, bbb4, ccc4`
 		if strings.Join(got, "\n") != expected {
 			t.Errorf("got %s, want %s", strings.Join(got, "\n"), expected)
 		}
