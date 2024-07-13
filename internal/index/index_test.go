@@ -142,7 +142,7 @@ func TestIndexScan(t *testing.T) {
 		if err := rhsTableS1.BeforeFirst(); err != nil {
 			t.Fatal(err)
 		}
-		for i := 0; i < n; i++ {
+		for i := 0; i < n+5; i++ {
 			if err := rhsTableS1.Insert(); err != nil {
 				t.Fatal(err)
 			}
@@ -178,7 +178,7 @@ func TestIndexScan(t *testing.T) {
 			t.Fatal(err)
 		}
 		prjS := query.NewProjectScan(joinS, "A", "B", "C")
-		got := make([]string, 0, n*n)
+		got := make([]string, 0, n)
 		for {
 			ok, err := prjS.Next()
 			if err != nil {
