@@ -178,64 +178,64 @@ func NewSelectScan(tableScan *record.TableScan, idx Index, val schema.Constant) 
 
 var _ query.Scan = (*SelectScan)(nil)
 
-func (i SelectScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
-	val, err := i.tableScan.Val(fieldName)
+func (s SelectScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+	val, err := s.tableScan.Val(fieldName)
 	if err != nil {
 		return nil, fmt.Errorf("tableScan.Val error: %w", err)
 	}
 	return val, nil
 }
 
-func (i SelectScan) BeforeFirst() error {
-	if err := i.idx.BeforeFirst(i.val); err != nil {
+func (s SelectScan) BeforeFirst() error {
+	if err := s.idx.BeforeFirst(s.val); err != nil {
 		return fmt.Errorf("index.BeforeFirst error: %w", err)
 	}
 	return nil
 }
 
-func (i SelectScan) Next() (bool, error) {
+func (s SelectScan) Next() (bool, error) {
 	for {
-		ok, err := i.idx.Next()
+		ok, err := s.idx.Next()
 		if err != nil {
 			return false, fmt.Errorf("index.Next error: %w", err)
 		}
 		if !ok {
 			return false, nil
 		}
-		rid, err := i.idx.DataRID()
+		rid, err := s.idx.DataRID()
 		if err != nil {
 			return false, fmt.Errorf("index.DataRID error: %w", err)
 		}
-		if err := i.tableScan.MoveToRID(rid); err != nil {
+		if err := s.tableScan.MoveToRID(rid); err != nil {
 		}
 	}
 }
 
-func (i SelectScan) Int32(fieldName schema.FieldName) (int32, error) {
-	val, err := i.tableScan.Int32(fieldName)
+func (s SelectScan) Int32(fieldName schema.FieldName) (int32, error) {
+	val, err := s.tableScan.Int32(fieldName)
 	if err != nil {
 		return 0, fmt.Errorf("tableScan.Int32 error: %w", err)
 	}
 	return val, nil
 }
 
-func (i SelectScan) Str(fieldName schema.FieldName) (string, error) {
-	val, err := i.tableScan.Str(fieldName)
+func (s SelectScan) Str(fieldName schema.FieldName) (string, error) {
+	val, err := s.tableScan.Str(fieldName)
 	if err != nil {
 		return "", fmt.Errorf("tableScan.Str error: %w", err)
 	}
 	return val, nil
 }
 
-func (i SelectScan) HasField(fieldName schema.FieldName) bool {
-	return i.tableScan.HasField(fieldName)
+func (s SelectScan) HasField(fieldName schema.FieldName) bool {
+	return s.tableScan.HasField(fieldName)
 }
 
-func (i SelectScan) Close() error {
-	if err := i.idx.Close(); err != nil {
+func (s SelectScan) Close() error {
+	if err := s.idx.Close(); err != nil {
 		return fmt.Errorf("index.Close error: %w", err)
 	}
-	if err := i.tableScan.Close(); err != nil {
+	if err := s.tableScan.Close(); err != nil {
 		return fmt.Errorf("tableScan.Close error: %w", err)
 	}
 	return nil

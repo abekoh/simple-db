@@ -56,9 +56,6 @@ func TestIndexScan(t *testing.T) {
 		if err := scan1.Close(); err != nil {
 			t.Fatal(err)
 		}
-		if err := idx.Close(); err != nil {
-			t.Fatal(err)
-		}
 
 		scan2, err := record.NewTableScan(tx, "T", layout)
 		if err != nil {
