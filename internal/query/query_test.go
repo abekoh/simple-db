@@ -236,7 +236,7 @@ func TestScan(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
-	t.Run("TableScan -> ProductScan -> SelectScan -> ProjectScan", func(t *testing.T) {
+	t.Run("TableScan*2 -> ProductScan -> SelectScan -> ProjectScan", func(t *testing.T) {
 		ctx := context.Background()
 		db, err := simpledb.New(ctx, t.TempDir())
 		if err != nil {

@@ -251,8 +251,8 @@ type JoinScan struct {
 	joinField schema.FieldName
 }
 
-func NewJoinScan(lhs query.Scan, idx Index, joinField schema.FieldName, rh *record.TableScan) (*JoinScan, error) {
-	js := &JoinScan{lhs: lhs, idx: idx, joinField: joinField, rhs: rh}
+func NewJoinScan(lhs query.Scan, rhs *record.TableScan, idx Index, joinField schema.FieldName) (*JoinScan, error) {
+	js := &JoinScan{lhs: lhs, idx: idx, joinField: joinField, rhs: rhs}
 	if err := js.BeforeFirst(); err != nil {
 		return nil, fmt.Errorf("BeforeFirst error: %w", err)
 	}
