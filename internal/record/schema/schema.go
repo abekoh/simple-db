@@ -127,6 +127,8 @@ func (f FieldName) Evaluate(v Valuable) (Constant, error) {
 type Constant interface {
 	fmt.Stringer
 	Val() any
+	HashCode() int
+	Equals(Constant) bool
 }
 
 type ConstantInt32 int32
@@ -143,6 +145,17 @@ func (v ConstantInt32) Evaluate(Valuable) (Constant, error) {
 	return v, nil
 }
 
+func (v ConstantInt32) HashCode() int {
+	return int(v)
+}
+
+func (v ConstantInt32) Equals(c Constant) bool {
+	if c, ok := c.(ConstantInt32); ok {
+		return v == c
+	}
+	return false
+}
+
 type ConstantStr string
 
 func (v ConstantStr) String() string {
@@ -155,6 +168,21 @@ func (v ConstantStr) Val() any {
 
 func (v ConstantStr) Evaluate(Valuable) (Constant, error) {
 	return v, nil
+}
+
+func (v ConstantStr) HashCode() int {
+	h := 0
+	for _, c := range v {
+		h = h*31 + int(c)
+	}
+	return h
+}
+
+func (v ConstantStr) Equals(c Constant) bool {
+	if c, ok := c.(ConstantStr); ok {
+		return v == c
+	}
+	return false
 }
 
 type Valuable interface {
