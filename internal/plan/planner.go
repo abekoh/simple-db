@@ -3,6 +3,7 @@ package plan
 import (
 	"fmt"
 
+	"github.com/abekoh/simple-db/internal/index"
 	"github.com/abekoh/simple-db/internal/metadata"
 	"github.com/abekoh/simple-db/internal/parse"
 	"github.com/abekoh/simple-db/internal/query"
@@ -435,8 +436,70 @@ func (up IndexUpdatePlanner) ExecuteDelete(d *parse.DeleteData, tx *transaction.
 }
 
 func (up IndexUpdatePlanner) ExecuteModify(d *parse.ModifyData, tx *transaction.Transaction) (int, error) {
-	//TODO implement me
-	panic("implement me")
+	tp, err := NewTablePlan(d.Table(), tx, up.mdm)
+	if err != nil {
+		return 0, fmt.Errorf("table plan error: %w", err)
+	}
+	sp := NewSelectPlan(tp, d.Predicate())
+
+	indexes, err := up.mdm.IndexInfo(d.Table(), tx)
+	if err != nil {
+		return 0, fmt.Errorf("index info error: %w", err)
+	}
+	var idx index.Index
+	idxInfo, ok := indexes[d.Field()]
+	if ok {
+		idx = idxInfo.Open()
+	}
+
+	s, err := sp.Open()
+	if err != nil {
+		return 0, fmt.Errorf("open error: %w", err)
+	}
+	us, ok := s.(query.UpdateScan)
+	if !ok {
+		return 0, fmt.Errorf("table is not updateable")
+	}
+	count := 0
+	for {
+		ok, err := us.Next()
+		if err != nil {
+			return 0, fmt.Errorf("next error: %w", err)
+		}
+		if !ok {
+			break
+		}
+		newVal, err := d.Value().Evaluate(us)
+		if err != nil {
+			return 0, fmt.Errorf("evaluate error: %w", err)
+		}
+		oldVal, err := us.Val(d.Field())
+		if err != nil {
+			return 0, fmt.Errorf("val error: %w", err)
+		}
+		if err := us.SetVal(d.Field(), newVal); err != nil {
+			return 0, fmt.Errorf("set value error: %w", err)
+		}
+		if idx != nil {
+			rid := us.RID()
+			if err := idx.Delete(oldVal, rid); err != nil {
+				return 0, fmt.Errorf("index delete error: %w", err)
+			}
+			if err := idx.Insert(newVal, rid); err != nil {
+				return 0, fmt.Errorf("index insert error: %w", err)
+			}
+		}
+		count++
+	}
+	if idx != nil {
+		if err := idx.Close(); err != nil {
+			return 0, fmt.Errorf("index close error: %w", err)
+		}
+	}
+	if err := s.Close(); err != nil {
+		return 0, fmt.Errorf("close error: %w", err)
+	}
+	return count, nil
 }
 
 func (up IndexUpdatePlanner) ExecuteCreateTable(d *parse.CreateTableData, tx *transaction.Transaction) (int, error) {
