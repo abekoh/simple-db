@@ -18,6 +18,18 @@ type (
 		Close() error
 	}
 	Initializer = func(tx *transaction.Transaction, idxName string, layout *record.Layout) Index
+	SearchCost  = func(numBlocks, rpb int) int
+	Config      struct {
+		Initializer Initializer
+		SearchCost  SearchCost
+	}
+)
+
+var (
+	ConfigHash = &Config{
+		Initializer: NewHashIndex,
+		SearchCost:  HashSearchCost,
+	}
 )
 
 const (
@@ -38,6 +50,10 @@ type HashIndex struct {
 
 func NewHashIndex(tx *transaction.Transaction, idxName string, layout *record.Layout) Index {
 	return &HashIndex{tx: tx, idxName: idxName, layout: layout}
+}
+
+func HashSearchCost(numBlocks, rpb int) int {
+	return numBlocks / numBuckets
 }
 
 var _ Index = (*HashIndex)(nil)

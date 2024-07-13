@@ -373,7 +373,7 @@ type IndexInfo struct {
 	tableSchema *schema.Schema
 	indexLayout *record.Layout
 	statInfo    StatInfo
-	initializer index.Initializer
+	cfg         *index.Config
 }
 
 func NewIndexInfo(
@@ -382,7 +382,7 @@ func NewIndexInfo(
 	tableSchema *schema.Schema,
 	tx *transaction.Transaction,
 	statInfo StatInfo,
-	initializer index.Initializer,
+	cfg *index.Config,
 ) (*IndexInfo, error) {
 	return &IndexInfo{
 		indexName:   indexName,
@@ -390,6 +390,7 @@ func NewIndexInfo(
 		tx:          tx,
 		tableSchema: tableSchema,
 		statInfo:    statInfo,
+		cfg:         cfg,
 	}, nil
 }
 
@@ -402,12 +403,13 @@ func (i *IndexInfo) FieldName() schema.FieldName {
 }
 
 func (i *IndexInfo) Open() index.Index {
-	return i.initializer(i.tx, i.indexName, i.indexLayout)
+	return i.cfg.Initializer(i.tx, i.indexName, i.indexLayout)
 }
 
 func (i *IndexInfo) BlockAccessed() int {
-	// TODO: implement
-	return -1
+	rpb := i.tx.BlockSize() / i.indexLayout.SlotSize()
+	numBlocks := i.statInfo.RecordsOutput() / int(rpb)
+	return i.cfg.SearchCost(numBlocks, int(rpb))
 }
 
 func (i *IndexInfo) RecordsOutput() int {
@@ -438,7 +440,7 @@ type IndexManager struct {
 	layout       *record.Layout
 	tableManager *TableManager
 	statManager  *StatManager
-	cfg          *IndexConfig
+	cfg          *index.Config
 }
 
 func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatManager, tx *transaction.Transaction, cfg *Config) (*IndexManager, error) {
@@ -455,7 +457,7 @@ func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatMa
 	if err != nil {
 		return nil, fmt.Errorf("layout error: %w", err)
 	}
-	indexCfg := &IndexConfig{}
+	indexCfg := index.ConfigHash
 	if cfg.Index != nil {
 		indexCfg = cfg.Index
 	}
@@ -517,7 +519,7 @@ func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) 
 		if initializer == nil {
 			initializer = index.NewHashIndex
 		}
-		indexInfo, err := NewIndexInfo(indexName, schema.FieldName(fieldName), tableLayout.Schema(), tx, statInfo, initializer)
+		indexInfo, err := NewIndexInfo(indexName, schema.FieldName(fieldName), tableLayout.Schema(), tx, statInfo, m.cfg)
 		if err != nil {
 			return nil, fmt.Errorf("new index info error: %w", err)
 		}
@@ -618,9 +620,5 @@ func (m *Manager) StatInfo(tableName string, layout *record.Layout, tx *transact
 }
 
 type Config struct {
-	Index *IndexConfig
-}
-
-type IndexConfig struct {
-	Initializer index.Initializer
+	Index *index.Config
 }
