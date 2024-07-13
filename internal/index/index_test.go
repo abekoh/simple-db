@@ -27,13 +27,16 @@ func TestIndexScan(t *testing.T) {
 
 		sche := schema.NewSchema()
 		sche.AddInt32Field("A")
-		sche.AddStrField("B", 9)
+		fieldB := schema.NewField(schema.Varchar, 9)
+		sche.AddField("B", fieldB)
 		layout := record.NewLayoutSchema(sche)
 		scan1, err := record.NewTableScan(tx, "T", layout)
 		if err != nil {
 			t.Fatal(err)
 		}
-		idx := cfg.Initializer(tx, "I", layout)
+
+		idxLayout := index.NewIndexLayout(fieldB)
+		idx := cfg.Initializer(tx, "I", idxLayout)
 
 		if err := scan1.BeforeFirst(); err != nil {
 			t.Fatal(err)
@@ -51,6 +54,9 @@ func TestIndexScan(t *testing.T) {
 			}
 		}
 		if err := scan1.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := idx.Close(); err != nil {
 			t.Fatal(err)
 		}
 

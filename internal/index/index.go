@@ -39,6 +39,14 @@ const (
 	dataFld  = "dataval"
 )
 
+func NewIndexLayout(field schema.Field) *record.Layout {
+	sche := schema.NewSchema()
+	sche.AddInt32Field(blockFld)
+	sche.AddInt32Field(idFld)
+	sche.AddField(dataFld, field)
+	return record.NewLayoutSchema(sche)
+}
+
 const numBuckets = 100
 
 type HashIndex struct {
