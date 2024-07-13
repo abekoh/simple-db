@@ -381,8 +381,57 @@ func (up IndexUpdatePlanner) ExecuteInsert(d *parse.InsertData, tx *transaction.
 }
 
 func (up IndexUpdatePlanner) ExecuteDelete(d *parse.DeleteData, tx *transaction.Transaction) (int, error) {
-	//TODO implement me
-	panic("implement me")
+	tp, err := NewTablePlan(d.Table(), tx, up.mdm)
+	if err != nil {
+		return 0, fmt.Errorf("table plan error: %w", err)
+	}
+	sp := NewSelectPlan(tp, d.Predicate())
+	indexes, err := up.mdm.IndexInfo(d.Table(), tx)
+	if err != nil {
+		return 0, fmt.Errorf("index info error: %w", err)
+	}
+
+	s, err := sp.Open()
+	if err != nil {
+		return 0, fmt.Errorf("open error: %w", err)
+	}
+	us, ok := s.(query.UpdateScan)
+	if !ok {
+		return 0, fmt.Errorf("table is not updateable")
+	}
+
+	count := 0
+	for {
+		ok, err := s.Next()
+		if err != nil {
+			return 0, fmt.Errorf("next error: %w", err)
+		}
+		if !ok {
+			break
+		}
+		rid := us.RID()
+		for fieldName, idxInfo := range indexes {
+			val, err := us.Val(fieldName)
+			if err != nil {
+				return 0, fmt.Errorf("val error: %w", err)
+			}
+			idx := idxInfo.Open()
+			if err := idx.Delete(val, rid); err != nil {
+				return 0, fmt.Errorf("index delete error: %w", err)
+			}
+			if err := idx.Close(); err != nil {
+				return 0, fmt.Errorf("index close error: %w", err)
+			}
+		}
+		if err := us.Delete(); err != nil {
+			return 0, fmt.Errorf("delete error: %w", err)
+		}
+		count++
+	}
+	if err := s.Close(); err != nil {
+		return 0, fmt.Errorf("close error: %w", err)
+	}
+	return count, nil
 }
 
 func (up IndexUpdatePlanner) ExecuteModify(d *parse.ModifyData, tx *transaction.Transaction) (int, error) {
