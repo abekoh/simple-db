@@ -337,37 +337,59 @@ func NewIndexUpdatePlanner(mdm *metadata.Manager) *IndexUpdatePlanner {
 
 var _ UpdatePlanner = (*IndexUpdatePlanner)(nil)
 
-func (p IndexUpdatePlanner) ExecuteInsert(d *parse.InsertData, tx *transaction.Transaction) (int, error) {
+func (up IndexUpdatePlanner) ExecuteInsert(d *parse.InsertData, tx *transaction.Transaction) (int, error) {
+	p, err := NewTablePlan(d.Table(), tx, up.mdm)
+	if err != nil {
+		return 0, fmt.Errorf("table plan error: %w", err)
+	}
+	s, err := p.Open()
+	if err != nil {
+		return 0, fmt.Errorf("open error: %w", err)
+	}
+	us, ok := s.(query.UpdateScan)
+	if !ok {
+		return 0, fmt.Errorf("table is not updateable")
+	}
+	if err := us.Insert(); err != nil {
+		return 0, fmt.Errorf("insert error: %w", err)
+	}
+	rid := us.RID()
+
+	indexes, err := up.mdm.IndexInfo(d.Table(), tx)
+	if err != nil {
+		return 0, fmt.Errorf("index info error: %w", err)
+	}
+	_ = rid
+	_ = indexes
+	panic("implement me")
+}
+
+func (up IndexUpdatePlanner) ExecuteDelete(d *parse.DeleteData, tx *transaction.Transaction) (int, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p IndexUpdatePlanner) ExecuteDelete(d *parse.DeleteData, tx *transaction.Transaction) (int, error) {
+func (up IndexUpdatePlanner) ExecuteModify(d *parse.ModifyData, tx *transaction.Transaction) (int, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p IndexUpdatePlanner) ExecuteModify(d *parse.ModifyData, tx *transaction.Transaction) (int, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p IndexUpdatePlanner) ExecuteCreateTable(d *parse.CreateTableData, tx *transaction.Transaction) (int, error) {
-	if err := p.mdm.CreateTable(d.Table(), d.Schema(), tx); err != nil {
+func (up IndexUpdatePlanner) ExecuteCreateTable(d *parse.CreateTableData, tx *transaction.Transaction) (int, error) {
+	if err := up.mdm.CreateTable(d.Table(), d.Schema(), tx); err != nil {
 		return 0, fmt.Errorf("create table error: %w", err)
 	}
 	return 0, nil
 }
 
-func (p IndexUpdatePlanner) ExecuteCreateView(d *parse.CreateViewData, tx *transaction.Transaction) (int, error) {
-	if err := p.mdm.CreateView(d.ViewName(), d.ViewDef(), tx); err != nil {
+func (up IndexUpdatePlanner) ExecuteCreateView(d *parse.CreateViewData, tx *transaction.Transaction) (int, error) {
+	if err := up.mdm.CreateView(d.ViewName(), d.ViewDef(), tx); err != nil {
 		return 0, fmt.Errorf("create view error: %w", err)
 	}
 	return 0, nil
 }
 
-func (p IndexUpdatePlanner) ExecuteCreateIndex(d *parse.CreateIndexData, tx *transaction.Transaction) (int, error) {
-	if err := p.mdm.CreateIndex(d.Index(), d.Table(), d.Field(), tx); err != nil {
+func (up IndexUpdatePlanner) ExecuteCreateIndex(d *parse.CreateIndexData, tx *transaction.Transaction) (int, error) {
+	if err := up.mdm.CreateIndex(d.Index(), d.Table(), d.Field(), tx); err != nil {
 		return 0, fmt.Errorf("create index error: %w", err)
 	}
 	return 0, nil
