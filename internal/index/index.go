@@ -172,8 +172,12 @@ type SelectScan struct {
 	val       schema.Constant
 }
 
-func NewSelectScan(tableScan *record.TableScan, idx Index, val schema.Constant) *SelectScan {
-	return &SelectScan{tableScan: tableScan, idx: idx, val: val}
+func NewSelectScan(tableScan *record.TableScan, idx Index, val schema.Constant) (*SelectScan, error) {
+	s := &SelectScan{tableScan: tableScan, idx: idx, val: val}
+	if err := s.BeforeFirst(); err != nil {
+		return nil, fmt.Errorf("BeforeFirst error: %w", err)
+	}
+	return s, nil
 }
 
 var _ query.Scan = (*SelectScan)(nil)

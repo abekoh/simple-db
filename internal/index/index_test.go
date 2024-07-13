@@ -36,7 +36,7 @@ func TestIndexScan(t *testing.T) {
 		}
 
 		idxLayout := index.NewIndexLayout(fieldB)
-		idx := cfg.Initializer(tx, "I", idxLayout)
+		idx1 := cfg.Initializer(tx, "I", idxLayout)
 
 		if err := scan1.BeforeFirst(); err != nil {
 			t.Fatal(err)
@@ -49,11 +49,14 @@ func TestIndexScan(t *testing.T) {
 			if err := scan1.SetVal("B", rec); err != nil {
 				t.Fatal(err)
 			}
-			if err := idx.Insert(rec, scan1.RID()); err != nil {
+			if err := idx1.Insert(rec, scan1.RID()); err != nil {
 				t.Fatal(err)
 			}
 		}
 		if err := scan1.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := idx1.Close(); err != nil {
 			t.Fatal(err)
 		}
 
@@ -61,7 +64,11 @@ func TestIndexScan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		scan3 := index.NewSelectScan(scan2, idx, schema.ConstantStr("rec100"))
+		idx2 := cfg.Initializer(tx, "I", idxLayout)
+		scan3, err := index.NewSelectScan(scan2, idx2, schema.ConstantStr("rec100"))
+		if err != nil {
+			t.Fatal(err)
+		}
 		scan4 := query.NewProjectScan(scan3, "B")
 
 		ok, err := scan4.Next()
