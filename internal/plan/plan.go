@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/abekoh/simple-db/internal/index"
 	"github.com/abekoh/simple-db/internal/metadata"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
@@ -358,8 +359,7 @@ var _ Plan = (*IndexSelectPlan)(nil)
 func (i IndexSelectPlan) Result() {}
 
 func (i IndexSelectPlan) String() string {
-	//TODO implement me
-	panic("implement me")
+	return fmt.Sprintf("IndexSelect{%s=%s(%s)}(%v)", i.indexInfo.FieldName(), i.val, i.indexInfo.IndexName(), i.p)
 }
 
 func (i IndexSelectPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
@@ -371,26 +371,33 @@ func (i IndexSelectPlan) SwapParams(params map[int]schema.Constant) (statement.B
 }
 
 func (i IndexSelectPlan) Open() (query.Scan, error) {
-	//TODO implement me
-	panic("implement me")
+	s, err := i.p.Open()
+	if err != nil {
+		return nil, fmt.Errorf("p.Open error: %w", err)
+	}
+	ts, ok := s.(*record.TableScan)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast to *record.TableScan from %T", s)
+	}
+	is, err := index.NewSelectScan(ts, i.indexInfo.Open(), i.val)
+	if err != nil {
+		return nil, fmt.Errorf("index.NewSelectScan error: %w", err)
+	}
+	return is, nil
 }
 
 func (i IndexSelectPlan) BlockAccessed() int {
-	//TODO implement me
-	panic("implement me")
+	return i.indexInfo.BlockAccessed()
 }
 
 func (i IndexSelectPlan) RecordsOutput() int {
-	//TODO implement me
-	panic("implement me")
+	return i.indexInfo.RecordsOutput()
 }
 
 func (i IndexSelectPlan) DistinctValues(fieldName schema.FieldName) int {
-	//TODO implement me
-	panic("implement me")
+	return i.indexInfo.DistinctValues(fieldName)
 }
 
 func (i IndexSelectPlan) Schema() *schema.Schema {
-	//TODO implement me
-	panic("implement me")
+	return i.p.Schema()
 }

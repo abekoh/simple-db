@@ -416,7 +416,7 @@ func (i *IndexInfo) RecordsOutput() int {
 	return i.statInfo.RecordsOutput() / i.statInfo.DistinctValues(i.fieldName)
 }
 
-func (i *IndexInfo) DistinctKeys(fieldName schema.FieldName) int {
+func (i *IndexInfo) DistinctValues(fieldName schema.FieldName) int {
 	if fieldName == i.fieldName {
 		return 1
 	}
