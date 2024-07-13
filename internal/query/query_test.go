@@ -336,7 +336,7 @@ func TestScan(t *testing.T) {
 			got = append(got, fmt.Sprintf("%s, %s", b, d))
 		}
 		if len(got) != n {
-			t.Errorf("got %d, want %d", len(got), n*n)
+			t.Errorf("got %d, want %d", len(got), n)
 		}
 		expected := `bbb0, ddd0
 bbb1, ddd1
