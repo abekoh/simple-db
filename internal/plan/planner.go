@@ -359,9 +359,25 @@ func (up IndexUpdatePlanner) ExecuteInsert(d *parse.InsertData, tx *transaction.
 	if err != nil {
 		return 0, fmt.Errorf("index info error: %w", err)
 	}
-	_ = rid
-	_ = indexes
-	panic("implement me")
+	for i, fieldName := range d.Fields() {
+		val := d.Values()[i]
+		if err := us.SetVal(fieldName, val); err != nil {
+			return 0, fmt.Errorf("set value error: %w", err)
+		}
+		if idxInfo, ok := indexes[fieldName]; ok {
+			idx := idxInfo.Open()
+			if err := idx.Insert(val, rid); err != nil {
+				return 0, fmt.Errorf("index insert error: %w", err)
+			}
+			if err := idx.Close(); err != nil {
+				return 0, fmt.Errorf("index close error: %w", err)
+			}
+		}
+	}
+	if err := us.Close(); err != nil {
+		return 0, fmt.Errorf("close error: %w", err)
+	}
+	return 1, nil
 }
 
 func (up IndexUpdatePlanner) ExecuteDelete(d *parse.DeleteData, tx *transaction.Transaction) (int, error) {
