@@ -3,6 +3,7 @@ package index
 import (
 	"fmt"
 
+	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/transaction"
@@ -153,6 +154,77 @@ func (h *HashIndex) Close() error {
 		if err := h.tableScan.Close(); err != nil {
 			return fmt.Errorf("tableScan.Close error: %w", err)
 		}
+	}
+	return nil
+}
+
+type SelectScan struct {
+	tableScan *record.TableScan
+	idx       Index
+	val       schema.Constant
+}
+
+var _ query.Scan = (*SelectScan)(nil)
+
+func (i SelectScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+	val, err := i.tableScan.Val(fieldName)
+	if err != nil {
+		return nil, fmt.Errorf("tableScan.Val error: %w", err)
+	}
+	return val, nil
+}
+
+func (i SelectScan) BeforeFirst() error {
+	if err := i.idx.BeforeFirst(i.val); err != nil {
+		return fmt.Errorf("index.BeforeFirst error: %w", err)
+	}
+	return nil
+}
+
+func (i SelectScan) Next() (bool, error) {
+	for {
+		ok, err := i.idx.Next()
+		if err != nil {
+			return false, fmt.Errorf("index.Next error: %w", err)
+		}
+		if !ok {
+			return false, nil
+		}
+		rid, err := i.idx.DataRID()
+		if err != nil {
+			return false, fmt.Errorf("index.DataRID error: %w", err)
+		}
+		if err := i.tableScan.MoveToRID(rid); err != nil {
+		}
+	}
+}
+
+func (i SelectScan) Int32(fieldName schema.FieldName) (int32, error) {
+	val, err := i.tableScan.Int32(fieldName)
+	if err != nil {
+		return 0, fmt.Errorf("tableScan.Int32 error: %w", err)
+	}
+	return val, nil
+}
+
+func (i SelectScan) Str(fieldName schema.FieldName) (string, error) {
+	val, err := i.tableScan.Str(fieldName)
+	if err != nil {
+		return "", fmt.Errorf("tableScan.Str error: %w", err)
+	}
+	return val, nil
+}
+
+func (i SelectScan) HasField(fieldName schema.FieldName) bool {
+	return i.tableScan.HasField(fieldName)
+}
+
+func (i SelectScan) Close() error {
+	if err := i.idx.Close(); err != nil {
+		return fmt.Errorf("index.Close error: %w", err)
+	}
+	if err := i.tableScan.Close(); err != nil {
+		return fmt.Errorf("tableScan.Close error: %w", err)
 	}
 	return nil
 }
