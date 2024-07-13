@@ -304,6 +304,7 @@ func (j JoinScan) Next() (bool, error) {
 			if err := j.rhs.MoveToRID(rid); err != nil {
 				return false, fmt.Errorf("rhs.MoveToRID error: %w", err)
 			}
+			return true, nil
 		}
 		lhsOk, err := j.lhs.Next()
 		if err != nil {

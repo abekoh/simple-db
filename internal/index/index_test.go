@@ -187,15 +187,19 @@ func TestIndexScan(t *testing.T) {
 			if !ok {
 				break
 			}
+			a, err := prjS.Str("A")
+			if err != nil {
+				t.Fatal(err)
+			}
 			b, err := prjS.Str("B")
 			if err != nil {
 				t.Fatal(err)
 			}
-			d, err := prjS.Str("D")
+			c, err := prjS.Str("C")
 			if err != nil {
 				t.Fatal(err)
 			}
-			got = append(got, fmt.Sprintf("%s, %s", b, d))
+			got = append(got, fmt.Sprintf("%s, %s, %s", a, b, c))
 		}
 		if len(got) != n {
 			t.Errorf("got %d, want %d", len(got), n)
