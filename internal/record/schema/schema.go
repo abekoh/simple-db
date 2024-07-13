@@ -25,6 +25,10 @@ func (r RID) String() string {
 	return fmt.Sprintf("RID{blockNum=%d, slot=%d}", r.blockNum, r.slot)
 }
 
+func (r RID) Equals(other RID) bool {
+	return r.blockNum == other.blockNum && r.slot == other.slot
+}
+
 type FieldType int32
 
 const (

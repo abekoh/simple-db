@@ -12,10 +12,16 @@ type Index interface {
 	BeforeFirst(searchKey schema.Constant) error
 	Next() (bool, error)
 	DataRID() (schema.RID, error)
-	Insert(searchKey string, dataRID schema.RID) error
-	Delete(searchKey string, dataRID schema.RID) error
+	Insert(dataVal schema.Constant, dataRID schema.RID) error
+	Delete(dataVal schema.Constant, dataRID schema.RID) error
 	Close() error
 }
+
+const (
+	blockFld = "block"
+	idFld    = "id"
+	dataFld  = "dataval"
+)
 
 const numBuckets = 100
 
@@ -55,7 +61,7 @@ func (h *HashIndex) Next() (bool, error) {
 		if !ok {
 			return false, nil
 		}
-		val, err := h.tableScan.Val("dataval")
+		val, err := h.tableScan.Val(dataFld)
 		if err != nil {
 			return false, fmt.Errorf("tableScan.Val error: %w", err)
 		}
@@ -66,18 +72,59 @@ func (h *HashIndex) Next() (bool, error) {
 }
 
 func (h *HashIndex) DataRID() (schema.RID, error) {
-	//TODO implement me
-	panic("implement me")
+	blockNum, err := h.tableScan.Int32(blockFld)
+	if err != nil {
+		return schema.RID{}, fmt.Errorf("tableScan.Int32 error: %w", err)
+	}
+	id, err := h.tableScan.Int32(idFld)
+	if err != nil {
+		return schema.RID{}, fmt.Errorf("tableScan.Int32 error: %w", err)
+	}
+	return schema.NewRID(blockNum, id), nil
 }
 
-func (h *HashIndex) Insert(searchKey string, dataRID schema.RID) error {
-	//TODO implement me
-	panic("implement me")
+func (h *HashIndex) Insert(dataVal schema.Constant, dataRID schema.RID) error {
+	if err := h.BeforeFirst(dataVal); err != nil {
+		return fmt.Errorf("index.BeforeFirst error: %w", err)
+	}
+	if err := h.tableScan.Insert(); err != nil {
+		return fmt.Errorf("index.Insert error: %w", err)
+	}
+	if err := h.tableScan.SetInt32(blockFld, dataRID.BlockNum()); err != nil {
+		return fmt.Errorf("tableScan.SetInt32 error: %w", err)
+	}
+	if err := h.tableScan.SetInt32(idFld, dataRID.Slot()); err != nil {
+		return fmt.Errorf("tableScan.SetInt32 error: %w", err)
+	}
+	if err := h.tableScan.SetVal(dataFld, dataVal); err != nil {
+		return fmt.Errorf("tableScan.SetVal error: %w", err)
+	}
+	return nil
 }
 
-func (h *HashIndex) Delete(searchKey string, dataRID schema.RID) error {
-	//TODO implement me
-	panic("implement me")
+func (h *HashIndex) Delete(dataVal schema.Constant, dataRID schema.RID) error {
+	if err := h.BeforeFirst(dataVal); err != nil {
+		return fmt.Errorf("index.BeforeFirst error: %w", err)
+	}
+	for {
+		ok, err := h.Next()
+		if err != nil {
+			return fmt.Errorf("index.Next error: %w", err)
+		}
+		if !ok {
+			return nil
+		}
+		rid, err := h.DataRID()
+		if err != nil {
+			return fmt.Errorf("index.DataRID error: %w", err)
+		}
+		if rid.Equals(dataRID) {
+			if err := h.tableScan.Delete(); err != nil {
+				return fmt.Errorf("tableScan.Delete error: %w", err)
+			}
+			return nil
+		}
+	}
 }
 
 func (h *HashIndex) Close() error {
