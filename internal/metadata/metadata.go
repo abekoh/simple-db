@@ -455,7 +455,11 @@ func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatMa
 	if err != nil {
 		return nil, fmt.Errorf("layout error: %w", err)
 	}
-	return &IndexManager{layout: layout, tableManager: tableManager, statManager: statManager}, nil
+	indexCfg := &IndexConfig{}
+	if cfg.Index != nil {
+		indexCfg = cfg.Index
+	}
+	return &IndexManager{layout: layout, tableManager: tableManager, statManager: statManager, cfg: indexCfg}, nil
 }
 
 func (m *IndexManager) CreateIndex(indexName, tableName string, fieldName schema.FieldName, tx *transaction.Transaction) error {
@@ -509,7 +513,7 @@ func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) 
 		if err != nil {
 			return nil, fmt.Errorf("stat error: %w", err)
 		}
-		initializer := m.cfg.IndexInitailizer
+		initializer := m.cfg.Initializer
 		if initializer == nil {
 			initializer = index.NewHashIndex
 		}
@@ -533,6 +537,9 @@ type Manager struct {
 }
 
 func NewManager(isNew bool, tx *transaction.Transaction, cfg *Config) (*Manager, error) {
+	if cfg == nil {
+		cfg = &Config{}
+	}
 	tableManager, err := NewTableManager(isNew, tx)
 	if err != nil {
 		return nil, fmt.Errorf("new table manager error: %w", err)
@@ -615,5 +622,5 @@ type Config struct {
 }
 
 type IndexConfig struct {
-	IndexInitailizer index.Initializer
+	Initializer index.Initializer
 }

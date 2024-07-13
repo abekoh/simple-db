@@ -31,8 +31,7 @@ func TestBasicQueryPlanner(t *testing.T) {
 	}
 
 	planner := NewPlanner(NewBasicQueryPlanner(db.MetadataMgr()), nil, db.MetadataMgr())
-	plan, err := planner.Execute(`-- noinspection SqlNoDataSourceInspection
-	SELECT a, b FROM mytable WHERE a = 1`, tx)
+	plan, err := planner.Execute(`SELECT a, b FROM mytable WHERE a = 1`, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
