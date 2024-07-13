@@ -363,7 +363,7 @@ func (i IndexSelectPlan) String() string {
 }
 
 func (i IndexSelectPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
-	return nil
+	return i.p.Placeholders(findSchema)
 }
 
 func (i IndexSelectPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
@@ -400,4 +400,94 @@ func (i IndexSelectPlan) DistinctValues(fieldName schema.FieldName) int {
 
 func (i IndexSelectPlan) Schema() *schema.Schema {
 	return i.p.Schema()
+}
+
+type IndexJoinPlan struct {
+	p1, p2    Plan
+	indexInfo *metadata.IndexInfo
+	joinField schema.FieldName
+	sche      schema.Schema
+}
+
+func NewIndexJoinPlan(p1, p2 Plan, indexInfo *metadata.IndexInfo, joinField schema.FieldName) *IndexJoinPlan {
+	s := schema.NewSchema()
+	s.AddAll(*p1.Schema())
+	s.AddAll(*p2.Schema())
+	return &IndexJoinPlan{p1: p1, p2: p2, indexInfo: indexInfo, joinField: joinField, sche: s}
+}
+
+var _ Plan = (*IndexJoinPlan)(nil)
+
+func (i IndexJoinPlan) Result() {}
+
+func (i IndexJoinPlan) String() string {
+	return fmt.Sprintf("IndexJoin{%s=%s(%s)}(%v, %v)", i.joinField, i.indexInfo.FieldName(), i.indexInfo.IndexName(), i.p1, i.p2)
+}
+
+func (i IndexJoinPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+	placeholders := i.p1.Placeholders(findSchema)
+	for k, v := range i.p2.Placeholders(findSchema) {
+		placeholders[k] = v
+	}
+	return placeholders
+}
+
+func (i IndexJoinPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+	b1, err := i.p1.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p1.SwapParams error: %w", err)
+	}
+	b2, err := i.p2.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p2.SwapParams error: %w", err)
+	}
+	return &BoundPlan{
+		Plan: &IndexJoinPlan{
+			p1:        b1.(Plan),
+			p2:        b2.(Plan),
+			indexInfo: i.indexInfo,
+			joinField: i.joinField,
+			sche:      i.sche,
+		},
+	}, nil
+}
+
+func (i IndexJoinPlan) Open() (query.Scan, error) {
+	s1, err := i.p1.Open()
+	if err != nil {
+		return nil, fmt.Errorf("p1.Open error: %w", err)
+	}
+	s2, err := i.p2.Open()
+	if err != nil {
+		return nil, fmt.Errorf("p1.Open error: %w", err)
+	}
+	ts2, ok := s2.(*record.TableScan)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast to *record.TableScan from %T", s2)
+	}
+	js, err := index.NewJoinScan(s1, ts2, i.indexInfo.Open(), i.joinField)
+	if err != nil {
+		return nil, fmt.Errorf("index.NewJoinScan error: %w", err)
+	}
+	return js, nil
+}
+
+func (i IndexJoinPlan) BlockAccessed() int {
+	return i.p1.BlockAccessed() + (i.p1.RecordsOutput() * i.indexInfo.BlockAccessed()) + i.RecordsOutput()
+}
+
+func (i IndexJoinPlan) RecordsOutput() int {
+	return i.p1.RecordsOutput() * i.indexInfo.RecordsOutput()
+}
+
+func (i IndexJoinPlan) DistinctValues(fieldName schema.FieldName) int {
+	if i.p1.Schema().HasField(fieldName) {
+		return i.p1.DistinctValues(fieldName)
+	} else {
+		return i.p2.DistinctValues(fieldName)
+	}
+}
+
+func (i IndexJoinPlan) Schema() *schema.Schema {
+	return &i.sche
 }
