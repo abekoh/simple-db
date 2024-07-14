@@ -18,10 +18,6 @@ type BTreeIndex struct {
 	leaf                  *BTreeLeaf
 }
 
-const (
-	leafOverflow = 1
-)
-
 func NewBTreeIndex(tx *transaction.Transaction, idxName string, leafLayout *record.Layout) (Index, error) {
 	leafTableName := idxName + "_leaf"
 	leafTableSize, err := tx.Size(leafTableName)
@@ -93,28 +89,98 @@ func NewBTreeIndex(tx *transaction.Transaction, idxName string, leafLayout *reco
 var _ Index = (*BTreeIndex)(nil)
 
 func (bti BTreeIndex) BeforeFirst(searchKey schema.Constant) error {
-	//TODO implement me
-	panic("implement me")
+	if err := bti.Close(); err != nil {
+		return fmt.Errorf("bti.Close error: %w", err)
+	}
+	root, err := NewBTreeDir(bti.tx, bti.rootBlockID, bti.dirLayout)
+	if err != nil {
+		return fmt.Errorf("NewBTreeDir error: %w", err)
+	}
+	blockNum, err := root.Search(searchKey)
+	if err != nil {
+		return fmt.Errorf("root.Search error: %w", err)
+	}
+	if err := root.Close(); err != nil {
+		return fmt.Errorf("root.Close error: %w", err)
+	}
+	leafBlockID := file.NewBlockID(bti.leafTableName, blockNum)
+	leaf, err := NewBTreeLeaf(bti.tx, leafBlockID, bti.leafLayout, searchKey)
+	if err != nil {
+		return fmt.Errorf("NewBTreeLeaf error: %w", err)
+	}
+	bti.leaf = leaf
+	return nil
 }
 
 func (bti BTreeIndex) Next() (bool, error) {
-	//TODO implement me
-	panic("implement me")
+	if bti.leaf == nil {
+		return false, fmt.Errorf("bti.leaf is nil")
+	}
+	if ok, err := bti.leaf.Next(); err != nil {
+		return false, fmt.Errorf("leaf.Next error: %w", err)
+	} else {
+		return ok, nil
+	}
 }
 
 func (bti BTreeIndex) DataRID() (schema.RID, error) {
-	//TODO implement me
-	panic("implement me")
+	if bti.leaf == nil {
+		return schema.RID{}, fmt.Errorf("bti.leaf is nil")
+	}
+	rid, err := bti.leaf.DataRID()
+	if err != nil {
+		return schema.RID{}, fmt.Errorf("leaf.DataRID error: %w", err)
+	}
+	return rid, nil
 }
 
 func (bti BTreeIndex) Insert(dataVal schema.Constant, dataRID schema.RID) error {
-	//TODO implement me
-	panic("implement me")
+	if bti.leaf == nil {
+		return fmt.Errorf("bti.leaf is nil")
+	}
+	if err := bti.BeforeFirst(dataVal); err != nil {
+		return fmt.Errorf("bti.BeforeFirst error: %w", err)
+	}
+	e, err := bti.leaf.Insert(dataRID)
+	if err != nil {
+		return fmt.Errorf("leaf.Insert error: %w", err)
+	}
+	if e != nil {
+		return nil
+	}
+	root, err := NewBTreeDir(bti.tx, bti.rootBlockID, bti.dirLayout)
+	if err != nil {
+		return fmt.Errorf("NewBTreeDir error: %w", err)
+	}
+	e2, err := root.Insert(DirEntry{dataValue: dataVal, blockNum: e.blockNum})
+	if err != nil {
+		return fmt.Errorf("root.Insert error: %w", err)
+	}
+	if e2 != nil {
+		if err := root.MakeNewRoot(*e2); err != nil {
+			return fmt.Errorf("root.MakeNewRoot error: %w", err)
+		}
+	}
+	if err := root.Close(); err != nil {
+		return fmt.Errorf("root.Close error: %w", err)
+	}
+	return nil
 }
 
 func (bti BTreeIndex) Delete(dataVal schema.Constant, dataRID schema.RID) error {
-	//TODO implement me
-	panic("implement me")
+	if bti.leaf == nil {
+		return fmt.Errorf("bti.leaf is nil")
+	}
+	if err := bti.BeforeFirst(dataVal); err != nil {
+		return fmt.Errorf("bti.BeforeFirst error: %w", err)
+	}
+	if err := bti.leaf.Delete(dataRID); err != nil {
+		return fmt.Errorf("leaf.Delete error: %w", err)
+	}
+	if err := bti.leaf.Close(); err != nil {
+		return fmt.Errorf("leaf.Close error: %w", err)
+	}
+	return nil
 }
 
 func (bti BTreeIndex) Close() error {
