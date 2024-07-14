@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"cmp"
 	"fmt"
 )
 
@@ -133,6 +134,7 @@ type Constant interface {
 	Val() any
 	HashCode() int
 	Equals(Constant) bool
+	Compare(Constant) int
 }
 
 type ConstantInt32 int32
@@ -158,6 +160,13 @@ func (v ConstantInt32) Equals(c Constant) bool {
 		return v == c
 	}
 	return false
+}
+
+func (v ConstantInt32) Compare(c Constant) int {
+	if c, ok := c.(ConstantInt32); ok {
+		return cmp.Compare(int32(v), int32(c))
+	}
+	panic("type mismatch")
 }
 
 type ConstantStr string
@@ -189,6 +198,13 @@ func (v ConstantStr) Equals(c Constant) bool {
 	return false
 }
 
+func (v ConstantStr) Compare(c Constant) int {
+	if c, ok := c.(ConstantStr); ok {
+		return cmp.Compare(string(v), string(c))
+	}
+	panic("type mismatch")
+}
+
 type Valuable interface {
 	Val(fieldName FieldName) (Constant, error)
 }
@@ -212,5 +228,9 @@ func (p Placeholder) HashCode() int {
 }
 
 func (p Placeholder) Equals(Constant) bool {
+	panic("don't use placeholder as value")
+}
+
+func (p Placeholder) Compare(Constant) int {
 	panic("don't use placeholder as value")
 }

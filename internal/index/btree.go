@@ -15,6 +15,7 @@ type BTreeIndex struct {
 	dirLayout, leafLayout *record.Layout
 	leafTableName         string
 	rootBlockID           file.BlockID
+	leaf                  *BTreeLeaf
 }
 
 func NewBTreeIndex(tx *transaction.Transaction, idxName string, leafLayout *record.Layout) (Index, error) {
@@ -113,8 +114,11 @@ func (bti BTreeIndex) Delete(dataVal schema.Constant, dataRID schema.RID) error 
 }
 
 func (bti BTreeIndex) Close() error {
-	//TODO implement me
-	panic("implement me")
+	if bti.leaf != nil {
+		if err := bti.leaf.Close(); err != nil {
+			return fmt.Errorf("leaf.Close error: %w", err)
+		}
+	}
 }
 
 type BTreePage struct {
@@ -201,6 +205,21 @@ func (btp BTreePage) insert(slot int32) error {
 	return nil
 }
 
+func (btp BTreePage) flag() (int32, error) {
+	n, err := btp.tx.Int32(btp.currentBlockID, 0)
+	if err != nil {
+		return 0, fmt.Errorf("tx.Int32 error: %w", err)
+	}
+	return n, nil
+}
+
+func (btp BTreePage) setFlag(n int32) error {
+	if err := btp.tx.SetInt32(btp.currentBlockID, 0, int32(n), true); err != nil {
+		return fmt.Errorf("tx.SetInt32 error: %w", err)
+	}
+	return nil
+}
+
 func (btp BTreePage) recordsNum() (int32, error) {
 	n, err := btp.tx.Int32(btp.currentBlockID, 4)
 	if err != nil {
@@ -274,7 +293,185 @@ func (btp BTreePage) fieldPos(slot int32, fieldName schema.FieldName) (int32, er
 	return slotPos + offset, nil
 }
 
+func (btp BTreePage) FindSlotBefore(searchKey schema.Constant) (int32, error) {
+	var slot int32
+	for {
+		recsNum, err := btp.recordsNum()
+		if err != nil {
+			return -1, fmt.Errorf("btp.recordsNum error: %w", err)
+		}
+		if slot >= recsNum {
+			return slot - 1, nil
+		}
+		val, err := btp.value(slot, dataFld)
+		if err != nil {
+			return -1, fmt.Errorf("btp.value error: %w", err)
+		}
+		if searchKey.Compare(val) >= 0 {
+			return slot - 1, nil
+		}
+		slot++
+	}
+}
+
 func (btp BTreePage) Close() error {
-	//TODO implement me
-	panic("implement me")
+	if err := btp.tx.Unpin(btp.currentBlockID); err != nil {
+		return fmt.Errorf("tx.Unpin error: %w", err)
+	}
+	return nil
+}
+
+func (btp BTreePage) IsFull() (bool, error) {
+	recsNum, err := btp.recordsNum()
+	if err != nil {
+		return false, fmt.Errorf("btp.recordsNum error: %w", err)
+	}
+	slotSize := btp.layout.SlotSize()
+	slotPos := 4*2 + (recsNum + 1*slotSize)
+	return slotPos >= btp.tx.BlockSize(), nil
+}
+
+func (btp BTreePage) Split(splitPos int32, flag int32) (file.BlockID, error) {
+	newBlockId, err := btp.tx.Append(btp.currentBlockID.Filename())
+	if err != nil {
+		return file.BlockID{}, fmt.Errorf("tx.Append error: %w", err)
+	}
+	newPage, err := NewBTreePage(btp.tx, newBlockId, btp.layout)
+	if err != nil {
+		return file.BlockID{}, fmt.Errorf("NewBTreePage error: %w", err)
+	}
+
+	sche := btp.layout.Schema()
+	destSlot := int32(0)
+	for {
+		recsNum, err := btp.recordsNum()
+		if err != nil {
+			return file.BlockID{}, fmt.Errorf("btp.recordsNum error: %w", err)
+		}
+		if destSlot >= recsNum {
+			break
+		}
+		if err := newPage.insert(destSlot); err != nil {
+			return file.BlockID{}, fmt.Errorf("newPage.insert error: %w", err)
+		}
+		for _, fieldName := range sche.FieldNames() {
+			val, err := btp.value(destSlot, fieldName)
+			if err != nil {
+				return file.BlockID{}, fmt.Errorf("btp.value error: %w", err)
+			}
+			if err := newPage.setValue(destSlot, fieldName, val); err != nil {
+				return file.BlockID{}, fmt.Errorf("newPage.setValue error: %w", err)
+			}
+		}
+	}
+	if err := newPage.setFlag(flag); err != nil {
+		return file.BlockID{}, fmt.Errorf("newPage.setFlag error: %w", err)
+	}
+	if err := newPage.Close(); err != nil {
+		return file.BlockID{}, fmt.Errorf("newPage.Close error: %w", err)
+	}
+	return newBlockId, nil
+}
+
+func (btp BTreePage) AppendNew(flag int32) error {
+	blockID, err := btp.tx.Append(btp.currentBlockID.Filename())
+	if err != nil {
+		return fmt.Errorf("tx.Append error: %w", err)
+	}
+	if err := btp.Format(blockID, flag); err != nil {
+		return fmt.Errorf("btp.Format error: %w", err)
+	}
+	return nil
+}
+
+func (btp BTreePage) ChildNum() (int32, error) {
+	v, err := btp.value(0, blockFld)
+	if err != nil {
+		return 0, fmt.Errorf("btp.value error: %w", err)
+	}
+	if v, ok := v.(schema.ConstantInt32); ok {
+		return int32(v), nil
+	}
+	return 0, fmt.Errorf("type mismatch")
+}
+
+func (btp BTreePage) DataRID(slot int32) (schema.RID, error) {
+	blockNum, err := btp.value(slot, blockFld)
+	if err != nil {
+		return schema.RID{}, fmt.Errorf("btp.value error: %w", err)
+	}
+	id, err := btp.value(slot, idFld)
+	if err != nil {
+		return schema.RID{}, fmt.Errorf("btp.value error: %w", err)
+	}
+	if blockNum, ok := blockNum.(schema.ConstantInt32); ok {
+		if id, ok := id.(schema.ConstantInt32); ok {
+			return schema.NewRID(int32(blockNum), int32(id)), nil
+		}
+	}
+	return schema.RID{}, fmt.Errorf("type mismatch")
+}
+
+func (btp BTreePage) InsertLeaf(slot int32, val schema.Constant, rid schema.RID) error {
+	if err := btp.insert(slot); err != nil {
+		return fmt.Errorf("btp.insert error: %w", err)
+	}
+	if err := btp.setValue(slot, dataFld, val); err != nil {
+		return fmt.Errorf("btp.setValue error: %w", err)
+	}
+	if err := btp.setValue(slot, blockFld, schema.ConstantInt32(rid.BlockNum())); err != nil {
+		return fmt.Errorf("btp.setValue error: %w", err)
+	}
+	if err := btp.setValue(slot, idFld, schema.ConstantInt32(rid.Slot())); err != nil {
+		return fmt.Errorf("btp.setValue error: %w", err)
+	}
+	return nil
+}
+
+func (btp BTreePage) Delete(slot int32) error {
+	recsNum, err := btp.recordsNum()
+	if err != nil {
+		return fmt.Errorf("btp.recordsNum error: %w", err)
+	}
+	for i := slot + 1; i < recsNum; i++ {
+		from := i
+		to := i - 1
+		for _, fieldName := range btp.layout.Schema().FieldNames() {
+			val, err := btp.value(from, fieldName)
+			if err != nil {
+				return fmt.Errorf("btp.value error: %w", err)
+			}
+			if err := btp.setValue(to, fieldName, val); err != nil {
+				return fmt.Errorf("btp.setValue error: %w", err)
+			}
+		}
+	}
+	if err := btp.setRecordsNum(recsNum - 1); err != nil {
+		return fmt.Errorf("btp.setRecordsNum error: %w", err)
+	}
+	return nil
+}
+
+type BTreeLeaf struct {
+	tx          *transaction.Transaction
+	layout      *record.Layout
+	searchKey   schema.Constant
+	contents    *BTreePage
+	currentSlot int32
+	fieldName   schema.FieldName
+}
+
+func NewBTreeLeaf(tx *transaction.Transaction, blockID file.BlockID, layout *record.Layout, searchKey schema.Constant) (*BTreeLeaf, error) {
+	contents, err := NewBTreePage(tx, blockID, layout)
+	if err != nil {
+		return nil, fmt.Errorf("NewBTreePage error: %w", err)
+	}
+	return &BTreeLeaf{
+		tx:          tx,
+		layout:      layout,
+		searchKey:   searchKey,
+		contents:    contents,
+		currentSlot: 1,
+		fieldName:   "",
+	}, nil
 }
