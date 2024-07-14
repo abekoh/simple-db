@@ -119,6 +119,7 @@ func (bti BTreeIndex) Close() error {
 			return fmt.Errorf("leaf.Close error: %w", err)
 		}
 	}
+	return nil
 }
 
 type BTreePage struct {
@@ -480,7 +481,7 @@ func NewBTreeLeaf(tx *transaction.Transaction, blockID file.BlockID, layout *rec
 	}, nil
 }
 
-func (btl *BTreeLeaf) Close(searchKey schema.Constant) error {
+func (btl *BTreeLeaf) Close() error {
 	if err := btl.contents.Close(); err != nil {
 		return fmt.Errorf("contents.Close error: %w", err)
 	}
