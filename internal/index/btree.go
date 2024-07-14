@@ -530,3 +530,29 @@ func (btl *BTreeLeaf) Next() (bool, error) {
 	}
 	return true, nil
 }
+
+func (btl *BTreeLeaf) DataRID() (schema.RID, error) {
+	return btl.contents.DataRID(btl.currentSlot)
+}
+
+func (btl *BTreeLeaf) Delete(rid schema.RID) error {
+	for {
+		ok, err := btl.Next()
+		if err != nil {
+			return fmt.Errorf("btl.Next error: %w", err)
+		}
+		if !ok {
+			return nil
+		}
+		r, err := btl.DataRID()
+		if err != nil {
+			return fmt.Errorf("btl.DataRID error: %w", err)
+		}
+		if r.Equals(rid) {
+			if err := btl.contents.Delete(btl.currentSlot); err != nil {
+				return fmt.Errorf("btl.contents.Delete error: %w", err)
+			}
+			return nil
+		}
+	}
+}
