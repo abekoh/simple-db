@@ -135,8 +135,32 @@ func NewBTreePage(tx *transaction.Transaction, currentBlockID file.BlockID, layo
 }
 
 func (btp BTreePage) Format(blockId file.BlockID, flag int32) error {
-	//TODO implement me
-	panic("implement me")
+	if err := btp.tx.SetInt32(blockId, 0, flag, false); err != nil {
+		return fmt.Errorf("tx.SetInt32 error: %w", err)
+	}
+	if err := btp.tx.SetInt32(blockId, 4, 0, false); err != nil {
+		return fmt.Errorf("tx.SetInt32 error: %w", err)
+	}
+	recSize := btp.layout.SlotSize()
+	for pos := int32(2 * 4); pos+recSize <= btp.tx.BlockSize(); pos += recSize {
+		for _, fieldName := range btp.layout.Schema().FieldNames() {
+			offset, ok := btp.layout.Offset(fieldName)
+			if !ok {
+				return fmt.Errorf("no such field: %s", fieldName)
+			}
+			switch btp.layout.Schema().Typ(fieldName) {
+			case schema.Integer32:
+				if err := btp.tx.SetInt32(blockId, pos+offset, 0, false); err != nil {
+					return fmt.Errorf("tx.SetInt32 error: %w", err)
+				}
+			case schema.Varchar:
+				if err := btp.tx.SetStr(blockId, pos+offset, "", false); err != nil {
+					return fmt.Errorf("tx.SetString error: %w", err)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (btp BTreePage) InsertDir(slot int32, val schema.Constant, blockNum int32) error {
