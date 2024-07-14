@@ -457,6 +457,26 @@ func (btp *BTreePage) Delete(slot int32) error {
 	return nil
 }
 
+type BTreeDir struct {
+	tx       *transaction.Transaction
+	layout   *record.Layout
+	contents *BTreePage
+	filename string
+}
+
+func NewBTreeDir(tx *transaction.Transaction, blockID file.BlockID, layout *record.Layout) (*BTreeDir, error) {
+	contents, err := NewBTreePage(tx, blockID, layout)
+	if err != nil {
+		return nil, fmt.Errorf("NewBTreePage error: %w", err)
+	}
+	return &BTreeDir{
+		tx:       tx,
+		layout:   layout,
+		contents: contents,
+		filename: blockID.Filename(),
+	}, nil
+}
+
 type BTreeLeaf struct {
 	tx          *transaction.Transaction
 	layout      *record.Layout
