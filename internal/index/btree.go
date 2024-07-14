@@ -18,6 +18,10 @@ type BTreeIndex struct {
 	leaf                  *BTreeLeaf
 }
 
+const (
+	leafOverflow = 1
+)
+
 func NewBTreeIndex(tx *transaction.Transaction, idxName string, leafLayout *record.Layout) (Index, error) {
 	leafTableName := idxName + "_leaf"
 	leafTableSize, err := tx.Size(leafTableName)
@@ -556,4 +560,106 @@ func (btl *BTreeLeaf) Delete(rid schema.RID) error {
 			return nil
 		}
 	}
+}
+
+func (btl *BTreeLeaf) Insert(rid schema.RID) (*DirEntry, error) {
+	flg, err := btl.contents.flag()
+	if err != nil {
+		return nil, fmt.Errorf("btl.contents.flag error: %w", err)
+	}
+	val, err := btl.contents.value(0, dataFld)
+	if err != nil {
+		return nil, fmt.Errorf("btl.contents.value error: %w", err)
+	}
+	if flg >= 0 && val.Compare(btl.searchKey) > 0 {
+		newBlockID, err := btl.contents.Split(0, flg)
+		if err != nil {
+			return nil, fmt.Errorf("btl.contents.Split error: %w", err)
+		}
+		var currentSlot int32
+		if err := btl.contents.setFlag(-1); err != nil {
+			return nil, fmt.Errorf("btl.contents.setFlag error: %w", err)
+		}
+		if err := btl.contents.InsertLeaf(currentSlot, btl.searchKey, rid); err != nil {
+			return nil, fmt.Errorf("btl.contents.InsertLeaf error: %w", err)
+		}
+		return &DirEntry{dataValue: btl.searchKey, blockNum: newBlockID.Num()}, nil
+	}
+
+	btl.currentSlot++
+	if err := btl.contents.InsertLeaf(btl.currentSlot, btl.searchKey, rid); err != nil {
+		return nil, fmt.Errorf("btl.contents.insert error: %w", err)
+	}
+	isFull, err := btl.contents.IsFull()
+	if err != nil {
+		return nil, fmt.Errorf("btl.contents.IsFull error: %w", err)
+	}
+	if !isFull {
+		return nil, nil
+	}
+
+	// split the leaf page
+	firstKey, err := btl.contents.value(0, dataFld)
+	if err != nil {
+		return nil, fmt.Errorf("btl.contents.value error: %w", err)
+	}
+	recsNum, err := btl.contents.recordsNum()
+	if err != nil {
+		return nil, fmt.Errorf("btl.contents.recordsNum error: %w", err)
+	}
+	lastKey, err := btl.contents.value(recsNum-1, dataFld)
+	if err != nil {
+		return nil, fmt.Errorf("btl.contents.value error: %w", err)
+	}
+	if firstKey.Equals(lastKey) {
+		newBlockID, err := btl.contents.Split(1, flg)
+		if err != nil {
+			return nil, fmt.Errorf("btl.contents.Split error: %w", err)
+		}
+		if err := btl.contents.setFlag(newBlockID.Num()); err != nil {
+			return nil, fmt.Errorf("btl.contents.setFlag error: %w", err)
+		}
+		return nil, nil
+	} else {
+		splitPos := recsNum / 2
+		splitKey, err := btl.contents.value(splitPos, dataFld)
+		if err != nil {
+			return nil, fmt.Errorf("btl.contents.value error: %w", err)
+		}
+		if splitKey.Equals(btl.searchKey) {
+			var key schema.Constant
+			for {
+				key, err = btl.contents.value(splitPos, dataFld)
+				if err != nil {
+					return nil, fmt.Errorf("btl.contents.value error: %w", err)
+				}
+				if !key.Equals(btl.searchKey) {
+					break
+				}
+				splitPos++
+			}
+			splitKey = key
+		} else {
+			for {
+				key, err := btl.contents.value(splitPos-1, dataFld)
+				if err != nil {
+					return nil, fmt.Errorf("btl.contents.value error: %w", err)
+				}
+				if !key.Equals(btl.searchKey) {
+					break
+				}
+				splitPos--
+			}
+		}
+		newBlockID, err := btl.contents.Split(splitPos, -1)
+		if err != nil {
+			return nil, fmt.Errorf("btl.contents.Split error: %w", err)
+		}
+		return &DirEntry{dataValue: splitKey, blockNum: newBlockID.Num()}, nil
+	}
+}
+
+type DirEntry struct {
+	dataValue schema.Constant
+	blockNum  int32
 }
