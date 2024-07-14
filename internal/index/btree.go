@@ -167,12 +167,13 @@ func (btp BTreePage) InsertDir(slot int32, val schema.Constant, blockNum int32) 
 	if err := btp.insert(slot); err != nil {
 		return fmt.Errorf("btp.insert error: %w", err)
 	}
-	if err := btp.setValue(int(slot), dataFld, val); err != nil {
+	if err := btp.setValue(slot, dataFld, val); err != nil {
 		return fmt.Errorf("btp.setValue error: %w", err)
 	}
-	if err := btp.setValue(int(slot), blockFld, schema.ConstantInt32(blockNum)); err != nil {
+	if err := btp.setValue(slot, blockFld, schema.ConstantInt32(blockNum)); err != nil {
 		return fmt.Errorf("btp.setValue error: %w", err)
 	}
+	return nil
 }
 
 func (btp BTreePage) insert(slot int32) error {
@@ -215,7 +216,7 @@ func (btp BTreePage) setRecordsNum(n int32) error {
 	return nil
 }
 
-func (btp BTreePage) value(slot int, fieldName schema.FieldName) (schema.Constant, error) {
+func (btp BTreePage) value(slot int32, fieldName schema.FieldName) (schema.Constant, error) {
 	typ := btp.layout.Schema().Typ(fieldName)
 	fieldPos, err := btp.fieldPos(slot, fieldName)
 	if err != nil {
@@ -239,7 +240,7 @@ func (btp BTreePage) value(slot int, fieldName schema.FieldName) (schema.Constan
 	}
 }
 
-func (btp BTreePage) setValue(slot int, fieldName schema.FieldName, val schema.Constant) error {
+func (btp BTreePage) setValue(slot int32, fieldName schema.FieldName, val schema.Constant) error {
 	fieldPos, err := btp.fieldPos(slot, fieldName)
 	if err != nil {
 		return fmt.Errorf("btp.fieldPos error: %w", err)
@@ -264,12 +265,12 @@ func (btp BTreePage) setValue(slot int, fieldName schema.FieldName, val schema.C
 	return nil
 }
 
-func (btp BTreePage) fieldPos(slot int, fieldName schema.FieldName) (int32, error) {
+func (btp BTreePage) fieldPos(slot int32, fieldName schema.FieldName) (int32, error) {
 	offset, ok := btp.layout.Offset(fieldName)
 	if !ok {
 		return -1, fmt.Errorf("no such field: %s", fieldName)
 	}
-	slotPos := 4*2 + (int32(slot) * btp.layout.SlotSize())
+	slotPos := 4*2 + (slot * btp.layout.SlotSize())
 	return slotPos + offset, nil
 }
 
