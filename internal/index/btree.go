@@ -513,6 +513,105 @@ func (btd *BTreeDir) Search(searchKey schema.Constant) (int32, error) {
 	return childBlock.Num(), nil
 }
 
+func (btd *BTreeDir) MakeNewRoot(e DirEntry) error {
+	firstVal, err := btd.contents.value(0, dataFld)
+	if err != nil {
+		return fmt.Errorf("btd.contents.value error: %w", err)
+	}
+	level, err := btd.contents.flag()
+	if err != nil {
+		return fmt.Errorf("btd.contents.flag error: %w", err)
+	}
+	newBlockID, err := btd.contents.Split(0, level)
+	if err != nil {
+		return fmt.Errorf("btd.contents.Split error: %w", err)
+	}
+	oldRoot := DirEntry{dataValue: firstVal, blockNum: newBlockID.Num()}
+	if _, err := btd.InsertEntry(oldRoot); err != nil {
+		return fmt.Errorf("btd.InsertEntry error: %w", err)
+	}
+	if _, err := btd.InsertEntry(e); err != nil {
+		return fmt.Errorf("btd.InsertEntry error: %w", err)
+	}
+	if err := btd.contents.setFlag(level + 1); err != nil {
+		return fmt.Errorf("btd.contents.setFlag error: %w", err)
+	}
+	return nil
+}
+
+func (btd *BTreeDir) Insert(e DirEntry) (*DirEntry, error) {
+	flg, err := btd.contents.flag()
+	if err != nil {
+		return nil, fmt.Errorf("btd.contents.flag error: %w", err)
+	}
+	if flg == 0 {
+		ne, err := btd.InsertEntry(e)
+		if err != nil {
+			return nil, fmt.Errorf("btd.InsertEntry error: %w", err)
+		}
+		return ne, nil
+	}
+	childBlockID, err := btd.findChildBlock(e.dataValue)
+	if err != nil {
+		return nil, fmt.Errorf("btd.findChildBlock error: %w", err)
+	}
+	child, err := NewBTreeDir(btd.tx, childBlockID, btd.layout)
+	if err != nil {
+		return nil, fmt.Errorf("NewBTreeDir error: %w", err)
+	}
+	myEntry, err := child.Insert(e)
+	if err != nil {
+		return nil, fmt.Errorf("child.Insert error: %w", err)
+	}
+	if myEntry != nil {
+		ne, err := btd.InsertEntry(e)
+		if err != nil {
+			return nil, fmt.Errorf("btd.InsertEntry error: %w", err)
+		}
+		return ne, nil
+	} else {
+		return nil, nil
+	}
+}
+
+func (btd *BTreeDir) InsertEntry(e DirEntry) (*DirEntry, error) {
+	slot, err := btd.contents.FindSlotBefore(e.dataValue)
+	if err != nil {
+		return nil, fmt.Errorf("btd.contents.FindSlotBefore error: %w", err)
+	}
+	newSlot := slot + 1
+	if err := btd.contents.InsertDir(newSlot, e.dataValue, e.blockNum); err != nil {
+		return nil, fmt.Errorf("btd.contents.InsertDir error: %w", err)
+	}
+	isFull, err := btd.contents.IsFull()
+	if err != nil {
+		return nil, fmt.Errorf("btd.contents.IsFull error: %w", err)
+	}
+	if !isFull {
+		return nil, nil
+	}
+
+	// split
+	level, err := btd.contents.flag()
+	if err != nil {
+		return nil, fmt.Errorf("btd.contents.flag error: %w", err)
+	}
+	recsNum, err := btd.contents.recordsNum()
+	if err != nil {
+		return nil, fmt.Errorf("btd.contents.recordsNum error: %w", err)
+	}
+	splitPos := recsNum / 2
+	splitVal, err := btd.contents.value(splitPos, dataFld)
+	if err != nil {
+		return nil, fmt.Errorf("btd.contents.value error: %w", err)
+	}
+	newBlockID, err := btd.contents.Split(splitPos, level)
+	if err != nil {
+		return nil, fmt.Errorf("btd.contents.Split error: %w", err)
+	}
+	return &DirEntry{dataValue: splitVal, blockNum: newBlockID.Num()}, nil
+}
+
 func (btd *BTreeDir) findChildBlock(searchKey schema.Constant) (file.BlockID, error) {
 	slot, err := btd.contents.FindSlotBefore(searchKey)
 	if err != nil {
