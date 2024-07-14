@@ -164,8 +164,113 @@ func (btp BTreePage) Format(blockId file.BlockID, flag int32) error {
 }
 
 func (btp BTreePage) InsertDir(slot int32, val schema.Constant, blockNum int32) error {
-	//TODO implement me
-	panic("implement me")
+	if err := btp.insert(slot); err != nil {
+		return fmt.Errorf("btp.insert error: %w", err)
+	}
+	if err := btp.setValue(int(slot), dataFld, val); err != nil {
+		return fmt.Errorf("btp.setValue error: %w", err)
+	}
+	if err := btp.setValue(int(slot), blockFld, schema.ConstantInt32(blockNum)); err != nil {
+		return fmt.Errorf("btp.setValue error: %w", err)
+	}
+}
+
+func (btp BTreePage) insert(slot int32) error {
+	recsNum, err := btp.recordsNum()
+	if err != nil {
+		return fmt.Errorf("btp.recordsNum error: %w", err)
+	}
+	sche := btp.layout.Schema()
+	for i := recsNum; i > slot; i-- {
+		from := i - 1
+		to := i
+		for _, fieldName := range sche.FieldNames() {
+			fromVal, err := btp.value(from, fieldName)
+			if err != nil {
+				return fmt.Errorf("btp.value error: %w", err)
+			}
+			if err := btp.setValue(to, fieldName, fromVal); err != nil {
+				return fmt.Errorf("btp.setValue error: %w", err)
+			}
+		}
+	}
+	if err := btp.setRecordsNum(recsNum + 1); err != nil {
+		return fmt.Errorf("btp.setRecordsNum error: %w", err)
+	}
+	return nil
+}
+
+func (btp BTreePage) recordsNum() (int32, error) {
+	n, err := btp.tx.Int32(btp.currentBlockID, 4)
+	if err != nil {
+		return 0, fmt.Errorf("tx.Int32 error: %w", err)
+	}
+	return n, nil
+}
+
+func (btp BTreePage) setRecordsNum(n int32) error {
+	if err := btp.tx.SetInt32(btp.currentBlockID, 4, int32(n), true); err != nil {
+		return fmt.Errorf("tx.SetInt32 error: %w", err)
+	}
+	return nil
+}
+
+func (btp BTreePage) value(slot int, fieldName schema.FieldName) (schema.Constant, error) {
+	typ := btp.layout.Schema().Typ(fieldName)
+	fieldPos, err := btp.fieldPos(slot, fieldName)
+	if err != nil {
+		return nil, fmt.Errorf("btp.fieldPos error: %w", err)
+	}
+	switch typ {
+	case schema.Integer32:
+		v, err := btp.tx.Int32(btp.currentBlockID, fieldPos)
+		if err != nil {
+			return nil, fmt.Errorf("tx.Int32 error: %w", err)
+		}
+		return schema.ConstantInt32(v), nil
+	case schema.Varchar:
+		v, err := btp.tx.Str(btp.currentBlockID, fieldPos)
+		if err != nil {
+			return nil, fmt.Errorf("tx.Str error: %w", err)
+		}
+		return schema.ConstantStr(v), nil
+	default:
+		return nil, fmt.Errorf("unsupported type: %v", typ)
+	}
+}
+
+func (btp BTreePage) setValue(slot int, fieldName schema.FieldName, val schema.Constant) error {
+	fieldPos, err := btp.fieldPos(slot, fieldName)
+	if err != nil {
+		return fmt.Errorf("btp.fieldPos error: %w", err)
+	}
+	fieldType := btp.layout.Schema().Typ(fieldName)
+	switch v := val.(type) {
+	case schema.ConstantInt32:
+		if fieldType != schema.Integer32 {
+			return fmt.Errorf("field type mismatch: %v", fieldType)
+		}
+		if err := btp.tx.SetInt32(btp.currentBlockID, fieldPos, int32(v), true); err != nil {
+			return fmt.Errorf("tx.SetInt32 error: %w", err)
+		}
+	case schema.ConstantStr:
+		if fieldType != schema.Varchar {
+			return fmt.Errorf("field type mismatch: %v", fieldType)
+		}
+		if err := btp.tx.SetStr(btp.currentBlockID, fieldPos, string(v), true); err != nil {
+			return fmt.Errorf("tx.SetStr error: %w", err)
+		}
+	}
+	return nil
+}
+
+func (btp BTreePage) fieldPos(slot int, fieldName schema.FieldName) (int32, error) {
+	offset, ok := btp.layout.Offset(fieldName)
+	if !ok {
+		return -1, fmt.Errorf("no such field: %s", fieldName)
+	}
+	slotPos := 4*2 + (int32(slot) * btp.layout.SlotSize())
+	return slotPos + offset, nil
 }
 
 func (btp BTreePage) Close() error {
