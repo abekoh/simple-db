@@ -488,4 +488,45 @@ func (btl *BTreeLeaf) Close(searchKey schema.Constant) error {
 }
 
 func (btl *BTreeLeaf) Next() (bool, error) {
+	tryOverflow := func() (bool, error) {
+		firstKey, err := btl.contents.value(0, dataFld)
+		if err != nil {
+			return false, fmt.Errorf("contents.value error: %w", err)
+		}
+		flag, err := btl.contents.flag()
+		if err != nil {
+			return false, fmt.Errorf("contents.flag error: %w", err)
+		}
+		if !btl.searchKey.Equals(firstKey) || flag < 0 {
+			return false, nil
+		}
+		if err := btl.contents.Close(); err != nil {
+			return false, fmt.Errorf("contents.Close error: %w", err)
+		}
+		nextBlockID := file.NewBlockID(btl.filename, flag)
+		cs, err := NewBTreePage(btl.tx, nextBlockID, btl.layout)
+		if err != nil {
+			return false, fmt.Errorf("NewBTreePage error: %w", err)
+		}
+		btl.contents = cs
+		btl.currentSlot = 0
+		return false, nil
+	}
+
+	btl.currentSlot++
+	recsNum, err := btl.contents.recordsNum()
+	if err != nil {
+		return false, fmt.Errorf("contents.recordsNum error: %w", err)
+	}
+	if btl.currentSlot >= recsNum {
+		return tryOverflow()
+	}
+	val, err := btl.contents.value(btl.currentSlot, dataFld)
+	if err != nil {
+		return false, fmt.Errorf("contents.value error: %w", err)
+	}
+	if btl.searchKey.Compare(val) != 0 {
+		return tryOverflow()
+	}
+	return true, nil
 }
