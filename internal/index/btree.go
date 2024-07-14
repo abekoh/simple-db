@@ -477,6 +477,61 @@ func NewBTreeDir(tx *transaction.Transaction, blockID file.BlockID, layout *reco
 	}, nil
 }
 
+func (btd *BTreeDir) Close() error {
+	if err := btd.contents.Close(); err != nil {
+		return fmt.Errorf("contents.Close error: %w", err)
+	}
+	return nil
+}
+
+func (btd *BTreeDir) Search(searchKey schema.Constant) (int32, error) {
+	childBlock, err := btd.findChildBlock(searchKey)
+	if err != nil {
+		return -1, fmt.Errorf("btd.findChildBlock error: %w", err)
+	}
+	for {
+		flg, err := btd.contents.flag()
+		if err != nil {
+			return -1, fmt.Errorf("btd.contents.flag error: %w", err)
+		}
+		if flg <= 0 {
+			break
+		}
+		if err := btd.contents.Close(); err != nil {
+			return -1, fmt.Errorf("btd.contents.Close error: %w", err)
+		}
+		cs, err := NewBTreePage(btd.tx, childBlock, btd.layout)
+		if err != nil {
+			return -1, fmt.Errorf("NewBTreePage error: %w", err)
+		}
+		btd.contents = cs
+		childBlock, err = btd.findChildBlock(searchKey)
+		if err != nil {
+			return -1, fmt.Errorf("btd.findChildBlock error: %w", err)
+		}
+	}
+	return childBlock.Num(), nil
+}
+
+func (btd *BTreeDir) findChildBlock(searchKey schema.Constant) (file.BlockID, error) {
+	slot, err := btd.contents.FindSlotBefore(searchKey)
+	if err != nil {
+		return file.BlockID{}, fmt.Errorf("btd.findChildBlock error: %w", err)
+	}
+	val, err := btd.contents.value(slot+1, dataFld)
+	if err != nil {
+		return file.BlockID{}, fmt.Errorf("btd.contents.value error: %w", err)
+	}
+	if searchKey.Equals(val) {
+		slot++
+	}
+	blockNum, err := btd.contents.ChildNum()
+	if err != nil {
+		return file.BlockID{}, fmt.Errorf("btd.contents.ChildNum error: %w", err)
+	}
+	return file.NewBlockID(btd.filename, blockNum), nil
+}
+
 type BTreeLeaf struct {
 	tx          *transaction.Transaction
 	layout      *record.Layout
