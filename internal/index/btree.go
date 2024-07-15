@@ -480,8 +480,8 @@ func (btp *BTreePage) AppendNew(flag int32) error {
 	return nil
 }
 
-func (btp *BTreePage) ChildNum() (int32, error) {
-	v, err := btp.value(0, blockFld)
+func (btp *BTreePage) ChildNum(slot int32) (int32, error) {
+	v, err := btp.value(slot, blockFld)
 	if err != nil {
 		return 0, fmt.Errorf("btp.value error: %w", err)
 	}
@@ -818,7 +818,7 @@ func (btd *BTreeDir) findChildBlock(searchKey schema.Constant) (file.BlockID, er
 	if searchKey.Equals(val) {
 		slot++
 	}
-	blockNum, err := btd.contents.ChildNum()
+	blockNum, err := btd.contents.ChildNum(slot)
 	if err != nil {
 		return file.BlockID{}, fmt.Errorf("btd.contents.ChildNum error: %w", err)
 	}
