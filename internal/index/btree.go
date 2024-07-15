@@ -577,8 +577,8 @@ func (btd *BTreeDir) Close() error {
 
 type BTreeDirDump struct {
 	Level    int32
-	Keys     []schema.Constant
-	Vals     []schema.Constant
+	Keys     []string
+	Vals     []string
 	Children []BTreeDirDump
 }
 
@@ -615,10 +615,13 @@ func (btd *BTreeDir) Dump(leafLayout *record.Layout, leafTableName string) (*BTr
 		if err != nil {
 			return nil, fmt.Errorf("btd.contents.value error: %w", err)
 		}
-		dump.Keys = append(dump.Keys, key)
+		dump.Keys = append(dump.Keys, key.String())
 	}
 	if level == 0 {
 		for i := int32(0); i < recsNum; i++ {
+			if i > 0 {
+				dump.Vals = append(dump.Vals, "|")
+			}
 			childBlockNum, err := btd.contents.value(i, blockFld)
 			if err != nil {
 				return nil, fmt.Errorf("btd.contents.value error: %w", err)
@@ -637,7 +640,7 @@ func (btd *BTreeDir) Dump(leafLayout *record.Layout, leafTableName string) (*BTr
 				if err != nil {
 					return nil, fmt.Errorf("child.value error: %w", err)
 				}
-				dump.Vals = append(dump.Vals, key)
+				dump.Vals = append(dump.Vals, key.String())
 			}
 			if err := child.Close(); err != nil {
 				return nil, fmt.Errorf("child.Close error: %w", err)
