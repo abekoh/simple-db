@@ -60,13 +60,13 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 		if err := idx.Insert(val, ts.RID()); err != nil {
 			t.Fatal(err)
 		}
-	}
 
-	d, err := idx.Dump()
-	if err != nil {
-		t.Fatal(err)
+		d, err := idx.Dump()
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("%v\n", d)
 	}
-	_ = d
 
 	for _, val := range vals {
 		if err := idx.BeforeFirst(val); err != nil {

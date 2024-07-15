@@ -183,6 +183,7 @@ func (bti *BTreeIndex) Close() error {
 			return fmt.Errorf("leaf.Close error: %w", err)
 		}
 	}
+	bti.leaf = nil
 	return nil
 }
 
@@ -577,6 +578,10 @@ type BTreeDirDump struct {
 	Level    int32
 	Keys     []schema.Constant
 	Children []BTreeDirDump
+}
+
+func (d BTreeDirDump) String() string {
+	return fmt.Sprintf("Level: %d, Keys: %v, Children: %v", d.Level, d.Keys, d.Children)
 }
 
 func (btd *BTreeDir) Dump() (*BTreeDirDump, error) {
