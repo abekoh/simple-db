@@ -88,7 +88,7 @@ func NewBTreeIndex(tx *transaction.Transaction, idxName string, leafLayout *reco
 
 var _ Index = (*BTreeIndex)(nil)
 
-func (bti BTreeIndex) BeforeFirst(searchKey schema.Constant) error {
+func (bti *BTreeIndex) BeforeFirst(searchKey schema.Constant) error {
 	if err := bti.Close(); err != nil {
 		return fmt.Errorf("bti.Close error: %w", err)
 	}
@@ -112,7 +112,7 @@ func (bti BTreeIndex) BeforeFirst(searchKey schema.Constant) error {
 	return nil
 }
 
-func (bti BTreeIndex) Next() (bool, error) {
+func (bti *BTreeIndex) Next() (bool, error) {
 	if bti.leaf == nil {
 		return false, fmt.Errorf("bti.leaf is nil")
 	}
@@ -123,7 +123,7 @@ func (bti BTreeIndex) Next() (bool, error) {
 	}
 }
 
-func (bti BTreeIndex) DataRID() (schema.RID, error) {
+func (bti *BTreeIndex) DataRID() (schema.RID, error) {
 	if bti.leaf == nil {
 		return schema.RID{}, fmt.Errorf("bti.leaf is nil")
 	}
@@ -134,10 +134,7 @@ func (bti BTreeIndex) DataRID() (schema.RID, error) {
 	return rid, nil
 }
 
-func (bti BTreeIndex) Insert(dataVal schema.Constant, dataRID schema.RID) error {
-	if bti.leaf == nil {
-		return fmt.Errorf("bti.leaf is nil")
-	}
+func (bti *BTreeIndex) Insert(dataVal schema.Constant, dataRID schema.RID) error {
 	if err := bti.BeforeFirst(dataVal); err != nil {
 		return fmt.Errorf("bti.BeforeFirst error: %w", err)
 	}
@@ -145,7 +142,7 @@ func (bti BTreeIndex) Insert(dataVal schema.Constant, dataRID schema.RID) error 
 	if err != nil {
 		return fmt.Errorf("leaf.Insert error: %w", err)
 	}
-	if e != nil {
+	if e == nil {
 		return nil
 	}
 	root, err := NewBTreeDir(bti.tx, bti.rootBlockID, bti.dirLayout)
@@ -167,10 +164,7 @@ func (bti BTreeIndex) Insert(dataVal schema.Constant, dataRID schema.RID) error 
 	return nil
 }
 
-func (bti BTreeIndex) Delete(dataVal schema.Constant, dataRID schema.RID) error {
-	if bti.leaf == nil {
-		return fmt.Errorf("bti.leaf is nil")
-	}
+func (bti *BTreeIndex) Delete(dataVal schema.Constant, dataRID schema.RID) error {
 	if err := bti.BeforeFirst(dataVal); err != nil {
 		return fmt.Errorf("bti.BeforeFirst error: %w", err)
 	}
@@ -183,7 +177,7 @@ func (bti BTreeIndex) Delete(dataVal schema.Constant, dataRID schema.RID) error 
 	return nil
 }
 
-func (bti BTreeIndex) Close() error {
+func (bti *BTreeIndex) Close() error {
 	if bti.leaf != nil {
 		if err := bti.leaf.Close(); err != nil {
 			return fmt.Errorf("leaf.Close error: %w", err)
