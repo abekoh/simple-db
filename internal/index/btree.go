@@ -395,7 +395,7 @@ func (btp *BTreePage) FindSlotBefore(searchKey schema.Constant) (int32, error) {
 		if err != nil {
 			return -1, fmt.Errorf("btp.value error: %w", err)
 		}
-		if searchKey.Compare(val) >= 0 {
+		if val.Compare(searchKey) >= 0 {
 			return slot - 1, nil
 		}
 		slot++
