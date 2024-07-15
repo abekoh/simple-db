@@ -65,7 +65,7 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("%v\n", d)
+		t.Logf("Val: %v, Dump: {%v}\n", val, d)
 	}
 
 	for _, val := range vals {
