@@ -898,10 +898,10 @@ func (btl *BTreeLeaf) Next() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("contents.value error: %w", err)
 	}
-	if btl.searchKey.Compare(val) != 0 {
-		return tryOverflow()
+	if val.Equals(btl.searchKey) {
+		return true, nil
 	}
-	return true, nil
+	return tryOverflow()
 }
 
 func (btl *BTreeLeaf) DataRID() (schema.RID, error) {

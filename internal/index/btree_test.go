@@ -68,6 +68,8 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 		t.Logf("Val: %v, Dump: %v\n", val, d)
 	}
 
+	vals = []schema.Constant{schema.ConstantStr("lllll167")}
+
 	for _, val := range vals {
 		if err := idx.BeforeFirst(val); err != nil {
 			t.Fatal(err)
