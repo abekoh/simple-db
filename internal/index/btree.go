@@ -195,7 +195,7 @@ func (bti *BTreeIndex) Dump() (*BTreeDirDump, error) {
 	if err != nil {
 		return nil, fmt.Errorf("NewBTreeDir error: %w", err)
 	}
-	dump, err := root.Dump()
+	dump, err := root.Dump(bti.leafLayout, bti.leafTableName)
 	if err != nil {
 		return nil, fmt.Errorf("root.Dump error: %w", err)
 	}
@@ -578,13 +578,14 @@ type BTreeDirDump struct {
 	Level    int32
 	Keys     []schema.Constant
 	Children []BTreeDirDump
+	Vals     []schema.Constant
 }
 
 func (d BTreeDirDump) String() string {
-	return fmt.Sprintf("Level: %d, Keys: %v, Children: %v", d.Level, d.Keys, d.Children)
+	return fmt.Sprintf("Level: %d, Keys: %v, Children: %v, Vals: %v", d.Level, d.Keys, d.Children, d.Vals)
 }
 
-func (btd *BTreeDir) Dump() (*BTreeDirDump, error) {
+func (btd *BTreeDir) Dump(leafLayout *record.Layout, leafTableName string) (*BTreeDirDump, error) {
 	level, err := btd.contents.flag()
 	if err != nil {
 		return nil, fmt.Errorf("btd.contents.flag error: %w", err)
@@ -602,6 +603,31 @@ func (btd *BTreeDir) Dump() (*BTreeDirDump, error) {
 		dump.Keys = append(dump.Keys, key)
 	}
 	if level == 0 {
+		for i := int32(0); i < recsNum; i++ {
+			childBlockNum, err := btd.contents.value(i, blockFld)
+			if err != nil {
+				return nil, fmt.Errorf("btd.contents.value error: %w", err)
+			}
+			childBlockID := file.NewBlockID(leafTableName, int32(childBlockNum.(schema.ConstantInt32)))
+			child, err := NewBTreePage(btd.tx, childBlockID, leafLayout)
+			if err != nil {
+				return nil, fmt.Errorf("NewBTreePage error: %w", err)
+			}
+			childRecsNum, err := child.recordsNum()
+			if err != nil {
+				return nil, fmt.Errorf("child.recordsNum error: %w", err)
+			}
+			for i := int32(0); i < childRecsNum; i++ {
+				key, err := child.value(i, dataFld)
+				if err != nil {
+					return nil, fmt.Errorf("child.value error: %w", err)
+				}
+				dump.Vals = append(dump.Vals, key)
+			}
+			if err := child.Close(); err != nil {
+				return nil, fmt.Errorf("child.Close error: %w", err)
+			}
+		}
 		return dump, nil
 	}
 	for i := int32(0); i < recsNum; i++ {
@@ -613,7 +639,7 @@ func (btd *BTreeDir) Dump() (*BTreeDirDump, error) {
 		if err != nil {
 			return nil, fmt.Errorf("NewBTreeDir error: %w", err)
 		}
-		childDump, err := child.Dump()
+		childDump, err := child.Dump(leafLayout, leafTableName)
 		if err != nil {
 			return nil, fmt.Errorf("child.Dump error: %w", err)
 		}
