@@ -3,6 +3,7 @@ package index
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/abekoh/simple-db/internal/file"
 	"github.com/abekoh/simple-db/internal/record"
@@ -577,12 +578,26 @@ func (btd *BTreeDir) Close() error {
 type BTreeDirDump struct {
 	Level    int32
 	Keys     []schema.Constant
-	Children []BTreeDirDump
 	Vals     []schema.Constant
+	Children []BTreeDirDump
 }
 
 func (d BTreeDirDump) String() string {
-	return fmt.Sprintf("Level: %d, Keys: %v, Children: %v, Vals: %v", d.Level, d.Keys, d.Children, d.Vals)
+	//return fmt.Sprintf("Level: %d, Keys: %v, Children: %v, Vals: %v", d.Level, d.Keys, d.Children, d.Vals)
+	var b strings.Builder
+	b.WriteString("{")
+	b.WriteString(fmt.Sprintf("Level: %d", d.Level))
+	if len(d.Keys) > 0 {
+		b.WriteString(fmt.Sprintf(", Keys: %v", d.Keys))
+	}
+	if len(d.Vals) > 0 {
+		b.WriteString(fmt.Sprintf(", Vals: %v", d.Vals))
+	}
+	if len(d.Children) > 0 {
+		b.WriteString(fmt.Sprintf(", Children: %v", d.Children))
+	}
+	b.WriteString("}")
+	return b.String()
 }
 
 func (btd *BTreeDir) Dump(leafLayout *record.Layout, leafTableName string) (*BTreeDirDump, error) {
