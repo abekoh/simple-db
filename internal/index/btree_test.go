@@ -68,14 +68,14 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !ok {
-			t.Fatal("no record found")
+			t.Errorf("no record found for %v", val)
+			continue
 		}
 
 		gotRID, err := idx.DataRID()
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("val=%v, rid=%v", val, gotRID)
 		if err := ts.MoveToRID(gotRID); err != nil {
 			t.Fatal(err)
 		}
@@ -84,7 +84,9 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !val.Equals(gotVal) {
-			t.Fatalf("expect %v, got %v", val, gotVal)
+			t.Errorf("expect %v, got %v", val, gotVal)
+		} else {
+			t.Logf("expect %v, got %v", val, gotVal)
 		}
 	}
 
