@@ -354,8 +354,11 @@ func (btp *BTreePage) fieldPos(slot int32, fieldName schema.FieldName) (int32, e
 	if !ok {
 		return -1, fmt.Errorf("no such field: %s", fieldName)
 	}
-	slotPos := 4*2 + (slot * btp.layout.SlotSize())
-	return slotPos + offset, nil
+	return btp.slotPos(slot) + offset, nil
+}
+
+func (btp *BTreePage) slotPos(slot int32) int32 {
+	return 4*2 + (slot * btp.layout.SlotSize())
 }
 
 func (btp *BTreePage) FindSlotBefore(searchKey schema.Constant) (int32, error) {
@@ -391,8 +394,7 @@ func (btp *BTreePage) IsFull() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("btp.recordsNum error: %w", err)
 	}
-	slotSize := btp.layout.SlotSize()
-	slotPos := 4*2 + (recsNum + 1*slotSize)
+	slotPos := btp.slotPos(recsNum + 1)
 	return slotPos >= btp.tx.BlockSize(), nil
 }
 
