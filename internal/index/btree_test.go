@@ -94,8 +94,6 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 		}
 		if !val.Equals(gotVal) {
 			t.Errorf("expect %v, got %v", val, gotVal)
-		} else {
-			t.Logf("expect %v, got %v", val, gotVal)
 		}
 	}
 
