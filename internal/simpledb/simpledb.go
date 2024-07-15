@@ -44,7 +44,7 @@ func NewWithConfig(ctx context.Context, dirname string, cfg *Config) (*DB, error
 	if cfg == nil {
 		cfg = &Config{}
 	}
-	db, err := NewWithParams(ctx, dirname, 400, 8)
+	db, err := NewWithParams(ctx, dirname, 400, 32)
 	if err != nil {
 		return nil, fmt.Errorf("could not create SimpleDB: %w", err)
 	}
