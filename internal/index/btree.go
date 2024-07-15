@@ -1013,7 +1013,7 @@ func (btl *BTreeLeaf) Insert(rid schema.RID) (*DirEntry, error) {
 				if err != nil {
 					return nil, fmt.Errorf("btl.contents.value error: %w", err)
 				}
-				if !key.Equals(btl.searchKey) {
+				if !key.Equals(splitKey) {
 					break
 				}
 				splitPos--
