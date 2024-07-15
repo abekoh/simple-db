@@ -583,20 +583,19 @@ type BTreeDirDump struct {
 }
 
 func (d BTreeDirDump) String() string {
-	//return fmt.Sprintf("Level: %d, Keys: %v, Children: %v, Vals: %v", d.Level, d.Keys, d.Children, d.Vals)
 	var b strings.Builder
-	b.WriteString("{")
-	b.WriteString(fmt.Sprintf("Level: %d", d.Level))
+	space := strings.Repeat("  ", int(max(4-d.Level, 0)))
+	b.WriteString("\n")
+	b.WriteString(fmt.Sprintf("%sLevel: %d", space, d.Level))
 	if len(d.Keys) > 0 {
-		b.WriteString(fmt.Sprintf(", Keys: %v", d.Keys))
+		b.WriteString(fmt.Sprintf("\n%sKeys: %v", space, d.Keys))
 	}
 	if len(d.Vals) > 0 {
-		b.WriteString(fmt.Sprintf(", Vals: %v", d.Vals))
+		b.WriteString(fmt.Sprintf("\n%sVals: %v", space, d.Vals))
 	}
 	if len(d.Children) > 0 {
-		b.WriteString(fmt.Sprintf(", Children: %v", d.Children))
+		b.WriteString(fmt.Sprintf("\n%sChildren: %v", space, d.Children))
 	}
-	b.WriteString("}")
 	return b.String()
 }
 
