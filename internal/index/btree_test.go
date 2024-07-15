@@ -62,7 +62,7 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if gotRID != ts.RID() {
+	if !gotRID.Equals(ts.RID()) {
 		t.Fatalf("got %v, want %v", gotRID, ts.RID())
 	}
 
