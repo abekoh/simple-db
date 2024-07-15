@@ -588,7 +588,17 @@ func (d BTreeDirDump) String() string {
 	b.WriteString("\n")
 	b.WriteString(fmt.Sprintf("%sLevel: %d", space, d.Level))
 	if len(d.Keys) > 0 {
-		b.WriteString(fmt.Sprintf("\n%sKeys: %v", space, d.Keys))
+		b.WriteString(fmt.Sprintf("\n%sKeys: [", space))
+		for i, k := range d.Keys {
+			if i > 0 {
+				b.WriteString(" ")
+			}
+			if k == "" {
+				k = "<empty>"
+			}
+			b.WriteString(fmt.Sprintf("%v", k))
+		}
+		b.WriteString("]")
 	}
 	if len(d.Vals) > 0 {
 		b.WriteString(fmt.Sprintf("\n%sVals: %v", space, d.Vals))
