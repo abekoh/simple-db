@@ -394,14 +394,19 @@ func (btp *BTreePage) IsFull() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("btp.recordsNum error: %w", err)
 	}
-	slotPos := btp.slotPos(recsNum + 1)
-	return slotPos >= btp.tx.BlockSize(), nil
+	return btp.slotPos(recsNum+1) >= btp.tx.BlockSize(), nil
 }
 
 func (btp *BTreePage) Split(splitPos int32, flag int32) (file.BlockID, error) {
 	newBlockId, err := btp.tx.Append(btp.currentBlockID.Filename())
 	if err != nil {
 		return file.BlockID{}, fmt.Errorf("tx.Append error: %w", err)
+	}
+	if _, err := btp.tx.Pin(newBlockId); err != nil {
+		return file.BlockID{}, fmt.Errorf("tx.Pin error: %w", err)
+	}
+	if err := btp.Format(newBlockId, flag); err != nil {
+		return file.BlockID{}, fmt.Errorf("btp.Format error: %w", err)
 	}
 	newPage, err := NewBTreePage(btp.tx, newBlockId, btp.layout)
 	if err != nil {
@@ -415,14 +420,14 @@ func (btp *BTreePage) Split(splitPos int32, flag int32) (file.BlockID, error) {
 		if err != nil {
 			return file.BlockID{}, fmt.Errorf("btp.recordsNum error: %w", err)
 		}
-		if destSlot >= recsNum {
+		if splitPos >= recsNum {
 			break
 		}
 		if err := newPage.insert(destSlot); err != nil {
 			return file.BlockID{}, fmt.Errorf("newPage.insert error: %w", err)
 		}
 		for _, fieldName := range sche.FieldNames() {
-			val, err := btp.value(destSlot, fieldName)
+			val, err := btp.value(splitPos, fieldName)
 			if err != nil {
 				return file.BlockID{}, fmt.Errorf("btp.value error: %w", err)
 			}
@@ -430,6 +435,10 @@ func (btp *BTreePage) Split(splitPos int32, flag int32) (file.BlockID, error) {
 				return file.BlockID{}, fmt.Errorf("newPage.setValue error: %w", err)
 			}
 		}
+		if err := btp.Delete(splitPos); err != nil {
+			return file.BlockID{}, fmt.Errorf("btp.Delete error: %w", err)
+		}
+		destSlot++
 	}
 	if err := newPage.setFlag(flag); err != nil {
 		return file.BlockID{}, fmt.Errorf("newPage.setFlag error: %w", err)
