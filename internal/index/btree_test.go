@@ -2,6 +2,7 @@ package index_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -36,19 +37,17 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tmpVals := make([]schema.Constant, 0)
-	for c := 'a'; c <= 'z'; c++ {
-		tmpVals = append(tmpVals, schema.ConstantStr(strings.Repeat(string(c), 10)))
-	}
-	for c := 'A'; c <= 'Z'; c++ {
-		tmpVals = append(tmpVals, schema.ConstantStr(strings.Repeat(string(c), 10)))
-	}
-	for c := '0'; c <= '9'; c++ {
-		tmpVals = append(tmpVals, schema.ConstantStr(strings.Repeat(string(c), 10)))
-	}
-	vals := make([]schema.Constant, len(tmpVals)*4)
-	for i := 0; i < 4; i++ {
-		copy(vals[i*len(tmpVals):(i+1)*len(tmpVals)], tmpVals)
+	vals := make([]schema.Constant, 0)
+	cnt := 0
+	for range 5 {
+		for c := 'a'; c <= 'z'; c++ {
+			vals = append(vals, schema.ConstantStr(fmt.Sprintf("%s%d", strings.Repeat(string(c), 5), cnt)))
+			cnt++
+		}
+		for c := 'A'; c <= 'Z'; c++ {
+			vals = append(vals, schema.ConstantStr(fmt.Sprintf("%s%d", strings.Repeat(string(c), 5), cnt)))
+			cnt++
+		}
 	}
 
 	for _, val := range vals {
