@@ -23,7 +23,7 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 	}
 
 	sche := schema.NewSchema()
-	field := schema.NewField(schema.Varchar, 5)
+	field := schema.NewField(schema.Varchar, 10)
 	sche.AddField("A", field)
 	recordLayout := record.NewLayoutSchema(sche)
 	ts, err := record.NewTableScan(tx, "mytable", recordLayout)
@@ -36,15 +36,19 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vals := make([]schema.Constant, 0)
+	tmpVals := make([]schema.Constant, 0)
 	for c := 'a'; c <= 'z'; c++ {
-		vals = append(vals, schema.ConstantStr(strings.Repeat(string(c), 5)))
+		tmpVals = append(tmpVals, schema.ConstantStr(strings.Repeat(string(c), 10)))
 	}
 	for c := 'A'; c <= 'Z'; c++ {
-		vals = append(vals, schema.ConstantStr(strings.Repeat(string(c), 5)))
+		tmpVals = append(tmpVals, schema.ConstantStr(strings.Repeat(string(c), 10)))
 	}
 	for c := '0'; c <= '9'; c++ {
-		vals = append(vals, schema.ConstantStr(strings.Repeat(string(c), 5)))
+		tmpVals = append(tmpVals, schema.ConstantStr(strings.Repeat(string(c), 10)))
+	}
+	vals := make([]schema.Constant, len(tmpVals)*4)
+	for i := 0; i < 4; i++ {
+		copy(vals[i*len(tmpVals):(i+1)*len(tmpVals)], tmpVals)
 	}
 
 	for _, val := range vals {
@@ -58,6 +62,12 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+
+	d, err := idx.Dump()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = d
 
 	for _, val := range vals {
 		if err := idx.BeforeFirst(val); err != nil {

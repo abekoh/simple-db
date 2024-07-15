@@ -18,7 +18,7 @@ type BTreeIndex struct {
 	leaf                  *BTreeLeaf
 }
 
-func NewBTreeIndex(tx *transaction.Transaction, idxName string, leafLayout *record.Layout) (Index, error) {
+func NewBTreeIndex(tx *transaction.Transaction, idxName string, leafLayout *record.Layout) (*BTreeIndex, error) {
 	leafTableName := idxName + "_leaf"
 	leafTableSize, err := tx.Size(leafTableName)
 	if err != nil {
@@ -149,7 +149,7 @@ func (bti *BTreeIndex) Insert(dataVal schema.Constant, dataRID schema.RID) error
 	if err != nil {
 		return fmt.Errorf("NewBTreeDir error: %w", err)
 	}
-	e2, err := root.Insert(DirEntry{dataValue: dataVal, blockNum: e.blockNum})
+	e2, err := root.Insert(*e)
 	if err != nil {
 		return fmt.Errorf("root.Insert error: %w", err)
 	}
@@ -184,6 +184,24 @@ func (bti *BTreeIndex) Close() error {
 		}
 	}
 	return nil
+}
+
+func (bti *BTreeIndex) Dump() (*BTreeDirDump, error) {
+	if err := bti.Close(); err != nil {
+		return nil, fmt.Errorf("bti.Close error: %w", err)
+	}
+	root, err := NewBTreeDir(bti.tx, bti.rootBlockID, bti.dirLayout)
+	if err != nil {
+		return nil, fmt.Errorf("NewBTreeDir error: %w", err)
+	}
+	dump, err := root.Dump()
+	if err != nil {
+		return nil, fmt.Errorf("root.Dump error: %w", err)
+	}
+	if err := root.Close(); err != nil {
+		return nil, fmt.Errorf("root.Close error: %w", err)
+	}
+	return dump, nil
 }
 
 type BTreePage struct {
@@ -555,6 +573,45 @@ func (btd *BTreeDir) Close() error {
 	return nil
 }
 
+type BTreeDirDump struct {
+	Level    int32
+	Children []BTreeDirDump
+}
+
+func (btd *BTreeDir) Dump() (*BTreeDirDump, error) {
+	level, err := btd.contents.flag()
+	if err != nil {
+		return nil, fmt.Errorf("btd.contents.flag error: %w", err)
+	}
+	dump := &BTreeDirDump{Level: level}
+	if level == 0 {
+		return dump, nil
+	}
+	recsNum, err := btd.contents.recordsNum()
+	if err != nil {
+		return nil, fmt.Errorf("btd.contents.recordsNum error: %w", err)
+	}
+	for i := int32(0); i < recsNum; i++ {
+		childBlockID, err := btd.contents.value(i, blockFld)
+		if err != nil {
+			return nil, fmt.Errorf("btd.contents.value error: %w", err)
+		}
+		child, err := NewBTreeDir(btd.tx, file.NewBlockID(btd.filename, int32(childBlockID.(schema.ConstantInt32))), btd.layout)
+		if err != nil {
+			return nil, fmt.Errorf("NewBTreeDir error: %w", err)
+		}
+		childDump, err := child.Dump()
+		if err != nil {
+			return nil, fmt.Errorf("child.Dump error: %w", err)
+		}
+		dump.Children = append(dump.Children, *childDump)
+		if err := child.Close(); err != nil {
+			return nil, fmt.Errorf("child.Close error: %w", err)
+		}
+	}
+	return dump, nil
+}
+
 func (btd *BTreeDir) Search(searchKey schema.Constant) (int32, error) {
 	childBlock, err := btd.findChildBlock(searchKey)
 	if err != nil {
@@ -611,11 +668,11 @@ func (btd *BTreeDir) MakeNewRoot(e DirEntry) error {
 }
 
 func (btd *BTreeDir) Insert(e DirEntry) (*DirEntry, error) {
-	flg, err := btd.contents.flag()
+	level, err := btd.contents.flag()
 	if err != nil {
 		return nil, fmt.Errorf("btd.contents.flag error: %w", err)
 	}
-	if flg == 0 {
+	if level == 0 {
 		ne, err := btd.InsertEntry(e)
 		if err != nil {
 			return nil, fmt.Errorf("btd.InsertEntry error: %w", err)
