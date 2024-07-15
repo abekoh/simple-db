@@ -2,6 +2,7 @@ package index_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/index"
@@ -37,13 +38,13 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 
 	vals := make([]schema.Constant, 0)
 	for c := 'a'; c <= 'z'; c++ {
-		vals = append(vals, schema.ConstantStr(c))
+		vals = append(vals, schema.ConstantStr(strings.Repeat(string(c), 5)))
 	}
 	for c := 'A'; c <= 'Z'; c++ {
-		vals = append(vals, schema.ConstantStr(c))
+		vals = append(vals, schema.ConstantStr(strings.Repeat(string(c), 5)))
 	}
 	for c := '0'; c <= '9'; c++ {
-		vals = append(vals, schema.ConstantStr(c))
+		vals = append(vals, schema.ConstantStr(strings.Repeat(string(c), 5)))
 	}
 
 	for _, val := range vals {
