@@ -27,8 +27,16 @@ type (
 
 var (
 	ConfigHash = &Config{
-		Initializer: NewHashIndex,
-		SearchCost:  HashSearchCost,
+		Initializer: func(tx *transaction.Transaction, idxName string, layout *record.Layout) (Index, error) {
+			return NewHashIndex(tx, idxName, layout)
+		},
+		SearchCost: HashSearchCost,
+	}
+	ConfigBTree = &Config{
+		Initializer: func(tx *transaction.Transaction, idxName string, layout *record.Layout) (Index, error) {
+			return NewBTreeIndex(tx, idxName, layout)
+		},
+		SearchCost: BTreeSearchCost,
 	}
 )
 
@@ -56,7 +64,7 @@ type HashIndex struct {
 	tableScan *record.TableScan
 }
 
-func NewHashIndex(tx *transaction.Transaction, idxName string, layout *record.Layout) (Index, error) {
+func NewHashIndex(tx *transaction.Transaction, idxName string, layout *record.Layout) (*HashIndex, error) {
 	return &HashIndex{tx: tx, idxName: idxName, layout: layout}, nil
 }
 

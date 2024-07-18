@@ -11,6 +11,10 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
+func BTreeSearchCost(numBlocks, rpb int) int {
+	return 1 + int(math.Log2(float64(numBlocks))/math.Log2(float64(rpb)))
+}
+
 type BTreeIndex struct {
 	tx                    *transaction.Transaction
 	dirLayout, leafLayout *record.Layout
