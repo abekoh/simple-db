@@ -23,7 +23,7 @@ type BTreeIndex struct {
 	leaf                  *BTreeLeaf
 }
 
-func NewBTreeIndex(tx *transaction.Transaction, idxName string, leafLayout *record.Layout) (*BTreeIndex, error) {
+func NewBTreeIndex(tx *transaction.Transaction, idxName string, leafLayout *record.Layout) (Index, error) {
 	leafTableName := idxName + "_leaf"
 	leafTableSize, err := tx.Size(leafTableName)
 	if err != nil {

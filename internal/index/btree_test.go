@@ -60,6 +60,7 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 		if err := idx.Insert(val, ts.RID()); err != nil {
 			t.Fatal(err)
 		}
+		idx := idx.(*index.BTreeIndex)
 
 		d, err := idx.Dump()
 		if err != nil {
