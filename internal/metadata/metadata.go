@@ -402,8 +402,12 @@ func (i *IndexInfo) FieldName() schema.FieldName {
 	return i.fieldName
 }
 
-func (i *IndexInfo) Open() index.Index {
-	return i.cfg.Initializer(i.tx, i.indexName, i.indexLayout)
+func (i *IndexInfo) Open() (index.Index, error) {
+	idx, err := i.cfg.Initializer(i.tx, i.indexName, i.indexLayout)
+	if err != nil {
+		return nil, fmt.Errorf("initializer error: %w", err)
+	}
+	return idx, nil
 }
 
 func (i *IndexInfo) BlockAccessed() int {

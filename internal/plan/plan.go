@@ -379,7 +379,11 @@ func (i IndexSelectPlan) Open() (query.Scan, error) {
 	if !ok {
 		return nil, fmt.Errorf("failed to cast to *record.TableScan from %T", s)
 	}
-	is, err := index.NewSelectScan(ts, i.indexInfo.Open(), i.val)
+	idx, err := i.indexInfo.Open()
+	if err != nil {
+		return nil, fmt.Errorf("indexInfo.Open error: %w", err)
+	}
+	is, err := index.NewSelectScan(ts, idx, i.val)
 	if err != nil {
 		return nil, fmt.Errorf("index.NewSelectScan error: %w", err)
 	}
@@ -465,7 +469,11 @@ func (i IndexJoinPlan) Open() (query.Scan, error) {
 	if !ok {
 		return nil, fmt.Errorf("failed to cast to *record.TableScan from %T", s2)
 	}
-	js, err := index.NewJoinScan(s1, ts2, i.indexInfo.Open(), i.joinField)
+	idx, err := i.indexInfo.Open()
+	if err != nil {
+		return nil, fmt.Errorf("indexInfo.Open error: %w", err)
+	}
+	js, err := index.NewJoinScan(s1, ts2, idx, i.joinField)
 	if err != nil {
 		return nil, fmt.Errorf("index.NewJoinScan error: %w", err)
 	}

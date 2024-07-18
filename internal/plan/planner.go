@@ -366,7 +366,10 @@ func (up IndexUpdatePlanner) ExecuteInsert(d *parse.InsertData, tx *transaction.
 			return 0, fmt.Errorf("set value error: %w", err)
 		}
 		if idxInfo, ok := indexes[fieldName]; ok {
-			idx := idxInfo.Open()
+			idx, err := idxInfo.Open()
+			if err != nil {
+				return 0, fmt.Errorf("index open error: %w", err)
+			}
 			if err := idx.Insert(val, rid); err != nil {
 				return 0, fmt.Errorf("index insert error: %w", err)
 			}
@@ -416,7 +419,10 @@ func (up IndexUpdatePlanner) ExecuteDelete(d *parse.DeleteData, tx *transaction.
 			if err != nil {
 				return 0, fmt.Errorf("val error: %w", err)
 			}
-			idx := idxInfo.Open()
+			idx, err := idxInfo.Open()
+			if err != nil {
+				return 0, fmt.Errorf("index open error: %w", err)
+			}
 			if err := idx.Delete(val, rid); err != nil {
 				return 0, fmt.Errorf("index delete error: %w", err)
 			}
@@ -449,7 +455,10 @@ func (up IndexUpdatePlanner) ExecuteModify(d *parse.ModifyData, tx *transaction.
 	var idx index.Index
 	idxInfo, ok := indexes[d.Field()]
 	if ok {
-		idx = idxInfo.Open()
+		idx, err = idxInfo.Open()
+		if err != nil {
+			return 0, fmt.Errorf("index open error: %w", err)
+		}
 	}
 
 	s, err := sp.Open()

@@ -37,7 +37,10 @@ func TestIndexScan(t *testing.T) {
 		}
 
 		idxLayout := index.NewIndexLayout(fieldB)
-		idx1 := cfg.Initializer(tx, "I", idxLayout)
+		idx1, err := cfg.Initializer(tx, "I", idxLayout)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		if err := scan1.BeforeFirst(); err != nil {
 			t.Fatal(err)
@@ -65,7 +68,10 @@ func TestIndexScan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		idx2 := cfg.Initializer(tx, "I", idxLayout)
+		idx2, err := cfg.Initializer(tx, "I", idxLayout)
+		if err != nil {
+			t.Fatal(err)
+		}
 		scan3, err := index.NewSelectScan(scan2, idx2, schema.ConstantStr("rec100"))
 		if err != nil {
 			t.Fatal(err)
@@ -138,7 +144,10 @@ func TestIndexScan(t *testing.T) {
 			t.Fatal(err)
 		}
 		idxLayout := index.NewIndexLayout(fieldB)
-		rhsIdx1 := cfg.Initializer(tx, "I", idxLayout)
+		rhsIdx1, err := cfg.Initializer(tx, "I", idxLayout)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if err := rhsTableS1.BeforeFirst(); err != nil {
 			t.Fatal(err)
 		}
@@ -172,7 +181,10 @@ func TestIndexScan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		idx2 := cfg.Initializer(tx, "I", idxLayout)
+		idx2, err := cfg.Initializer(tx, "I", idxLayout)
+		if err != nil {
+			t.Fatal(err)
+		}
 		joinS, err := index.NewJoinScan(lhsTableS2, rhsTableS2, idx2, "B")
 		if err != nil {
 			t.Fatal(err)

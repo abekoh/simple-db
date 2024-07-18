@@ -17,7 +17,7 @@ type (
 		Delete(dataVal schema.Constant, dataRID schema.RID) error
 		Close() error
 	}
-	Initializer = func(tx *transaction.Transaction, idxName string, layout *record.Layout) Index
+	Initializer = func(tx *transaction.Transaction, idxName string, layout *record.Layout) (Index, error)
 	SearchCost  = func(numBlocks, rpb int) int
 	Config      struct {
 		Initializer Initializer
@@ -56,8 +56,8 @@ type HashIndex struct {
 	tableScan *record.TableScan
 }
 
-func NewHashIndex(tx *transaction.Transaction, idxName string, layout *record.Layout) Index {
-	return &HashIndex{tx: tx, idxName: idxName, layout: layout}
+func NewHashIndex(tx *transaction.Transaction, idxName string, layout *record.Layout) (Index, error) {
+	return &HashIndex{tx: tx, idxName: idxName, layout: layout}, nil
 }
 
 func HashSearchCost(numBlocks, rpb int) int {
