@@ -53,7 +53,7 @@ func NewPlan(tx *transaction.Transaction, p plan.Plan) *Plan {
 func (p Plan) Result() {}
 
 func (p Plan) String() string {
-	return fmt.Sprintf("Materialize(%s)", p.srcPlan)
+	return fmt.Sprintf("Materialize{%s}", p.srcPlan)
 }
 
 func (p Plan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
