@@ -4,6 +4,7 @@ go 1.22.0
 
 require (
 	github.com/jackc/pgx/v5 v5.6.0
+	github.com/oklog/ulid/v2 v2.1.0
 	golang.org/x/sync v0.7.0
 )
 

@@ -10,6 +10,7 @@ import (
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/statement"
 	"github.com/abekoh/simple-db/internal/transaction"
+	"github.com/oklog/ulid/v2"
 )
 
 type TempTable struct {
@@ -20,7 +21,7 @@ type TempTable struct {
 
 func NewTempTable(tx *transaction.Transaction, sche schema.Schema) *TempTable {
 	l := record.NewLayoutSchema(sche)
-	return &TempTable{tx: tx, tableName: "tempTable", layout: l}
+	return &TempTable{tx: tx, tableName: fmt.Sprintf("temp_table_%s", ulid.Make()), layout: l}
 }
 
 func (t TempTable) Open() (query.UpdateScan, error) {
