@@ -255,10 +255,10 @@ func (s SortPlan) copy(src query.Scan, dest query.UpdateScan) (bool, error) {
 }
 
 type SortScan struct {
-	s1, s2, currentScan query.UpdateScan
-	comparator          *Comparator
-	hasMore1, hasMore2  bool
-	savedPosition       []schema.RID
+	s1, s2, currentScan            query.UpdateScan
+	comparator                     *Comparator
+	hasMore1, hasMore2             bool
+	savedPosition1, savedPosition2 *schema.RID
 }
 
 var _ query.Scan = (*SortScan)(nil)
@@ -292,14 +292,14 @@ func NewSortScan(runs []TempTable, comperator *Comparator) (*SortScan, error) {
 	}, nil
 }
 
-func (s SortScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+func (s *SortScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
 	if s.currentScan == nil {
 		return nil, fmt.Errorf("currentScan is nil")
 	}
 	return s.currentScan.Val(fieldName)
 }
 
-func (s SortScan) BeforeFirst() error {
+func (s *SortScan) BeforeFirst() error {
 	s.currentScan = nil
 	if err := s.s1.BeforeFirst(); err != nil {
 		return fmt.Errorf("s1.BeforeFirst error: %w", err)
@@ -322,7 +322,7 @@ func (s SortScan) BeforeFirst() error {
 	return nil
 }
 
-func (s SortScan) Next() (bool, error) {
+func (s *SortScan) Next() (bool, error) {
 	if s.currentScan != nil {
 		if s.currentScan == s.s1 {
 			hasMore1, err := s.s1.Next()
@@ -358,7 +358,7 @@ func (s SortScan) Next() (bool, error) {
 	return true, nil
 }
 
-func (s SortScan) Int32(fieldName schema.FieldName) (int32, error) {
+func (s *SortScan) Int32(fieldName schema.FieldName) (int32, error) {
 	if s.currentScan == nil {
 		return 0, fmt.Errorf("currentScan is nil")
 	}
@@ -369,7 +369,7 @@ func (s SortScan) Int32(fieldName schema.FieldName) (int32, error) {
 	return v, nil
 }
 
-func (s SortScan) Str(fieldName schema.FieldName) (string, error) {
+func (s *SortScan) Str(fieldName schema.FieldName) (string, error) {
 	if s.currentScan == nil {
 		return "", fmt.Errorf("currentScan is nil")
 	}
@@ -380,14 +380,14 @@ func (s SortScan) Str(fieldName schema.FieldName) (string, error) {
 	return v, nil
 }
 
-func (s SortScan) HasField(fieldName schema.FieldName) bool {
+func (s *SortScan) HasField(fieldName schema.FieldName) bool {
 	if s.currentScan == nil {
 		return false
 	}
 	return s.currentScan.HasField(fieldName)
 }
 
-func (s SortScan) Close() error {
+func (s *SortScan) Close() error {
 	if s.s1 != nil {
 		if err := s.s1.Close(); err != nil {
 			return fmt.Errorf("s1.Close error: %w", err)
@@ -396,6 +396,29 @@ func (s SortScan) Close() error {
 	if s.s2 != nil {
 		if err := s.s2.Close(); err != nil {
 			return fmt.Errorf("s2.Close error: %w", err)
+		}
+	}
+	return nil
+}
+
+func (s *SortScan) SavePosition() {
+	rid1 := s.s1.RID()
+	s.savedPosition1 = &rid1
+	if s.s2 != nil {
+		rid2 := s.s2.RID()
+		s.savedPosition2 = &rid2
+	}
+}
+
+func (s *SortScan) RestorePosition() error {
+	if s.savedPosition1 != nil {
+		if err := s.s1.MoveToRID(*s.savedPosition1); err != nil {
+			return fmt.Errorf("s1.MoveToRID error: %w", err)
+		}
+	}
+	if s.savedPosition2 != nil {
+		if err := s.s2.MoveToRID(*s.savedPosition2); err != nil {
+			return fmt.Errorf("s2.MoveToRID error: %w", err)
 		}
 	}
 	return nil
