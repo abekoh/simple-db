@@ -31,7 +31,7 @@ func TestSortPlan(t *testing.T) {
 	}
 
 	layout := record.NewLayoutSchema(sche)
-	updateScan, err := record.NewTableScan(tx, "T", layout)
+	updateScan, err := record.NewTableScan(tx, "mytable", layout)
 	if err != nil {
 		t.Fatal(err)
 	}
