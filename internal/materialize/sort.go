@@ -11,12 +11,20 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
+type SortType int
+
+const (
+	Asc SortType = iota
+	Desc
+)
+
 type Comparator struct {
-	fields []schema.FieldName
+	fields   []schema.FieldName
+	sortType SortType
 }
 
 func NewComparator(fields []schema.FieldName) *Comparator {
-	return &Comparator{fields: fields}
+	return &Comparator{fields: fields, sortType: Asc}
 }
 
 func (c Comparator) Compare(s1, s2 query.Scan) (int, error) {
@@ -31,6 +39,9 @@ func (c Comparator) Compare(s1, s2 query.Scan) (int, error) {
 		}
 		cmp := val1.Compare(val2)
 		if cmp != 0 {
+			if c.sortType == Desc {
+				cmp = -cmp
+			}
 			return cmp, nil
 		}
 	}
