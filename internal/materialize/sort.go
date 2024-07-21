@@ -53,12 +53,13 @@ type SortPlan struct {
 	p          plan.Plan
 	sche       schema.Schema
 	sortFields []schema.FieldName
+	comparator *Comparator
 }
 
 var _ plan.Plan = (*SortPlan)(nil)
 
 func NewSortPlan(tx *transaction.Transaction, p plan.Plan, sortFields []schema.FieldName) *SortPlan {
-	return &SortPlan{tx: tx, p: p, sche: *p.Schema(), sortFields: sortFields}
+	return &SortPlan{tx: tx, p: p, sche: *p.Schema(), sortFields: sortFields, comparator: NewComparator(sortFields)}
 }
 
 func (s SortPlan) Result() {}
@@ -119,7 +120,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 			if !ok {
 				break
 			}
-			cmpRes, err := NewComparator(s.sortFields).Compare(src, currentScan)
+			cmpRes, err := s.comparator.Compare(src, currentScan)
 			if err != nil {
 				return nil, fmt.Errorf("NewComparator.Compare error: %w", err)
 			}
@@ -148,7 +149,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 		}
 		// do a merge iteration
 		newRuns := make([]TempTable, 0)
-		for len(newRuns) > 1 {
+		for len(runs) > 1 {
 			p1 := runs[0]
 			p2 := runs[1]
 			runs = runs[2:]
@@ -175,7 +176,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 				return nil, fmt.Errorf("src2.Next error: %w", err)
 			}
 			for ok1 && ok2 {
-				cmpRes, err := NewComparator(s.sortFields).Compare(src1, src2)
+				cmpRes, err := s.comparator.Compare(src1, src2)
 				if err != nil {
 					return nil, fmt.Errorf("NewComparator.Compare error: %w", err)
 				}
