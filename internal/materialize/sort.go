@@ -276,12 +276,15 @@ type SortScan struct {
 var _ query.Scan = (*SortScan)(nil)
 
 func NewSortScan(runs []TempTable, comperator *Comparator) (*SortScan, error) {
+	if len(runs) == 0 || len(runs) > 2 {
+		return nil, fmt.Errorf("runs length error")
+	}
 	s1, err := runs[0].Open()
 	if err != nil {
 		return nil, fmt.Errorf("runs[0].Open error: %w", err)
 	}
 	var s2 query.UpdateScan
-	if len(runs) == 1 {
+	if len(runs) == 2 {
 		s2, err = runs[1].Open()
 		if err != nil {
 			return nil, fmt.Errorf("runs[1].Open error: %w", err)
