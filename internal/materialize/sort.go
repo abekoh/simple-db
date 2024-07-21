@@ -291,9 +291,13 @@ func NewSortScan(runs []TempTable, comperator *Comparator) (*SortScan, error) {
 	if err != nil {
 		return nil, fmt.Errorf("s1.Next error: %w", err)
 	}
-	hasMore2, err := s2.Next()
-	if err != nil {
-		return nil, fmt.Errorf("s2.Next error: %w", err)
+	var hasMore2 bool
+	if s2 != nil {
+		ok, err := s2.Next()
+		if err != nil {
+			return nil, fmt.Errorf("s2.Next error: %w", err)
+		}
+		hasMore2 = ok
 	}
 	return &SortScan{
 		s1:         s1,
