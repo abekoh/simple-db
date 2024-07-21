@@ -268,9 +268,12 @@ func NewSortScan(runs []TempTable, comperator *Comparator) (*SortScan, error) {
 	if err != nil {
 		return nil, fmt.Errorf("runs[0].Open error: %w", err)
 	}
-	s2, err := runs[1].Open()
-	if err != nil {
-		return nil, fmt.Errorf("runs[1].Open error: %w", err)
+	var s2 query.UpdateScan
+	if len(runs) == 1 {
+		s2, err = runs[1].Open()
+		if err != nil {
+			return nil, fmt.Errorf("runs[1].Open error: %w", err)
+		}
 	}
 	hasMore1, err := s1.Next()
 	if err != nil {
@@ -290,36 +293,110 @@ func NewSortScan(runs []TempTable, comperator *Comparator) (*SortScan, error) {
 }
 
 func (s SortScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
-	//TODO implement me
-	panic("implement me")
+	if s.currentScan == nil {
+		return nil, fmt.Errorf("currentScan is nil")
+	}
+	return s.currentScan.Val(fieldName)
 }
 
 func (s SortScan) BeforeFirst() error {
-	//TODO implement me
-	panic("implement me")
+	s.currentScan = nil
+	if err := s.s1.BeforeFirst(); err != nil {
+		return fmt.Errorf("s1.BeforeFirst error: %w", err)
+	}
+	hasMore1, err := s.s1.Next()
+	if err != nil {
+		return fmt.Errorf("s1.Next error: %w", err)
+	}
+	s.hasMore1 = hasMore1
+	if s.s2 != nil {
+		if err := s.s2.BeforeFirst(); err != nil {
+			return fmt.Errorf("s2.BeforeFirst error: %w", err)
+		}
+		hasMore2, err := s.s2.Next()
+		if err != nil {
+			return fmt.Errorf("s2.Next error: %w", err)
+		}
+		s.hasMore2 = hasMore2
+	}
+	return nil
 }
 
 func (s SortScan) Next() (bool, error) {
-	//TODO implement me
-	panic("implement me")
+	if s.currentScan != nil {
+		if s.currentScan == s.s1 {
+			hasMore1, err := s.s1.Next()
+			if err != nil {
+				return false, fmt.Errorf("s1.Next error: %w", err)
+			}
+			s.hasMore1 = hasMore1
+		} else if s.currentScan == s.s2 {
+			hasMore2, err := s.s2.Next()
+			if err != nil {
+				return false, fmt.Errorf("s2.Next error: %w", err)
+			}
+			s.hasMore2 = hasMore2
+		}
+	}
+	if !s.hasMore1 && !s.hasMore2 {
+		return false, nil
+	} else if s.hasMore1 && s.hasMore2 {
+		cmpRes, err := s.comparator.Compare(s.s1, s.s2)
+		if err != nil {
+			return false, fmt.Errorf("comparator.Compare error: %w", err)
+		}
+		if cmpRes < 0 {
+			s.currentScan = s.s1
+		} else {
+			s.currentScan = s.s2
+		}
+	} else if s.hasMore1 {
+		s.currentScan = s.s1
+	} else {
+		s.currentScan = s.s2
+	}
+	return true, nil
 }
 
 func (s SortScan) Int32(fieldName schema.FieldName) (int32, error) {
-	//TODO implement me
-	panic("implement me")
+	if s.currentScan == nil {
+		return 0, fmt.Errorf("currentScan is nil")
+	}
+	v, err := s.currentScan.Int32(fieldName)
+	if err != nil {
+		return 0, fmt.Errorf("currentScan.Int32 error: %w", err)
+	}
+	return v, nil
 }
 
 func (s SortScan) Str(fieldName schema.FieldName) (string, error) {
-	//TODO implement me
-	panic("implement me")
+	if s.currentScan == nil {
+		return "", fmt.Errorf("currentScan is nil")
+	}
+	v, err := s.currentScan.Str(fieldName)
+	if err != nil {
+		return "", fmt.Errorf("currentScan.Str error: %w", err)
+	}
+	return v, nil
 }
 
 func (s SortScan) HasField(fieldName schema.FieldName) bool {
-	//TODO implement me
-	panic("implement me")
+	if s.currentScan == nil {
+		return false
+	}
+	return s.currentScan.HasField(fieldName)
 }
 
 func (s SortScan) Close() error {
-	//TODO implement me
-	panic("implement me")
+	if s.s1 != nil {
+		if err := s.s1.Close(); err != nil {
+			return fmt.Errorf("s1.Close error: %w", err)
+		}
+	}
+	if s.s2 != nil {
+		if err := s.s2.Close(); err != nil {
+			return fmt.Errorf("s2.Close error: %w", err)
+		}
+	}
+	return nil
 }
