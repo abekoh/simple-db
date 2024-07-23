@@ -18,7 +18,7 @@ type Config struct {
 func RunServer(ctx context.Context, cfg Config) error {
 	address := cfg.Address
 	if address == "" {
-		address = "127.0.0.1:5432"
+		address = "127.0.0.1:45432"
 	}
 	listen, err := net.Listen("tcp", address)
 	if err != nil {
