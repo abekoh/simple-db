@@ -111,7 +111,7 @@ func (c *ChunkScan) Next() (bool, error) {
 		return false, fmt.Errorf("rp.NextAfter error: %w", err)
 	}
 	c.currentSlot = cs
-	for ok {
+	for !ok {
 		if c.currentBNum == c.endBNum {
 			return false, nil
 		}
@@ -156,7 +156,7 @@ func (c *ChunkScan) Close() error {
 
 func (c *ChunkScan) moveToBlock(blockNum int32) {
 	c.currentBNum = blockNum
-	c.rp = &c.buffers[blockNum-c.startBNum]
+	c.rp = &c.buffers[c.currentBNum-c.startBNum]
 	c.currentSlot = -1
 }
 
