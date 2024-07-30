@@ -63,7 +63,7 @@ func NewMaxFunc(fieldName, aliasName schema.FieldName) *MaxFunc {
 func (m *MaxFunc) First(s query.Scan) error {
 	val, err := s.Val(m.fieldName)
 	if err != nil {
-		return err
+		return fmt.Errorf("s.Val error: %w", err)
 	}
 	m.maxVal = val
 	return nil
@@ -72,7 +72,7 @@ func (m *MaxFunc) First(s query.Scan) error {
 func (m *MaxFunc) Next(s query.Scan) error {
 	val, err := s.Val(m.fieldName)
 	if err != nil {
-		return err
+		return fmt.Errorf("s.Val error: %w", err)
 	}
 	if val.Compare(m.maxVal) > 0 {
 		m.maxVal = val
@@ -86,6 +86,92 @@ func (m *MaxFunc) AliasName() schema.FieldName {
 
 func (m *MaxFunc) Val() schema.Constant {
 	return m.maxVal
+}
+
+type MinFunc struct {
+	fieldName, aliasName schema.FieldName
+	minVal               schema.Constant
+}
+
+var _ AggregationFunc = (*MinFunc)(nil)
+
+func NewMinFunc(fieldName, aliasName schema.FieldName) *MinFunc {
+	return &MinFunc{fieldName: fieldName, aliasName: aliasName}
+}
+
+func (m *MinFunc) First(s query.Scan) error {
+	val, err := s.Val(m.fieldName)
+	if err != nil {
+		return fmt.Errorf("s.Val error: %w", err)
+	}
+	m.minVal = val
+	return nil
+}
+
+func (m *MinFunc) Next(s query.Scan) error {
+	val, err := s.Val(m.fieldName)
+	if err != nil {
+		return fmt.Errorf("s.Val error: %w", err)
+	}
+	if val.Compare(m.minVal) < 0 {
+		m.minVal = val
+	}
+	return nil
+}
+
+func (m *MinFunc) AliasName() schema.FieldName {
+	return m.aliasName
+}
+
+func (m *MinFunc) Val() schema.Constant {
+	return m.minVal
+}
+
+type SumFunc struct {
+	fieldName, aliasName schema.FieldName
+	sum                  int32
+}
+
+var _ AggregationFunc = (*SumFunc)(nil)
+
+func NewSumFunc(fieldName, aliasName schema.FieldName) *SumFunc {
+	return &SumFunc{fieldName: fieldName, aliasName: aliasName}
+}
+
+func (s *SumFunc) First(scan query.Scan) error {
+	val, err := scan.Val(s.fieldName)
+	if err != nil {
+		return fmt.Errorf("scan.Int32 error: %w", err)
+	}
+	switch val.(type) {
+	case schema.ConstantInt32:
+		s.sum = int32(val.(schema.ConstantInt32))
+	default:
+		return errors.New("type assertion failed")
+	}
+	return nil
+}
+
+func (s *SumFunc) Next(scan query.Scan) error {
+	val, err := scan.Val(s.fieldName)
+	if err != nil {
+		return fmt.Errorf("scan.Int32 error: %w", err)
+	}
+	switch val.(type) {
+	case schema.ConstantInt32:
+		s.sum += int32(val.(schema.ConstantInt32))
+	default:
+		return errors.New("type assertion failed")
+	}
+	return nil
+}
+
+func (s *SumFunc) AliasName() schema.FieldName {
+	return s.aliasName
+}
+
+func (s *SumFunc) Val() schema.Constant {
+	return schema.ConstantInt32(s.sum)
 }
 
 type GroupByScan struct {

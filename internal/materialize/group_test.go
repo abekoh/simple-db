@@ -74,12 +74,14 @@ func TestGroupByPlan(t *testing.T) {
 		tablePlan,
 		[]schema.FieldName{"department"},
 		[]materialize.AggregationFunc{
-			materialize.NewMaxFunc("score", "max_score"),
 			materialize.NewCountFunc("count_score"),
+			materialize.NewMaxFunc("score", "max_score"),
+			materialize.NewMinFunc("score", "min_score"),
+			materialize.NewSumFunc("score", "sum_score"),
 		},
 	)
 	sortPlan := materialize.NewSortPlan(tx, groupByPlan, []schema.FieldName{"department"})
-	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"department", "max_score", "count_score"})
+	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"department", "count_score", "max_score", "min_score"})
 
 	queryScan, err := projectPlan.Open()
 	if err != nil {
@@ -102,22 +104,26 @@ func TestGroupByPlan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		maxScore, err := queryScan.Int32("max_score")
-		if err != nil {
-			t.Fatal(err)
-		}
 		countScore, err := queryScan.Int32("count_score")
 		if err != nil {
 			t.Fatal(err)
 		}
-		res = append(res, fmt.Sprintf("%s: max=%d, count=%d", department, maxScore, countScore))
+		maxScore, err := queryScan.Int32("max_score")
+		if err != nil {
+			t.Fatal(err)
+		}
+		minScore, err := queryScan.Int32("min_score")
+		if err != nil {
+			t.Fatal(err)
+		}
+		res = append(res, fmt.Sprintf("%s: count=%d, max=%d, min=%d", department, countScore, maxScore, minScore))
 	}
 	if err := queryScan.Close(); err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(res, []string{
-		"english: max=90, count=3",
-		"math: max=93, count=4",
+		"english: count=3, max=90, min=85",
+		"math: count=4, max=93, min=85",
 	}) {
 		t.Fatalf("unexpected result: %v", res)
 	}
