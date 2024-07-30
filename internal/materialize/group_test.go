@@ -11,9 +11,11 @@ import (
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/simpledb"
+	"github.com/abekoh/simple-db/internal/transaction"
 )
 
 func TestGroupByPlan(t *testing.T) {
+	transaction.CleanupLockTable(t)
 	ctx := context.Background()
 	db, err := simpledb.New(ctx, t.TempDir())
 	if err != nil {
