@@ -369,7 +369,7 @@ func (ts *TableScan) Insert() error {
 	if err != nil {
 		return fmt.Errorf("could not insert after: %w", err)
 	}
-	if !ok {
+	for !ok {
 		lastBlock, err := ts.atLastBlock()
 		if err != nil {
 			return fmt.Errorf("could not at last block: %w", err)
