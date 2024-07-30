@@ -75,10 +75,11 @@ func TestGroupByPlan(t *testing.T) {
 		[]schema.FieldName{"department"},
 		[]materialize.AggregationFunc{
 			materialize.NewMaxFunc("score", "max_score"),
+			materialize.NewCountFunc("count_score"),
 		},
 	)
 	sortPlan := materialize.NewSortPlan(tx, groupByPlan, []schema.FieldName{"department"})
-	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"department", "max_score"})
+	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"department", "max_score", "count_score"})
 
 	queryScan, err := projectPlan.Open()
 	if err != nil {
@@ -101,16 +102,23 @@ func TestGroupByPlan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		score, err := queryScan.Int32("max_score")
+		maxScore, err := queryScan.Int32("max_score")
 		if err != nil {
 			t.Fatal(err)
 		}
-		res = append(res, fmt.Sprintf("%s:%d", department, score))
+		countScore, err := queryScan.Int32("count_score")
+		if err != nil {
+			t.Fatal(err)
+		}
+		res = append(res, fmt.Sprintf("%s: max=%d, count=%d", department, maxScore, countScore))
 	}
 	if err := queryScan.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(res, []string{"english:90", "math:93"}) {
+	if !reflect.DeepEqual(res, []string{
+		"english: max=90, count=3",
+		"math: max=93, count=4",
+	}) {
 		t.Fatalf("unexpected result: %v", res)
 	}
 }
