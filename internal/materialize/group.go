@@ -229,7 +229,7 @@ type GroupByPlan struct {
 var _ plan.Plan = (*GroupByPlan)(nil)
 
 func NewGroupByPlan(tx *transaction.Transaction, p plan.Plan, groupFields []schema.FieldName, aggregationFuncs []AggregationFunc) *GroupByPlan {
-	s := schema.Schema{}
+	s := schema.NewSchema()
 	for _, fn := range groupFields {
 		s.Add(fn, *p.Schema())
 	}
