@@ -1,6 +1,11 @@
 package materialize
 
 import (
+	"errors"
+	"fmt"
+	"maps"
+	"slices"
+
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
 )
@@ -78,4 +83,135 @@ func (m *MaxFunc) FieldName() schema.FieldName {
 
 func (m *MaxFunc) Val() schema.Constant {
 	return m.maxVal
+}
+
+type GroupByScan struct {
+	scan             query.Scan
+	groupFields      []schema.FieldName
+	groupValues      map[schema.FieldName]schema.Constant
+	aggregationFuncs []AggregationFunc
+	moreGroups       bool
+}
+
+var _ query.Scan = (*GroupByScan)(nil)
+
+func NewGroupByScan(scan query.Scan, fields []schema.FieldName, aggregationFuncs []AggregationFunc) (*GroupByScan, error) {
+	gs := GroupByScan{scan: scan, groupFields: fields, aggregationFuncs: aggregationFuncs}
+	if err := gs.BeforeFirst(); err != nil {
+		return nil, err
+	}
+	return &gs, nil
+}
+
+func (g *GroupByScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+	if slices.Contains(g.groupFields, fieldName) {
+		return g.groupValues[fieldName], nil
+	}
+	for _, f := range g.aggregationFuncs {
+		if f.FieldName() == fieldName {
+			return f.Val(), nil
+		}
+	}
+	return nil, errors.New("field not found")
+}
+
+func (g *GroupByScan) BeforeFirst() error {
+	if err := g.scan.BeforeFirst(); err != nil {
+		return fmt.Errorf("g.scan.BeforeFirst error: %w", err)
+	}
+	ok, err := g.scan.Next()
+	if err != nil {
+		return fmt.Errorf("g.scan.Next error: %w", err)
+	}
+	g.moreGroups = ok
+	return nil
+}
+
+func (g *GroupByScan) Next() (bool, error) {
+	if !g.moreGroups {
+		return false, nil
+	}
+	for _, f := range g.aggregationFuncs {
+		if err := f.First(g.scan); err != nil {
+			return false, fmt.Errorf("f.First error: %w", err)
+		}
+	}
+	g.groupValues = make(map[schema.FieldName]schema.Constant)
+	for _, f := range g.groupFields {
+		val, err := g.scan.Val(f)
+		if err != nil {
+			return false, fmt.Errorf("g.scan.Val error: %w", err)
+		}
+		g.groupValues[f] = val
+	}
+	for {
+		ok, err := g.scan.Next()
+		if err != nil {
+			return false, fmt.Errorf("g.scan.Next error: %w", err)
+		}
+		if !ok {
+			g.moreGroups = false
+			return true, nil
+		}
+		gv := make(map[schema.FieldName]schema.Constant)
+		for _, f := range g.groupFields {
+			val, err := g.scan.Val(f)
+			if err != nil {
+				return false, fmt.Errorf("g.scan.Val error: %w", err)
+			}
+			gv[f] = val
+		}
+		if !maps.Equal(g.groupValues, gv) {
+			g.moreGroups = true
+			return true, nil
+		}
+		for _, f := range g.aggregationFuncs {
+			if err := f.Next(g.scan); err != nil {
+				return false, fmt.Errorf("f.Next error: %w", err)
+			}
+		}
+	}
+}
+
+func (g *GroupByScan) Int32(fieldName schema.FieldName) (int32, error) {
+	v, err := g.Val(fieldName)
+	if err != nil {
+		return 0, err
+	}
+	intV, ok := v.(schema.ConstantInt32)
+	if !ok {
+		return 0, errors.New("type assertion failed")
+	}
+	return int32(intV), nil
+}
+
+func (g *GroupByScan) Str(fieldName schema.FieldName) (string, error) {
+	v, err := g.Val(fieldName)
+	if err != nil {
+		return "", err
+	}
+	strV, ok := v.(schema.ConstantStr)
+	if !ok {
+		return "", errors.New("type assertion failed")
+	}
+	return string(strV), nil
+}
+
+func (g *GroupByScan) HasField(fieldName schema.FieldName) bool {
+	if slices.Contains(g.groupFields, fieldName) {
+		return true
+	}
+	for _, f := range g.aggregationFuncs {
+		if f.FieldName() == fieldName {
+			return true
+		}
+	}
+	return false
+}
+
+func (g *GroupByScan) Close() error {
+	if err := g.scan.Close(); err != nil {
+		return fmt.Errorf("g.scan.Close error: %w", err)
+	}
+	return nil
 }
