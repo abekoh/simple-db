@@ -47,94 +47,94 @@ func (l Layout) SlotSize() int32 {
 	return l.slotSize
 }
 
-type RecordPage struct {
+type Page struct {
 	tx      *transaction.Transaction
 	blockID file.BlockID
 	layout  *Layout
 }
 
-func NewRecordPage(tx *transaction.Transaction, blockID file.BlockID, layout *Layout) (*RecordPage, error) {
+func NewRecordPage(tx *transaction.Transaction, blockID file.BlockID, layout *Layout) (*Page, error) {
 	if _, err := tx.Pin(blockID); err != nil {
 		return nil, fmt.Errorf("could not pin block: %w", err)
 	}
-	return &RecordPage{tx: tx, blockID: blockID, layout: layout}, nil
+	return &Page{tx: tx, blockID: blockID, layout: layout}, nil
 }
 
-func (rp *RecordPage) Int32(slot int32, fieldName schema.FieldName) (int32, error) {
-	layoutOffset, ok := rp.layout.Offset(fieldName)
+func (p *Page) Int32(slot int32, fieldName schema.FieldName) (int32, error) {
+	layoutOffset, ok := p.layout.Offset(fieldName)
 	if !ok {
 		return 0, fmt.Errorf("field not found: %s", fieldName)
 
 	}
-	val, err := rp.tx.Int32(rp.blockID, rp.offset(slot)+layoutOffset)
+	val, err := p.tx.Int32(p.blockID, p.offset(slot)+layoutOffset)
 	if err != nil {
 		return 0, fmt.Errorf("could not read int32: %w", err)
 	}
 	return val, nil
 }
 
-func (rp *RecordPage) Str(slot int32, fieldName schema.FieldName) (string, error) {
-	layoutOffset, ok := rp.layout.Offset(fieldName)
+func (p *Page) Str(slot int32, fieldName schema.FieldName) (string, error) {
+	layoutOffset, ok := p.layout.Offset(fieldName)
 	if !ok {
 		return "", fmt.Errorf("field not found: %s", fieldName)
 	}
-	val, err := rp.tx.Str(rp.blockID, rp.offset(slot)+layoutOffset)
+	val, err := p.tx.Str(p.blockID, p.offset(slot)+layoutOffset)
 	if err != nil {
 		return "", fmt.Errorf("could not read string: %w", err)
 	}
 	return val, nil
 }
 
-func (rp *RecordPage) SetInt32(slot int32, fieldName schema.FieldName, val int32) error {
-	layoutOffset, ok := rp.layout.Offset(fieldName)
+func (p *Page) SetInt32(slot int32, fieldName schema.FieldName, val int32) error {
+	layoutOffset, ok := p.layout.Offset(fieldName)
 	if !ok {
 		return fmt.Errorf("field not found: %s", fieldName)
 	}
-	if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot)+layoutOffset, val, true); err != nil {
+	if err := p.tx.SetInt32(p.blockID, p.offset(slot)+layoutOffset, val, true); err != nil {
 		return fmt.Errorf("could not set int32: %w", err)
 	}
 	return nil
 }
 
-func (rp *RecordPage) SetStr(slot int32, fieldName schema.FieldName, val string) error {
-	layoutOffset, ok := rp.layout.Offset(fieldName)
+func (p *Page) SetStr(slot int32, fieldName schema.FieldName, val string) error {
+	layoutOffset, ok := p.layout.Offset(fieldName)
 	if !ok {
 		return fmt.Errorf("field not found: %s", fieldName)
 	}
 	// TODO: validate length
-	if err := rp.tx.SetStr(rp.blockID, rp.offset(slot)+layoutOffset, val, true); err != nil {
+	if err := p.tx.SetStr(p.blockID, p.offset(slot)+layoutOffset, val, true); err != nil {
 		return fmt.Errorf("could not set string: %w", err)
 	}
 	return nil
 }
 
-func (rp *RecordPage) Delete(slot int32) error {
-	if err := rp.setFlag(slot, schema.Empty); err != nil {
+func (p *Page) Delete(slot int32) error {
+	if err := p.setFlag(slot, schema.Empty); err != nil {
 		return fmt.Errorf("could not set flag: %w", err)
 	}
 	return nil
 }
 
-func (rp *RecordPage) Format() error {
+func (p *Page) Format() error {
 	var slot int32
-	for rp.isValidSlot(slot) {
-		if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot), int32(schema.Empty), false); err != nil {
+	for p.isValidSlot(slot) {
+		if err := p.tx.SetInt32(p.blockID, p.offset(slot), int32(schema.Empty), false); err != nil {
 			return fmt.Errorf("could not format: %w", err)
 		}
-		sche := rp.layout.Schema()
+		sche := p.layout.Schema()
 		for _, name := range sche.FieldNames() {
-			layoutOffset, ok := rp.layout.Offset(name)
+			layoutOffset, ok := p.layout.Offset(name)
 			if !ok {
 				return fmt.Errorf("field not found: %s", name)
 			}
-			fieldPos := rp.offset(slot) + layoutOffset
+			fieldPos := p.offset(slot) + layoutOffset
 			switch sche.Typ(name) {
 			case schema.Integer32:
-				if err := rp.tx.SetInt32(rp.blockID, fieldPos, 0, false); err != nil {
+				if err := p.tx.SetInt32(p.blockID, fieldPos, 0, false); err != nil {
 					return fmt.Errorf("could not format: %w", err)
 				}
 			case schema.Varchar:
-				if err := rp.tx.SetStr(rp.blockID, fieldPos, "", false); err != nil {
+				if err := p.tx.SetStr(p.blockID, fieldPos, "", false); err != nil {
 					return fmt.Errorf("could not format: %w", err)
 				}
 			}
@@ -144,35 +144,35 @@ func (rp *RecordPage) Format() error {
 	return nil
 }
 
-func (rp *RecordPage) NextAfter(slot int32) (int32, bool, error) {
-	return rp.searchAfter(slot, schema.Used)
+func (p *Page) NextAfter(slot int32) (int32, bool, error) {
+	return p.searchAfter(slot, schema.Used)
 }
 
-func (rp *RecordPage) InsertAfter(slot int32) (int32, bool, error) {
-	newSlot, ok, err := rp.searchAfter(slot, schema.Empty)
+func (p *Page) InsertAfter(slot int32) (int32, bool, error) {
+	newSlot, ok, err := p.searchAfter(slot, schema.Empty)
 	if err != nil {
 		return -1, false, fmt.Errorf("could not search after: %w", err)
 	}
 	if ok {
-		if err := rp.setFlag(newSlot, schema.Used); err != nil {
+		if err := p.setFlag(newSlot, schema.Used); err != nil {
 			return -1, ok, fmt.Errorf("could not set flag: %w", err)
 		}
 	}
 	return newSlot, ok, nil
 }
 
-func (rp *RecordPage) offset(slot int32) int32 {
-	return slot * rp.layout.SlotSize()
+func (p *Page) offset(slot int32) int32 {
+	return slot * p.layout.SlotSize()
 }
 
-func (rp *RecordPage) isValidSlot(slot int32) bool {
-	return rp.offset(slot+1) <= rp.tx.BlockSize()
+func (p *Page) isValidSlot(slot int32) bool {
+	return p.offset(slot+1) <= p.tx.BlockSize()
 }
 
-func (rp *RecordPage) searchAfter(slot int32, flag schema.Flag) (int32, bool, error) {
+func (p *Page) searchAfter(slot int32, flag schema.Flag) (int32, bool, error) {
 	slot++
-	for rp.isValidSlot(slot) {
-		val, err := rp.tx.Int32(rp.blockID, rp.offset(slot))
+	for p.isValidSlot(slot) {
+		val, err := p.tx.Int32(p.blockID, p.offset(slot))
 		if err != nil {
 			return -1, false, fmt.Errorf("could not read int32: %w", err)
 		}
@@ -184,8 +184,8 @@ func (rp *RecordPage) searchAfter(slot int32, flag schema.Flag) (int32, bool, er
 	return -1, false, nil
 }
 
-func (rp *RecordPage) setFlag(slot int32, flag schema.Flag) error {
-	if err := rp.tx.SetInt32(rp.blockID, rp.offset(slot), int32(flag), true); err != nil {
+func (p *Page) setFlag(slot int32, flag schema.Flag) error {
+	if err := p.tx.SetInt32(p.blockID, p.offset(slot), int32(flag), true); err != nil {
 		return fmt.Errorf("could not set int32: %w", err)
 	}
 	return nil
@@ -194,7 +194,7 @@ func (rp *RecordPage) setFlag(slot int32, flag schema.Flag) error {
 type TableScan struct {
 	tx          *transaction.Transaction
 	layout      *Layout
-	rp          *RecordPage
+	rp          *Page
 	filename    string
 	currentSlot int32
 }
