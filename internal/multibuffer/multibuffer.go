@@ -159,7 +159,7 @@ func (c *ChunkScan) moveToBlock(blockNum int32) {
 
 type ProductScan struct {
 	tx                                *transaction.Transaction
-	lshScan, rhsScan, prodScan        query.Scan
+	lhsScan, rhsScan, prodScan        query.Scan
 	filename                          string
 	layout                            *record.Layout
 	chunkSize, nextBlockNum, fileSize int32
@@ -181,7 +181,7 @@ func NewProductScan(
 	chunkSize := bestFactor(int32(tx.AvailableBuffersNum()), fileSize)
 	ps := ProductScan{
 		tx:        tx,
-		lshScan:   lshScan,
+		lhsScan:   lshScan,
 		filename:  filename,
 		layout:    layout,
 		chunkSize: chunkSize,
@@ -192,37 +192,69 @@ func NewProductScan(
 	return &ps, nil
 }
 
-func (p ProductScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+func (p *ProductScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p ProductScan) BeforeFirst() error {
+func (p *ProductScan) BeforeFirst() error {
+	p.nextBlockNum = 0
+	if _, err := p.useNextChunk(); err != nil {
+		return fmt.Errorf("p.useNextChunk error: %w", err)
+	}
+	return nil
+}
+
+func (p *ProductScan) Next() (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p ProductScan) Next() (bool, error) {
+func (p *ProductScan) Int32(fieldName schema.FieldName) (int32, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p ProductScan) Int32(fieldName schema.FieldName) (int32, error) {
+func (p *ProductScan) Str(fieldName schema.FieldName) (string, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p ProductScan) Str(fieldName schema.FieldName) (string, error) {
+func (p *ProductScan) HasField(fieldName schema.FieldName) bool {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p ProductScan) HasField(fieldName schema.FieldName) bool {
+func (p *ProductScan) Close() error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p ProductScan) Close() error {
-	//TODO implement me
-	panic("implement me")
+func (p *ProductScan) useNextChunk() (bool, error) {
+	if p.nextBlockNum >= p.fileSize {
+		return false, nil
+	}
+	if p.rhsScan != nil {
+		if err := p.rhsScan.Close(); err != nil {
+			return false, fmt.Errorf("p.rhsScan.Close error: %w", err)
+		}
+	}
+	end := p.nextBlockNum + p.chunkSize - 1
+	if end >= p.fileSize {
+		end = p.fileSize - 1
+	}
+	rhsScan, err := NewChunkScan(p.tx, p.filename, p.layout, p.nextBlockNum, end)
+	if err != nil {
+		return false, fmt.Errorf("NewChunkScan error: %w", err)
+	}
+	if err := p.lhsScan.BeforeFirst(); err != nil {
+		return false, fmt.Errorf("p.lhsScan.BeforeFirst error: %w", err)
+	}
+	prodScan, err := query.NewProductScan(p.lhsScan, rhsScan)
+	if err != nil {
+		return false, fmt.Errorf("query.NewProductScan error: %w", err)
+	}
+	p.prodScan = prodScan
+	p.nextBlockNum = end + 1
+	return true, nil
 }
