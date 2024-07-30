@@ -25,8 +25,8 @@ func TestGroupByPlan(t *testing.T) {
 	}
 
 	sche := schema.NewSchema()
-	sche.AddInt32Field("id")
-	sche.AddInt32Field("value")
+	sche.AddStrField("department", 10)
+	sche.AddInt32Field("score")
 	if err := db.MetadataMgr().CreateTable("mytable", sche, tx); err != nil {
 		t.Fatal(err)
 	}
@@ -40,14 +40,25 @@ func TestGroupByPlan(t *testing.T) {
 	if err := updateScan.BeforeFirst(); err != nil {
 		t.Fatal(err)
 	}
-	for i, v := range []int32{4, 3, 12, 9, 7} {
+	for _, v := range []struct {
+		department string
+		score      int32
+	}{
+		{"math", 93},
+		{"math", 87},
+		{"math", 92},
+		{"math", 85},
+		{"english", 85},
+		{"english", 90},
+		{"english", 88},
+	} {
 		if err := updateScan.Insert(); err != nil {
 			t.Fatal(err)
 		}
-		if err := updateScan.SetInt32("id", int32(i)); err != nil {
+		if err := updateScan.SetVal("department", schema.ConstantStr(v.department)); err != nil {
 			t.Fatal(err)
 		}
-		if err := updateScan.SetVal("value", schema.ConstantInt32(v)); err != nil {
+		if err := updateScan.SetVal("score", schema.ConstantInt32(v.score)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -61,10 +72,10 @@ func TestGroupByPlan(t *testing.T) {
 	}
 	groupByPlan := materialize.NewGroupByPlan(tx,
 		tablePlan,
-		[]schema.FieldName{"id", "value"},
-		[]materialize.AggregationFunc{materialize.NewMaxFunc("value")},
+		[]schema.FieldName{"department"},
+		[]materialize.AggregationFunc{materialize.NewMaxFunc("score")},
 	)
-	projectPlan := plan.NewProjectPlan(groupByPlan, []schema.FieldName{"id", "value"})
+	projectPlan := plan.NewProjectPlan(groupByPlan, []schema.FieldName{"department", "score"})
 
 	queryScan, err := projectPlan.Open()
 	if err != nil {
@@ -74,7 +85,7 @@ func TestGroupByPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res := make([]string, 0, 5)
+	res := make([]string, 0, 2)
 	for {
 		ok, err := queryScan.Next()
 		if err != nil {
@@ -83,20 +94,20 @@ func TestGroupByPlan(t *testing.T) {
 		if !ok {
 			break
 		}
-		id, err := queryScan.Int32("id")
+		department, err := queryScan.Str("department")
 		if err != nil {
 			t.Fatal(err)
 		}
-		value, err := queryScan.Int32("value")
+		score, err := queryScan.Int32("score")
 		if err != nil {
 			t.Fatal(err)
 		}
-		res = append(res, fmt.Sprintf("%d:%d", id, value))
+		res = append(res, fmt.Sprintf("%s:%d", department, score))
 	}
 	if err := queryScan.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(res, []string{"0:12", "1:9", "2:7", "3:4", "4:3"}) {
-		t.Fatalf("got %v, want [0:12, 1:9, 2:7, 3:4, 4:3]", res)
+	if !reflect.DeepEqual(res, []string{"math:93", "english:90"}) {
+		t.Fatalf("unexpected result: %v", res)
 	}
 }
