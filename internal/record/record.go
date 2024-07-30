@@ -161,6 +161,10 @@ func (p *Page) InsertAfter(slot int32) (int32, bool, error) {
 	return newSlot, ok, nil
 }
 
+func (p *Page) BlockID() file.BlockID {
+	return p.blockID
+}
+
 func (p *Page) offset(slot int32) int32 {
 	return slot * p.layout.SlotSize()
 }

@@ -79,38 +79,76 @@ func NewChunkScan(
 }
 
 func (c *ChunkScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
-	//TODO implement me
-	panic("implement me")
+	switch c.layout.Schema().Typ(fieldName) {
+	case schema.Integer32:
+		val, err := c.Int32(fieldName)
+		if err != nil {
+			return nil, fmt.Errorf("c.Int32 error: %w", err)
+		}
+		return schema.ConstantInt32(val), nil
+	case schema.Varchar:
+		val, err := c.Str(fieldName)
+		if err != nil {
+			return nil, fmt.Errorf("c.Str error: %w", err)
+		}
+		return schema.ConstantStr(val), nil
+	default:
+		return nil, fmt.Errorf("unexpected field type: %v", c.layout.Schema().Typ(fieldName))
+	}
 }
 
 func (c *ChunkScan) BeforeFirst() error {
-	//TODO implement me
-	panic("implement me")
+	c.moveToBlock(c.startBNum)
+	return nil
 }
 
 func (c *ChunkScan) Next() (bool, error) {
-	//TODO implement me
-	panic("implement me")
+	cs, ok, err := c.rp.NextAfter(c.currentSlot)
+	if err != nil {
+		return false, fmt.Errorf("rp.NextAfter error: %w", err)
+	}
+	c.currentSlot = cs
+	for ok {
+		if c.currentBNum == c.endBNum {
+			return false, nil
+		}
+		c.moveToBlock(c.rp.BlockID().Num() + 1)
+		c.currentSlot, ok, err = c.rp.NextAfter(c.currentSlot)
+		if err != nil {
+			return false, fmt.Errorf("rp.NextAfter error: %w", err)
+		}
+	}
+	return true, nil
 }
 
 func (c *ChunkScan) Int32(fieldName schema.FieldName) (int32, error) {
-	//TODO implement me
-	panic("implement me")
+	val, err := c.rp.Int32(c.currentSlot, fieldName)
+	if err != nil {
+		return 0, fmt.Errorf("rp.Int32 error: %w", err)
+	}
+	return val, nil
 }
 
 func (c *ChunkScan) Str(fieldName schema.FieldName) (string, error) {
-	//TODO implement me
-	panic("implement me")
+	val, err := c.rp.Str(c.currentSlot, fieldName)
+	if err != nil {
+		return "", fmt.Errorf("rp.Str error: %w", err)
+	}
+	return val, nil
 }
 
 func (c *ChunkScan) HasField(fieldName schema.FieldName) bool {
-	//TODO implement me
-	panic("implement me")
+	return c.layout.Schema().HasField(fieldName)
 }
 
 func (c *ChunkScan) Close() error {
-	//TODO implement me
-	panic("implement me")
+	for i := 0; i < len(c.buffers); i++ {
+		blockID := file.NewBlockID(c.filename, c.startBNum+int32(i))
+		if err := c.tx.Unpin(blockID); err != nil {
+			return fmt.Errorf("tx.Unpin error: %w", err)
+		}
+	}
+	return nil
 }
 
 func (c *ChunkScan) moveToBlock(blockNum int32) {
