@@ -228,22 +228,20 @@ type GroupByPlan struct {
 
 var _ plan.Plan = (*GroupByPlan)(nil)
 
-func NewGroupByPlan(tx *transaction.Transaction, p plan.Plan, groupFields []schema.FieldName, aggregationFuncs []AggregationFunc) (*GroupByPlan, error) {
+func NewGroupByPlan(tx *transaction.Transaction, p plan.Plan, groupFields []schema.FieldName, aggregationFuncs []AggregationFunc) *GroupByPlan {
 	s := schema.Schema{}
 	for _, fn := range groupFields {
-		s.AddField(fn, schema.NewField(p.Schema().Typ(fn), p.Schema().Length(fn)))
+		s.Add(fn, *p.Schema())
 	}
 	for _, f := range aggregationFuncs {
-		fn := f.FieldName()
-		s.AddField(fn, schema.NewField(p.Schema().Typ(fn), p.Schema().Length(fn)))
+		s.AddInt32Field(f.FieldName())
 	}
 	return &GroupByPlan{
 		p:                NewSortPlan(tx, p, groupFields),
 		groupFields:      groupFields,
 		aggregationFuncs: aggregationFuncs,
 		sche:             s,
-	}, nil
-
+	}
 }
 
 func (g GroupByPlan) Result() {}
