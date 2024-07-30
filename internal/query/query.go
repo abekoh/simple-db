@@ -199,10 +199,26 @@ func (p Predicate) EquatesWithField(fieldName schema.FieldName) (schema.FieldNam
 	return "", false
 }
 
-func (p Predicate) SelectSubPred(sche schema.Schema) (Predicate, bool) {
+func (p Predicate) SelectSubPred(sche *schema.Schema) (Predicate, bool) {
 	result := make(Predicate, 0, len(p))
 	for _, t := range p {
-		if t.AppliesTo(&sche) {
+		if t.AppliesTo(sche) {
+			result = append(result, t)
+		}
+	}
+	if len(result) == 0 {
+		return nil, false
+	}
+	return result, true
+}
+
+func (p Predicate) JoinSubPred(sche1, sche2 *schema.Schema) (Predicate, bool) {
+	result := make(Predicate, 0, len(p))
+	newSche := schema.NewSchema()
+	newSche.AddAll(*sche1)
+	newSche.AddAll(*sche2)
+	for _, t := range p {
+		if !t.AppliesTo(sche1) && !t.AppliesTo(sche2) && t.AppliesTo(newSche) {
 			result = append(result, t)
 		}
 	}
