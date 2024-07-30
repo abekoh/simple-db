@@ -349,12 +349,13 @@ func (p ProductPlan) Open() (query.Scan, error) {
 	if err != nil {
 		return nil, fmt.Errorf("p.lhs.Open error: %w", err)
 	}
+	// copy recods from rhs to a temporary table
 	src, err := p.rhs.Open()
 	if err != nil {
 		return nil, fmt.Errorf("p.rhs.Open error: %w", err)
 	}
-	sche := p.lhs.Schema()
-	tempTable := materialize.NewTempTable(p.tx, *sche)
+	rhsSche := p.rhs.Schema()
+	tempTable := materialize.NewTempTable(p.tx, *rhsSche)
 	dest, err := tempTable.Open()
 	if err != nil {
 		return nil, fmt.Errorf("tempTable.Open error: %w", err)
@@ -374,7 +375,7 @@ func (p ProductPlan) Open() (query.Scan, error) {
 		if err := dest.Insert(); err != nil {
 			return nil, fmt.Errorf("dest.Insert error: %w", err)
 		}
-		for _, fieldName := range p.sche.FieldNames() {
+		for _, fieldName := range rhsSche.FieldNames() {
 			val, err := src.Val(fieldName)
 			if err != nil {
 				return nil, fmt.Errorf("src.Val error: %w", err)
