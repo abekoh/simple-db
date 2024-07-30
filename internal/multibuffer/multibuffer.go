@@ -376,10 +376,6 @@ func (p ProductPlan) Open() (query.Scan, error) {
 	if err != nil {
 		return nil, fmt.Errorf("tempTable.Open error: %w", err)
 	}
-	dest, ok := dest.(query.UpdateScan)
-	if !ok {
-		return nil, fmt.Errorf("dest is not a query.UpdateScan")
-	}
 	for {
 		ok, err := src.Next()
 		if err != nil {
