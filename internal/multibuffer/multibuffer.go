@@ -1,6 +1,15 @@
 package multibuffer
 
-import "math"
+import (
+	"fmt"
+	"math"
+
+	"github.com/abekoh/simple-db/internal/file"
+	"github.com/abekoh/simple-db/internal/query"
+	"github.com/abekoh/simple-db/internal/record"
+	"github.com/abekoh/simple-db/internal/record/schema"
+	"github.com/abekoh/simple-db/internal/transaction"
+)
 
 func bestRoot(available, size int32) int32 {
 	avail := available - 2
@@ -28,4 +37,84 @@ func bestFactor(available, size int32) int32 {
 		k = int32(math.Ceil(float64(size) / i))
 	}
 	return k
+}
+
+type ChunkScan struct {
+	buffers                         []record.Page
+	tx                              *transaction.Transaction
+	filename                        string
+	layout                          *record.Layout
+	startBNum, endBNum, currentBNum int32
+	rp                              *record.Page
+	currentSlot                     int32
+}
+
+var _ query.Scan = (*ChunkScan)(nil)
+
+func NewChunkScan(
+	tx *transaction.Transaction,
+	filename string,
+	layout *record.Layout,
+	startBNum, endBNum int32,
+) (*ChunkScan, error) {
+	buffs := make([]record.Page, 0, endBNum-startBNum+1)
+	for i := startBNum; i <= endBNum; i++ {
+		blockID := file.NewBlockID(filename, i)
+		rp, err := record.NewRecordPage(tx, blockID, layout)
+		if err != nil {
+			return nil, fmt.Errorf("record.NewRecordPage error: %w", err)
+		}
+		buffs = append(buffs, *rp)
+	}
+	cs := ChunkScan{
+		buffers:   buffs,
+		tx:        tx,
+		filename:  filename,
+		layout:    layout,
+		startBNum: startBNum,
+		endBNum:   endBNum,
+	}
+	cs.moveToBlock(startBNum)
+	return &cs, nil
+}
+
+func (c *ChunkScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ChunkScan) BeforeFirst() error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ChunkScan) Next() (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ChunkScan) Int32(fieldName schema.FieldName) (int32, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ChunkScan) Str(fieldName schema.FieldName) (string, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ChunkScan) HasField(fieldName schema.FieldName) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ChunkScan) Close() error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ChunkScan) moveToBlock(blockNum int32) {
+	c.currentBNum = blockNum
+	c.rp = &c.buffers[blockNum-c.startBNum]
+	c.currentSlot = -1
 }
