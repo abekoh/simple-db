@@ -129,6 +129,10 @@ func (f FieldName) Evaluate(v Valuable) (Constant, error) {
 	return v.Val(f)
 }
 
+func (f FieldName) AppliesTo(s *Schema) bool {
+	return s.HasField(f)
+}
+
 type Constant interface {
 	fmt.Stringer
 	Val() any
@@ -169,6 +173,10 @@ func (v ConstantInt32) Compare(c Constant) int {
 	panic("type mismatch")
 }
 
+func (v ConstantInt32) AppliesTo(_ *Schema) bool {
+	return true
+}
+
 type ConstantStr string
 
 func (v ConstantStr) String() string {
@@ -205,6 +213,10 @@ func (v ConstantStr) Compare(c Constant) int {
 	panic("type mismatch")
 }
 
+func (v ConstantStr) AppliesTo(_ *Schema) bool {
+	return true
+}
+
 type Valuable interface {
 	Val(fieldName FieldName) (Constant, error)
 }
@@ -232,5 +244,9 @@ func (p Placeholder) Equals(Constant) bool {
 }
 
 func (p Placeholder) Compare(Constant) int {
+	panic("don't use placeholder as value")
+}
+
+func (p Placeholder) AppliesTo(_ *Schema) bool {
 	panic("don't use placeholder as value")
 }

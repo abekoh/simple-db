@@ -31,6 +31,7 @@ type UpdateScan interface {
 
 type Expression interface {
 	Evaluate(v schema.Valuable) (schema.Constant, error)
+	AppliesTo(s *schema.Schema) bool
 }
 
 type Term struct {
@@ -116,6 +117,10 @@ func (t Term) EquatesWithField(fieldName schema.FieldName) (schema.FieldName, bo
 	return "", false
 }
 
+func (t Term) AppliesTo(s *schema.Schema) bool {
+	return t.lhs.AppliesTo(s) && t.rhs.AppliesTo(s)
+}
+
 type Predicate []Term
 
 func NewPredicate(terms ...Term) Predicate {
@@ -192,6 +197,19 @@ func (p Predicate) EquatesWithField(fieldName schema.FieldName) (schema.FieldNam
 		}
 	}
 	return "", false
+}
+
+func (p Predicate) SelectSubPred(sche schema.Schema) (Predicate, bool) {
+	result := make(Predicate, 0, len(p))
+	for _, t := range p {
+		if t.AppliesTo(&sche) {
+			result = append(result, t)
+		}
+	}
+	if len(result) == 0 {
+		return nil, false
+	}
+	return result, true
 }
 
 var _ UpdateScan = (*SelectScan)(nil)
