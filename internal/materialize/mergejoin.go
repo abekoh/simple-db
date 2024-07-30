@@ -233,7 +233,11 @@ func (m MergeJoinPlan) Open() (query.Scan, error) {
 	if !ok {
 		return nil, fmt.Errorf("s2 is not a SortScan")
 	}
-	return NewMergeJoinScan(s1, *sortScane, m.fieldName1, m.fieldName2)
+	ms, err := NewMergeJoinScan(s1, *sortScane, m.fieldName1, m.fieldName2)
+	if err != nil {
+		return nil, fmt.Errorf("NewMergeJoinScan error: %w", err)
+	}
+	return ms, nil
 }
 
 func (m MergeJoinPlan) BlockAccessed() int {
