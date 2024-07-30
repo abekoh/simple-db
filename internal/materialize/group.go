@@ -6,8 +6,10 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
+	"github.com/abekoh/simple-db/internal/statement"
 )
 
 type AggregationFunc interface {
@@ -214,4 +216,73 @@ func (g *GroupByScan) Close() error {
 		return fmt.Errorf("g.scan.Close error: %w", err)
 	}
 	return nil
+}
+
+type GroupByPlan struct {
+	p                plan.Plan
+	groupFields      []schema.FieldName
+	aggregationFuncs []AggregationFunc
+	sche             schema.Schema
+}
+
+var _ plan.Plan = (*GroupByPlan)(nil)
+
+func (g GroupByPlan) Result() {}
+
+func (g GroupByPlan) String() string {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (g GroupByPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+	return g.p.Placeholders(findSchema)
+}
+
+func (g GroupByPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+	newP, err := g.p.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("g.p.SwapParams error: %w", err)
+	}
+	bp, ok := newP.(*plan.BoundPlan)
+	if !ok {
+		return nil, errors.New("type assertion failed")
+	}
+	return &plan.BoundPlan{
+		Plan: bp,
+	}, nil
+}
+
+func (g GroupByPlan) Open() (query.Scan, error) {
+	s, err := g.p.Open()
+	if err != nil {
+		return nil, fmt.Errorf("g.p.Open error: %w", err)
+	}
+	gs, err := NewGroupByScan(s, g.groupFields, g.aggregationFuncs)
+	if err != nil {
+		return nil, fmt.Errorf("NewGroupByScan error: %w", err)
+	}
+	return gs, nil
+}
+
+func (g GroupByPlan) BlockAccessed() int {
+	return g.p.BlockAccessed()
+}
+
+func (g GroupByPlan) RecordsOutput() int {
+	numGroups := 1
+	for _, f := range g.groupFields {
+		numGroups *= g.p.DistinctValues(f)
+	}
+	return numGroups
+}
+
+func (g GroupByPlan) DistinctValues(fieldName schema.FieldName) int {
+	if slices.Contains(g.groupFields, fieldName) {
+		return g.p.DistinctValues(fieldName)
+	}
+	return g.RecordsOutput()
+}
+
+func (g GroupByPlan) Schema() *schema.Schema {
+	return &g.sche
 }
