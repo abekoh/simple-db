@@ -5,9 +5,12 @@ import (
 	"math"
 
 	"github.com/abekoh/simple-db/internal/file"
+	"github.com/abekoh/simple-db/internal/materialize"
+	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
+	"github.com/abekoh/simple-db/internal/statement"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
@@ -282,4 +285,133 @@ func (p *ProductScan) useNextChunk() (bool, error) {
 	p.prodScan = prodScan
 	p.nextBlockNum = end + 1
 	return true, nil
+}
+
+type ProductPlan struct {
+	tx       *transaction.Transaction
+	lhs, rhs plan.Plan
+	sche     schema.Schema
+}
+
+var _ plan.Plan = (*ProductPlan)(nil)
+
+func NewProductPlan(tx *transaction.Transaction, lhs, rhs plan.Plan) *ProductPlan {
+	sche := schema.NewSchema()
+	sche.AddAll(*lhs.Schema())
+	sche.AddAll(*rhs.Schema())
+	return &ProductPlan{
+		tx:   tx,
+		lhs:  lhs,
+		rhs:  rhs,
+		sche: sche,
+	}
+}
+
+func (p ProductPlan) Result() {}
+
+func (p ProductPlan) String() string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p ProductPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+	placeholders := p.Placeholders(findSchema)
+	for k, v := range p.rhs.Placeholders(findSchema) {
+		placeholders[k] = v
+	}
+	return placeholders
+}
+
+func (p ProductPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+	lhsBound, err := p.lhs.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p.lhs.SwapParams error: %w", err)
+	}
+	lhsPlan, ok := lhsBound.(plan.Plan)
+	if !ok {
+		return nil, fmt.Errorf("lhsBound is not a plan.Plan")
+	}
+	rhsBound, err := p.rhs.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p.rhs.SwapParams error: %w", err)
+	}
+	rhsPlan, ok := rhsBound.(plan.Plan)
+	if !ok {
+		return nil, fmt.Errorf("rhsBound is not a plan.Plan")
+	}
+	return &plan.BoundPlan{
+		Plan: NewProductPlan(p.tx, lhsPlan, rhsPlan),
+	}, nil
+}
+
+func (p ProductPlan) Open() (query.Scan, error) {
+	leftScan, err := p.lhs.Open()
+	if err != nil {
+		return nil, fmt.Errorf("p.lhs.Open error: %w", err)
+	}
+	src, err := p.rhs.Open()
+	if err != nil {
+		return nil, fmt.Errorf("p.rhs.Open error: %w", err)
+	}
+	sche := p.lhs.Schema()
+	tempTable := materialize.NewTempTable(p.tx, *sche)
+	dest, err := tempTable.Open()
+	if err != nil {
+		return nil, fmt.Errorf("tempTable.Open error: %w", err)
+	}
+	dest, ok := dest.(query.UpdateScan)
+	if !ok {
+		return nil, fmt.Errorf("dest is not a query.UpdateScan")
+	}
+	for {
+		ok, err := src.Next()
+		if err != nil {
+			return nil, fmt.Errorf("src.Next error: %w", err)
+		}
+		if !ok {
+			break
+		}
+		if err := dest.Insert(); err != nil {
+			return nil, fmt.Errorf("dest.Insert error: %w", err)
+		}
+		for _, fieldName := range p.sche.FieldNames() {
+			val, err := src.Val(fieldName)
+			if err != nil {
+				return nil, fmt.Errorf("src.Val error: %w", err)
+			}
+			if err := dest.SetVal(fieldName, val); err != nil {
+				return nil, fmt.Errorf("dest.SetVal error: %w", err)
+			}
+		}
+	}
+	if err := src.Close(); err != nil {
+		return nil, fmt.Errorf("src.Close error: %w", err)
+	}
+	if err := dest.Close(); err != nil {
+		return nil, fmt.Errorf("dest.Close error: %w", err)
+	}
+	return NewProductScan(p.tx, leftScan, tempTable.TableName(), tempTable.Layout())
+}
+
+func (p ProductPlan) BlockAccessed() int {
+	avail := p.tx.AvailableBuffersNum()
+	size := materialize.NewPlan(p.tx, p.rhs).BlockAccessed()
+	numChunks := size / avail
+	return p.rhs.BlockAccessed() + (p.lhs.BlockAccessed() + numChunks)
+}
+
+func (p ProductPlan) RecordsOutput() int {
+	return p.lhs.RecordsOutput() * p.rhs.RecordsOutput()
+}
+
+func (p ProductPlan) DistinctValues(fieldName schema.FieldName) int {
+	if p.lhs.Schema().HasField(fieldName) {
+		return p.lhs.DistinctValues(fieldName)
+	} else {
+		return p.rhs.DistinctValues(fieldName)
+	}
+}
+
+func (p ProductPlan) Schema() *schema.Schema {
+	return &p.sche
 }
