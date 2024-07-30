@@ -59,9 +59,8 @@ func TestGroupByPlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sortPlan := materialize.NewSortPlan(tx, tablePlan, []schema.FieldName{"value"})
 	groupByPlan := materialize.NewGroupByPlan(tx,
-		sortPlan,
+		tablePlan,
 		[]schema.FieldName{"id", "value"},
 		[]materialize.AggregationFunc{materialize.NewMaxFunc("value")},
 	)
