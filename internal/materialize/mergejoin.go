@@ -27,7 +27,7 @@ func NewMergeJoinScan(s1 query.Scan, s2 SortScan, fieldName1, fieldName2 schema.
 	return &ms, nil
 }
 
-func (m MergeJoinScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+func (m *MergeJoinScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
 	if m.s1.HasField(fieldName) {
 		v, err := m.s1.Val(fieldName)
 		if err != nil {
@@ -43,7 +43,7 @@ func (m MergeJoinScan) Val(fieldName schema.FieldName) (schema.Constant, error) 
 	}
 }
 
-func (m MergeJoinScan) BeforeFirst() error {
+func (m *MergeJoinScan) BeforeFirst() error {
 	if err := m.s1.BeforeFirst(); err != nil {
 		return fmt.Errorf("s1.BeforeFirst error: %w", err)
 	}
@@ -53,7 +53,7 @@ func (m MergeJoinScan) BeforeFirst() error {
 	return nil
 }
 
-func (m MergeJoinScan) Next() (bool, error) {
+func (m *MergeJoinScan) Next() (bool, error) {
 	ok2, err := m.s2.Next()
 	if err != nil {
 		return false, fmt.Errorf("s2.Next error: %w", err)
@@ -116,7 +116,7 @@ func (m MergeJoinScan) Next() (bool, error) {
 	return false, nil
 }
 
-func (m MergeJoinScan) Int32(fieldName schema.FieldName) (int32, error) {
+func (m *MergeJoinScan) Int32(fieldName schema.FieldName) (int32, error) {
 	if m.s1.HasField(fieldName) {
 		v, err := m.s1.Int32(fieldName)
 		if err != nil {
@@ -132,7 +132,7 @@ func (m MergeJoinScan) Int32(fieldName schema.FieldName) (int32, error) {
 	}
 }
 
-func (m MergeJoinScan) Str(fieldName schema.FieldName) (string, error) {
+func (m *MergeJoinScan) Str(fieldName schema.FieldName) (string, error) {
 	if m.s1.HasField(fieldName) {
 		v, err := m.s1.Str(fieldName)
 		if err != nil {
@@ -148,11 +148,11 @@ func (m MergeJoinScan) Str(fieldName schema.FieldName) (string, error) {
 	}
 }
 
-func (m MergeJoinScan) HasField(fieldName schema.FieldName) bool {
+func (m *MergeJoinScan) HasField(fieldName schema.FieldName) bool {
 	return m.s1.HasField(fieldName) || m.s2.HasField(fieldName)
 }
 
-func (m MergeJoinScan) Close() error {
+func (m *MergeJoinScan) Close() error {
 	if err := m.s1.Close(); err != nil {
 		return fmt.Errorf("s1.Close error: %w", err)
 	}
