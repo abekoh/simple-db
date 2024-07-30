@@ -154,15 +154,15 @@ func TestMergeJoinPlan(t *testing.T) {
 		t.Fatalf("got %d, want 9", len(res))
 	}
 	if !reflect.DeepEqual(res, []string{
-		"joe compsci",
-		"max compsci",
-		"amy math",
-		"kim math",
-		"pat math",
-		"sue math",
-		"art drama",
-		"bob drama",
-		"lee compsci",
+		"joe:compsci",
+		"max:compsci",
+		"amy:math",
+		"kim:math",
+		"pat:math",
+		"sue:math",
+		"art:drama",
+		"bob:drama",
+		"lee:compsci",
 	}) {
 		t.Fatalf("unexpected result: %v", res)
 	}
