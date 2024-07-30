@@ -152,8 +152,8 @@ func (g *GroupByScan) Next() (bool, error) {
 		if err != nil {
 			return false, fmt.Errorf("g.scan.Next error: %w", err)
 		}
-		if !ok {
-			g.moreGroups = false
+		g.moreGroups = ok
+		if !g.moreGroups {
 			return true, nil
 		}
 		gv := make(map[schema.FieldName]schema.Constant)
@@ -165,7 +165,6 @@ func (g *GroupByScan) Next() (bool, error) {
 			gv[f] = val
 		}
 		if !maps.Equal(g.groupValues, gv) {
-			g.moreGroups = true
 			return true, nil
 		}
 		for _, f := range g.aggregationFuncs {
