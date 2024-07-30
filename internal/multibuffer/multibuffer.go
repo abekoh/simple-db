@@ -196,6 +196,9 @@ func NewProductScan(
 }
 
 func (p *ProductScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+	if p.prodScan == nil {
+		return nil, fmt.Errorf("p.prodScan is nil")
+	}
 	v, err := p.prodScan.Val(fieldName)
 	if err != nil {
 		return nil, fmt.Errorf("p.prodScan.Val error: %w", err)
@@ -212,6 +215,9 @@ func (p *ProductScan) BeforeFirst() error {
 }
 
 func (p *ProductScan) Next() (bool, error) {
+	if p.prodScan == nil {
+		return false, fmt.Errorf("p.prodScan is nil")
+	}
 	for {
 		ok, err := p.prodScan.Next()
 		if err != nil {
@@ -232,6 +238,9 @@ func (p *ProductScan) Next() (bool, error) {
 }
 
 func (p *ProductScan) Int32(fieldName schema.FieldName) (int32, error) {
+	if p.prodScan == nil {
+		return 0, fmt.Errorf("p.prodScan is nil")
+	}
 	v, err := p.prodScan.Int32(fieldName)
 	if err != nil {
 		return 0, fmt.Errorf("p.prodScan.Int32 error: %w", err)
@@ -240,6 +249,9 @@ func (p *ProductScan) Int32(fieldName schema.FieldName) (int32, error) {
 }
 
 func (p *ProductScan) Str(fieldName schema.FieldName) (string, error) {
+	if p.prodScan == nil {
+		return "", fmt.Errorf("p.prodScan is nil")
+	}
 	v, err := p.prodScan.Str(fieldName)
 	if err != nil {
 		return "", fmt.Errorf("p.prodScan.Str error: %w", err)
@@ -252,6 +264,9 @@ func (p *ProductScan) HasField(fieldName schema.FieldName) bool {
 }
 
 func (p *ProductScan) Close() error {
+	if p.prodScan == nil {
+		return nil
+	}
 	if err := p.prodScan.Close(); err != nil {
 		return fmt.Errorf("p.prodScan.Close error: %w", err)
 	}
