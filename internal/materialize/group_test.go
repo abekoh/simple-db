@@ -23,7 +23,8 @@ func TestGroupByPlan(t *testing.T) {
 	}
 
 	sche := schema.NewSchema()
-	sche.AddInt32Field("A")
+	sche.AddInt32Field("id")
+	sche.AddInt32Field("value")
 	if err := db.MetadataMgr().CreateTable("mytable", sche, tx); err != nil {
 		t.Fatal(err)
 	}
@@ -37,11 +38,14 @@ func TestGroupByPlan(t *testing.T) {
 	if err := updateScan.BeforeFirst(); err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range []int32{1, 3, 12, 9, 7} {
+	for i, v := range []int32{4, 3, 12, 9, 7} {
 		if err := updateScan.Insert(); err != nil {
 			t.Fatal(err)
 		}
-		if err := updateScan.SetVal("A", schema.ConstantInt32(v)); err != nil {
+		if err := updateScan.SetInt32("id", int32(i)); err != nil {
+			t.Fatal(err)
+		}
+		if err := updateScan.SetVal("value", schema.ConstantInt32(v)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -55,10 +59,10 @@ func TestGroupByPlan(t *testing.T) {
 	}
 	groupByPlan := materialize.NewGroupByPlan(tx,
 		tablePlan,
-		[]schema.FieldName{"A"},
-		[]materialize.AggregationFunc{materialize.NewCountFunc("countA")},
+		[]schema.FieldName{"id"},
+		[]materialize.AggregationFunc{materialize.NewMaxFunc("value")},
 	)
-	projectPlan := plan.NewProjectPlan(groupByPlan, []schema.FieldName{"countA"})
+	projectPlan := plan.NewProjectPlan(groupByPlan, []schema.FieldName{"id", "value"})
 
 	queryScan, err := projectPlan.Open()
 	if err != nil {
@@ -68,7 +72,7 @@ func TestGroupByPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var result int32
+	var resID, resValue int32
 	for {
 		ok, err := queryScan.Next()
 		if err != nil {
@@ -77,13 +81,21 @@ func TestGroupByPlan(t *testing.T) {
 		if !ok {
 			break
 		}
-		val, err := queryScan.Int32("countA")
+		id, err := queryScan.Int32("id")
 		if err != nil {
 			t.Fatal(err)
 		}
-		result = val
+		resID = id
+		value, err := queryScan.Int32("value")
+		if err != nil {
+			t.Fatal(err)
+		}
+		resValue = value
 	}
-	if result != 5 {
-		t.Fatalf("got %d, want 5", result)
+	if resID != 4 {
+		t.Errorf("expected 4, but got %d", resID)
+	}
+	if resValue != 12 {
+		t.Errorf("expected 12, but got %d", resValue)
 	}
 }
