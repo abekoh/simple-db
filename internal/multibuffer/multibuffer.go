@@ -193,8 +193,11 @@ func NewProductScan(
 }
 
 func (p *ProductScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
-	//TODO implement me
-	panic("implement me")
+	v, err := p.prodScan.Val(fieldName)
+	if err != nil {
+		return nil, fmt.Errorf("p.prodScan.Val error: %w", err)
+	}
+	return v, nil
 }
 
 func (p *ProductScan) BeforeFirst() error {
@@ -206,28 +209,50 @@ func (p *ProductScan) BeforeFirst() error {
 }
 
 func (p *ProductScan) Next() (bool, error) {
-	//TODO implement me
-	panic("implement me")
+	for {
+		ok, err := p.prodScan.Next()
+		if err != nil {
+			return false, fmt.Errorf("p.prodScan.Next error: %w", err)
+		}
+		if ok {
+			break
+		}
+		nextChunkOk, err := p.useNextChunk()
+		if err != nil {
+			return false, fmt.Errorf("p.useNextChunk error: %w", err)
+		}
+		if !nextChunkOk {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (p *ProductScan) Int32(fieldName schema.FieldName) (int32, error) {
-	//TODO implement me
-	panic("implement me")
+	v, err := p.prodScan.Int32(fieldName)
+	if err != nil {
+		return 0, fmt.Errorf("p.prodScan.Int32 error: %w", err)
+	}
+	return v, nil
 }
 
 func (p *ProductScan) Str(fieldName schema.FieldName) (string, error) {
-	//TODO implement me
-	panic("implement me")
+	v, err := p.prodScan.Str(fieldName)
+	if err != nil {
+		return "", fmt.Errorf("p.prodScan.Str error: %w", err)
+	}
+	return v, nil
 }
 
 func (p *ProductScan) HasField(fieldName schema.FieldName) bool {
-	//TODO implement me
-	panic("implement me")
+	return p.prodScan.HasField(fieldName)
 }
 
 func (p *ProductScan) Close() error {
-	//TODO implement me
-	panic("implement me")
+	if err := p.prodScan.Close(); err != nil {
+		return fmt.Errorf("p.prodScan.Close error: %w", err)
+	}
+	return nil
 }
 
 func (p *ProductScan) useNextChunk() (bool, error) {
