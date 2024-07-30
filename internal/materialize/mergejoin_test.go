@@ -145,7 +145,7 @@ func TestMergeJoinPlan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		res = append(res, studentName+" "+departmentName)
+		res = append(res, studentName+":"+departmentName)
 	}
 	if err := queryScan.Close(); err != nil {
 		t.Fatal(err)
