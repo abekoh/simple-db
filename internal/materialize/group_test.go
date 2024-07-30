@@ -68,18 +68,22 @@ func TestGroupByPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ok, err := queryScan.Next()
-	if err != nil {
-		t.Fatal(err)
+	var result int32
+	for {
+		ok, err := queryScan.Next()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			break
+		}
+		val, err := queryScan.Int32("countA")
+		if err != nil {
+			t.Fatal(err)
+		}
+		result = val
 	}
-	if !ok {
-		t.Fatal("no rows")
-	}
-	val, err := queryScan.Int32("countA")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != 5 {
-		t.Fatalf("got %d, want 5", val)
+	if result != 5 {
+		t.Fatalf("got %d, want 5", result)
 	}
 }
