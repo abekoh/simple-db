@@ -156,3 +156,73 @@ func (c *ChunkScan) moveToBlock(blockNum int32) {
 	c.rp = &c.buffers[blockNum-c.startBNum]
 	c.currentSlot = -1
 }
+
+type ProductScan struct {
+	tx                                *transaction.Transaction
+	lshScan, rhsScan, prodScan        query.Scan
+	filename                          string
+	layout                            *record.Layout
+	chunkSize, nextBlockNum, fileSize int32
+}
+
+var _ query.Scan = (*ProductScan)(nil)
+
+func NewProductScan(
+	tx *transaction.Transaction,
+	lshScan query.Scan,
+	tableName string,
+	layout *record.Layout,
+) (*ProductScan, error) {
+	filename := fmt.Sprintf("%s.tbl", tableName)
+	fileSize, err := tx.Size(filename)
+	if err != nil {
+		return nil, fmt.Errorf("tx.Size error: %w", err)
+	}
+	chunkSize := bestFactor(int32(tx.AvailableBuffersNum()), fileSize)
+	ps := ProductScan{
+		tx:        tx,
+		lshScan:   lshScan,
+		filename:  filename,
+		layout:    layout,
+		chunkSize: chunkSize,
+	}
+	if err := ps.BeforeFirst(); err != nil {
+		return nil, fmt.Errorf("ps.BeforeFirst error: %w", err)
+	}
+	return &ps, nil
+}
+
+func (p ProductScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p ProductScan) BeforeFirst() error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p ProductScan) Next() (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p ProductScan) Int32(fieldName schema.FieldName) (int32, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p ProductScan) Str(fieldName schema.FieldName) (string, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p ProductScan) HasField(fieldName schema.FieldName) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p ProductScan) Close() error {
+	//TODO implement me
+	panic("implement me")
+}
