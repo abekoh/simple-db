@@ -66,7 +66,6 @@ func (m *MergeJoinScan) Next() (bool, error) {
 		if m.joinValue != nil && v2.Equals(m.joinValue) {
 			return true, nil
 		}
-		return true, nil
 	}
 	ok1, err := m.s1.Next()
 	if err != nil {

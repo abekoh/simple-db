@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/materialize"
-	plan2 "github.com/abekoh/simple-db/internal/plan"
+	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/simpledb"
@@ -107,11 +107,11 @@ func TestMergeJoinPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tablePlan1, err := plan2.NewTablePlan("departments", tx, db.MetadataMgr())
+	tablePlan1, err := plan.NewTablePlan("departments", tx, db.MetadataMgr())
 	if err != nil {
 		t.Fatal(err)
 	}
-	tablePlan2, err := plan2.NewTablePlan("students", tx, db.MetadataMgr())
+	tablePlan2, err := plan.NewTablePlan("students", tx, db.MetadataMgr())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestMergeJoinPlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectPlan := plan2.NewProjectPlan(joinPlan, []schema.FieldName{"student_name", "department_name"})
+	projectPlan := plan.NewProjectPlan(joinPlan, []schema.FieldName{"student_name", "department_name"})
 
 	queryScan, err := projectPlan.Open()
 	if err != nil {
