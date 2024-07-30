@@ -2,6 +2,8 @@ package materialize_test
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/materialize"
@@ -60,7 +62,7 @@ func TestGroupByPlan(t *testing.T) {
 	sortPlan := materialize.NewSortPlan(tx, tablePlan, []schema.FieldName{"value"})
 	groupByPlan := materialize.NewGroupByPlan(tx,
 		sortPlan,
-		[]schema.FieldName{"id"},
+		[]schema.FieldName{"id", "value"},
 		[]materialize.AggregationFunc{materialize.NewMaxFunc("value")},
 	)
 	projectPlan := plan.NewProjectPlan(groupByPlan, []schema.FieldName{"id", "value"})
@@ -73,7 +75,7 @@ func TestGroupByPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var resID, resValue int32
+	res := make([]string, 0, 5)
 	for {
 		ok, err := queryScan.Next()
 		if err != nil {
@@ -86,17 +88,16 @@ func TestGroupByPlan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		resID = id
 		value, err := queryScan.Int32("value")
 		if err != nil {
 			t.Fatal(err)
 		}
-		resValue = value
+		res = append(res, fmt.Sprintf("%d:%d", id, value))
 	}
-	if resID != 4 {
-		t.Errorf("expected 4, but got %d", resID)
+	if err := queryScan.Close(); err != nil {
+		t.Fatal(err)
 	}
-	if resValue != 12 {
-		t.Errorf("expected 12, but got %d", resValue)
+	if !reflect.DeepEqual(res, []string{"0:12", "1:9", "2:7", "3:4", "4:3"}) {
+		t.Fatalf("got %v, want [0:12, 1:9, 2:7, 3:4, 4:3]", res)
 	}
 }
