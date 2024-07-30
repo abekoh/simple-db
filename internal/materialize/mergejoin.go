@@ -21,6 +21,9 @@ var _ query.Scan = (*MergeJoinScan)(nil)
 
 func NewMergeJoinScan(s1 query.Scan, s2 SortScan, fieldName1, fieldName2 schema.FieldName) (*MergeJoinScan, error) {
 	ms := MergeJoinScan{s1: s1, s2: s2, fieldName1: fieldName1, fieldName2: fieldName2}
+	if err := ms.BeforeFirst(); err != nil {
+		return nil, fmt.Errorf("ms.BeforeFirst error: %w", err)
+	}
 	return &ms, nil
 }
 
