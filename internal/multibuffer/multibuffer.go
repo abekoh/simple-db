@@ -188,6 +188,7 @@ func NewProductScan(
 		filename:  filename,
 		layout:    layout,
 		chunkSize: chunkSize,
+		fileSize:  fileSize,
 	}
 	if err := ps.BeforeFirst(); err != nil {
 		return nil, fmt.Errorf("ps.BeforeFirst error: %w", err)
