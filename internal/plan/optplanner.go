@@ -40,10 +40,28 @@ func NewTablePlanner(
 	}, nil
 }
 
-func (p *TablePlanner) MakeIndexPlan(current Plan) Plan {
-	p
+func (tp *TablePlanner) MakeSelectPlan() Plan {
+	p, ok := tp.MakeIndexSelect()
+	if !ok {
+		p = tp.myPlan
+	}
+	return tp.addSelectPred(p)
 }
 
-func (p *TablePlanner) addSelectPred(p Plan) (Plan, error) {
-	selectPred := p.myPred.se
+func (tp *TablePlanner) MakeIndexSelect() (Plan, bool) {
+	for fieldName, indexInfo := range tp.indexes {
+		val, ok := tp.myPred.EquatesWithConstant(fieldName)
+		if ok {
+			return NewIndexSelectPlan(tp.myPlan, &indexInfo, val), true
+		}
+	}
+	return nil, false
+}
+
+func (tp *TablePlanner) addSelectPred(p Plan) Plan {
+	selectPred, ok := tp.myPred.SelectSubPred(&tp.mySche)
+	if ok {
+		return NewSelectPlan(p, selectPred)
+	}
+	return p
 }
