@@ -3,8 +3,11 @@ package materialize
 import (
 	"fmt"
 
+	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
+	"github.com/abekoh/simple-db/internal/statement"
+	"github.com/abekoh/simple-db/internal/transaction"
 )
 
 type MergeJoinScan struct {
@@ -154,4 +157,97 @@ func (m MergeJoinScan) Close() error {
 		return fmt.Errorf("s2.Close error: %w", err)
 	}
 	return nil
+}
+
+type MergeJoinPlan struct {
+	tx                     *transaction.Transaction
+	p1, p2                 plan.Plan
+	fieldName1, fieldName2 schema.FieldName
+	sche                   schema.Schema
+}
+
+var _ plan.Plan = (*MergeJoinPlan)(nil)
+
+func NewMergeJoinPlan(tx *transaction.Transaction, p1, p2 plan.Plan, fieldName1, fieldName2 schema.FieldName) (*MergeJoinPlan, error) {
+	sp1 := NewSortPlan(tx, p1, []schema.FieldName{fieldName1})
+	sp2 := NewSortPlan(tx, p2, []schema.FieldName{fieldName2})
+	sche := schema.NewSchema()
+	sche.AddAll(*p1.Schema())
+	sche.AddAll(*p2.Schema())
+	return &MergeJoinPlan{tx: tx, p1: sp1, p2: sp2, fieldName1: fieldName1, fieldName2: fieldName2, sche: sche}, nil
+}
+
+func (m MergeJoinPlan) Result() {}
+
+func (m MergeJoinPlan) String() string {
+	return fmt.Sprintf("MergeJoin(%s,%s){%s,%s}", m.fieldName1, m.fieldName2, m.p1, m.p2)
+}
+
+func (m MergeJoinPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+	placeholders := m.p1.Placeholders(findSchema)
+	for k, v := range m.p2.Placeholders(findSchema) {
+		placeholders[k] = v
+	}
+	return placeholders
+}
+
+func (m MergeJoinPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+	newP1, err := m.p1.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p1.SwapParams error: %w", err)
+	}
+	newBP1, ok := newP1.(*plan.BoundPlan)
+	if !ok {
+		return nil, fmt.Errorf("newP1 is not a plan.BoundPlan")
+	}
+	newP2, err := m.p2.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p2.SwapParams error: %w", err)
+	}
+	newBP2, ok := newP2.(*plan.BoundPlan)
+	if !ok {
+		return nil, fmt.Errorf("newP2 is not a plan.BoundPlan")
+	}
+	newMergeJoinPlan, err := NewMergeJoinPlan(m.tx, newBP1, newBP2, m.fieldName1, m.fieldName2)
+	if err != nil {
+		return nil, fmt.Errorf("NewMergeJoinPlan error: %w", err)
+	}
+	return &plan.BoundPlan{
+		Plan: newMergeJoinPlan,
+	}, nil
+}
+
+func (m MergeJoinPlan) Open() (query.Scan, error) {
+	s1, err := m.p1.Open()
+	if err != nil {
+		return nil, fmt.Errorf("p1.Open error: %w", err)
+	}
+	s2, err := m.p2.Open()
+	if err != nil {
+		return nil, fmt.Errorf("p2.Open error: %w", err)
+	}
+	sortScane, ok := s2.(*SortScan)
+	if !ok {
+		return nil, fmt.Errorf("s2 is not a SortScan")
+	}
+	return NewMergeJoinScan(s1, *sortScane, m.fieldName1, m.fieldName2)
+}
+
+func (m MergeJoinPlan) BlockAccessed() int {
+	return m.p1.BlockAccessed() + m.p2.BlockAccessed()
+}
+
+func (m MergeJoinPlan) RecordsOutput() int {
+	return (m.p1.RecordsOutput() + m.p2.RecordsOutput()) / max(m.p1.DistinctValues(m.fieldName1), m.p2.DistinctValues(m.fieldName2))
+}
+
+func (m MergeJoinPlan) DistinctValues(fieldName schema.FieldName) int {
+	if m.p1.Schema().HasField(fieldName) {
+		return m.p1.DistinctValues(fieldName)
+	}
+	return m.p2.DistinctValues(fieldName)
+}
+
+func (m MergeJoinPlan) Schema() *schema.Schema {
+	return &m.sche
 }
