@@ -5,6 +5,7 @@ import (
 
 	"github.com/abekoh/simple-db/internal/metadata"
 	"github.com/abekoh/simple-db/internal/multibuffer"
+	"github.com/abekoh/simple-db/internal/parse"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/transaction"
@@ -107,4 +108,44 @@ func (tp *TablePlanner) addJoinPred(p Plan, currentSche *schema.Schema) Plan {
 		return NewSelectPlan(p, joinPred)
 	}
 	return p
+}
+
+type HeuristicQueryPlanner struct {
+	tablePlanners []TablePlanner
+	mdm           *metadata.Manager
+}
+
+var _ QueryPlanner = (*HeuristicQueryPlanner)(nil)
+
+func NewHeuristicQueryPlanner(mdm *metadata.Manager) *HeuristicQueryPlanner {
+	return &HeuristicQueryPlanner{mdm: mdm}
+}
+
+func (h HeuristicQueryPlanner) CreatePlan(d *parse.QueryData, tx *transaction.Transaction) (Plan, error) {
+	// Step1
+	tablePlanners := make([]TablePlanner, len(d.Tables()))
+	for i, tableName := range d.Tables() {
+		tp, err := NewTablePlanner(tableName, d.Predicate(), tx, h.mdm)
+		if err != nil {
+			return nil, fmt.Errorf("NewTablePlanner error: %w", err)
+		}
+		tablePlanners[i] = *tp
+	}
+
+	// Step2
+	var bestTablePlanner *TablePlanner
+	var bestPlan Plan
+	var bestPlanIndex int
+	for i, tp := range tablePlanners {
+		p := tp.MakeSelectPlan()
+		if bestPlan == nil ||
+			p.RecordsOutput() < bestPlan.RecordsOutput() {
+			bestTablePlanner = &tp
+			bestPlan = p
+			bestPlanIndex = i
+		}
+	}
+	tablePlanners = append(tablePlanners[:bestPlanIndex], tablePlanners[bestPlanIndex+1:]...)
+
+	// Step3
 }
