@@ -119,7 +119,8 @@ func TestMergeJoinPlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectPlan := plan.NewProjectPlan(joinPlan, []schema.FieldName{"student_name", "department_name"})
+	sortPlan := materialize.NewSortPlan(tx, joinPlan, []schema.FieldName{"student_name"})
+	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"student_name", "department_name"})
 
 	queryScan, err := projectPlan.Open()
 	if err != nil {
@@ -154,15 +155,15 @@ func TestMergeJoinPlan(t *testing.T) {
 		t.Fatalf("got %d, want 9", len(res))
 	}
 	if !reflect.DeepEqual(res, []string{
-		"joe:compsci",
-		"max:compsci",
 		"amy:math",
-		"kim:math",
-		"pat:math",
-		"sue:math",
 		"art:drama",
 		"bob:drama",
+		"joe:compsci",
+		"kim:math",
 		"lee:compsci",
+		"max:compsci",
+		"pat:math",
+		"sue:math",
 	}) {
 		t.Fatalf("unexpected result: %v", res)
 	}
