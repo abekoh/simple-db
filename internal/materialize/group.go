@@ -16,19 +16,19 @@ import (
 type AggregationFunc interface {
 	First(s query.Scan) error
 	Next(s query.Scan) error
-	FieldName() schema.FieldName
+	AliasName() schema.FieldName
 	Val() schema.Constant
 }
 
 type CountFunc struct {
-	fieldName schema.FieldName
+	aliasName schema.FieldName
 	count     int
 }
 
 var _ AggregationFunc = (*CountFunc)(nil)
 
-func NewCountFunc(fieldName schema.FieldName) *CountFunc {
-	return &CountFunc{fieldName: fieldName}
+func NewCountFunc(aliasName schema.FieldName) *CountFunc {
+	return &CountFunc{aliasName: aliasName}
 }
 
 func (c *CountFunc) First(s query.Scan) error {
@@ -41,8 +41,8 @@ func (c *CountFunc) Next(s query.Scan) error {
 	return nil
 }
 
-func (c *CountFunc) FieldName() schema.FieldName {
-	return c.fieldName
+func (c *CountFunc) AliasName() schema.FieldName {
+	return c.aliasName
 }
 
 func (c *CountFunc) Val() schema.Constant {
@@ -50,14 +50,14 @@ func (c *CountFunc) Val() schema.Constant {
 }
 
 type MaxFunc struct {
-	fieldName schema.FieldName
-	maxVal    schema.Constant
+	fieldName, aliasName schema.FieldName
+	maxVal               schema.Constant
 }
 
 var _ AggregationFunc = (*MaxFunc)(nil)
 
-func NewMaxFunc(fieldName schema.FieldName) *MaxFunc {
-	return &MaxFunc{fieldName: fieldName}
+func NewMaxFunc(fieldName, aliasName schema.FieldName) *MaxFunc {
+	return &MaxFunc{fieldName: fieldName, aliasName: aliasName}
 }
 
 func (m *MaxFunc) First(s query.Scan) error {
@@ -80,8 +80,8 @@ func (m *MaxFunc) Next(s query.Scan) error {
 	return nil
 }
 
-func (m *MaxFunc) FieldName() schema.FieldName {
-	return m.fieldName
+func (m *MaxFunc) AliasName() schema.FieldName {
+	return m.aliasName
 }
 
 func (m *MaxFunc) Val() schema.Constant {
@@ -111,7 +111,7 @@ func (g *GroupByScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
 		return g.groupValues[fieldName], nil
 	}
 	for _, f := range g.aggregationFuncs {
-		if f.FieldName() == fieldName {
+		if f.AliasName() == fieldName {
 			return f.Val(), nil
 		}
 	}
@@ -204,7 +204,7 @@ func (g *GroupByScan) HasField(fieldName schema.FieldName) bool {
 		return true
 	}
 	for _, f := range g.aggregationFuncs {
-		if f.FieldName() == fieldName {
+		if f.AliasName() == fieldName {
 			return true
 		}
 	}
@@ -233,7 +233,7 @@ func NewGroupByPlan(tx *transaction.Transaction, p plan.Plan, groupFields []sche
 		s.Add(fn, *p.Schema())
 	}
 	for _, f := range aggregationFuncs {
-		s.AddInt32Field(f.FieldName())
+		s.AddInt32Field(f.AliasName())
 	}
 	return &GroupByPlan{
 		p:                NewSortPlan(tx, p, groupFields),

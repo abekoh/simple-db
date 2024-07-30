@@ -73,10 +73,12 @@ func TestGroupByPlan(t *testing.T) {
 	groupByPlan := materialize.NewGroupByPlan(tx,
 		tablePlan,
 		[]schema.FieldName{"department"},
-		[]materialize.AggregationFunc{materialize.NewMaxFunc("score")},
+		[]materialize.AggregationFunc{
+			materialize.NewMaxFunc("score", "max_score"),
+		},
 	)
 	sortPlan := materialize.NewSortPlan(tx, groupByPlan, []schema.FieldName{"department"})
-	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"department", "score"})
+	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"department", "max_score"})
 
 	queryScan, err := projectPlan.Open()
 	if err != nil {
@@ -99,7 +101,7 @@ func TestGroupByPlan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		score, err := queryScan.Int32("score")
+		score, err := queryScan.Int32("max_score")
 		if err != nil {
 			t.Fatal(err)
 		}
