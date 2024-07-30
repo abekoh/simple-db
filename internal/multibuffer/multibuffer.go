@@ -315,7 +315,7 @@ func (p ProductPlan) String() string {
 }
 
 func (p ProductPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
-	placeholders := p.Placeholders(findSchema)
+	placeholders := p.lhs.Placeholders(findSchema)
 	for k, v := range p.rhs.Placeholders(findSchema) {
 		placeholders[k] = v
 	}
