@@ -75,7 +75,8 @@ func TestGroupByPlan(t *testing.T) {
 		[]schema.FieldName{"department"},
 		[]materialize.AggregationFunc{materialize.NewMaxFunc("score")},
 	)
-	projectPlan := plan.NewProjectPlan(groupByPlan, []schema.FieldName{"department", "score"})
+	sortPlan := materialize.NewSortPlan(tx, groupByPlan, []schema.FieldName{"department"})
+	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"department", "score"})
 
 	queryScan, err := projectPlan.Open()
 	if err != nil {
@@ -107,7 +108,7 @@ func TestGroupByPlan(t *testing.T) {
 	if err := queryScan.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(res, []string{"math:93", "english:90"}) {
+	if !reflect.DeepEqual(res, []string{"english:90", "math:93"}) {
 		t.Fatalf("unexpected result: %v", res)
 	}
 }
