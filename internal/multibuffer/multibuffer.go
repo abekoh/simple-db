@@ -364,7 +364,7 @@ func (p ProductPlan) Open() (query.Scan, error) {
 	if err != nil {
 		return nil, fmt.Errorf("p.lhs.Open error: %w", err)
 	}
-	// copy recods from rhs to a temporary table
+	// copy records from rhs to a temporary table
 	src, err := p.rhs.Open()
 	if err != nil {
 		return nil, fmt.Errorf("p.rhs.Open error: %w", err)
