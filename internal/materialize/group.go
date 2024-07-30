@@ -10,6 +10,7 @@ import (
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/statement"
+	"github.com/abekoh/simple-db/internal/transaction"
 )
 
 type AggregationFunc interface {
@@ -226,6 +227,24 @@ type GroupByPlan struct {
 }
 
 var _ plan.Plan = (*GroupByPlan)(nil)
+
+func NewGroupByPlan(tx *transaction.Transaction, p plan.Plan, groupFields []schema.FieldName, aggregationFuncs []AggregationFunc) (*GroupByPlan, error) {
+	s := schema.Schema{}
+	for _, fn := range groupFields {
+		s.AddField(fn, schema.NewField(p.Schema().Typ(fn), p.Schema().Length(fn)))
+	}
+	for _, f := range aggregationFuncs {
+		fn := f.FieldName()
+		s.AddField(fn, schema.NewField(p.Schema().Typ(fn), p.Schema().Length(fn)))
+	}
+	return &GroupByPlan{
+		p:                NewSortPlan(tx, p, groupFields),
+		groupFields:      groupFields,
+		aggregationFuncs: aggregationFuncs,
+		sche:             s,
+	}, nil
+
+}
 
 func (g GroupByPlan) Result() {}
 
