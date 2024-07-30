@@ -59,7 +59,7 @@ func TestRecordPage(t *testing.T) {
 	if _, err := tx.Pin(blockID); err != nil {
 		t.Fatal(err)
 	}
-	rp, err := NewRecordPage(tx, blockID, layout)
+	rp, err := NewPage(tx, blockID, layout)
 	if err != nil {
 		t.Fatal(err)
 	}

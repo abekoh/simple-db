@@ -60,9 +60,9 @@ func NewChunkScan(
 	buffs := make([]record.Page, 0, endBNum-startBNum+1)
 	for i := startBNum; i <= endBNum; i++ {
 		blockID := file.NewBlockID(filename, i)
-		rp, err := record.NewRecordPage(tx, blockID, layout)
+		rp, err := record.NewPage(tx, blockID, layout)
 		if err != nil {
-			return nil, fmt.Errorf("record.NewRecordPage error: %w", err)
+			return nil, fmt.Errorf("record.NewPage error: %w", err)
 		}
 		buffs = append(buffs, *rp)
 	}

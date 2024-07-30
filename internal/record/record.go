@@ -53,7 +53,7 @@ type Page struct {
 	layout  *Layout
 }
 
-func NewRecordPage(tx *transaction.Transaction, blockID file.BlockID, layout *Layout) (*Page, error) {
+func NewPage(tx *transaction.Transaction, blockID file.BlockID, layout *Layout) (*Page, error) {
 	if _, err := tx.Pin(blockID); err != nil {
 		return nil, fmt.Errorf("could not pin block: %w", err)
 	}
@@ -227,7 +227,7 @@ func (ts *TableScan) moveToNewBlock() error {
 	if err != nil {
 		return fmt.Errorf("could not append: %w", err)
 	}
-	rp, err := NewRecordPage(ts.tx, blockID, ts.layout)
+	rp, err := NewPage(ts.tx, blockID, ts.layout)
 	if err != nil {
 		return fmt.Errorf("could not create new record page: %w", err)
 	}
@@ -244,7 +244,7 @@ func (ts *TableScan) moveToBlock(blockNum int32) error {
 		return fmt.Errorf("could not close: %w", err)
 	}
 	blockID := file.NewBlockID(ts.filename, blockNum)
-	rp, err := NewRecordPage(ts.tx, blockID, ts.layout)
+	rp, err := NewPage(ts.tx, blockID, ts.layout)
 	if err != nil {
 		return fmt.Errorf("could not create new record page: %w", err)
 	}
@@ -404,7 +404,7 @@ func (ts *TableScan) MoveToRID(rid schema.RID) error {
 		return fmt.Errorf("could not close: %w", err)
 	}
 	blockID := file.NewBlockID(ts.filename, rid.BlockNum())
-	rp, err := NewRecordPage(ts.tx, blockID, ts.layout)
+	rp, err := NewPage(ts.tx, blockID, ts.layout)
 	if err != nil {
 		return fmt.Errorf("could not create new record page: %w", err)
 	}
