@@ -218,7 +218,7 @@ func (p Predicate) JoinSubPred(sche1, sche2 *schema.Schema) (Predicate, bool) {
 	newSche.AddAll(*sche1)
 	newSche.AddAll(*sche2)
 	for _, t := range p {
-		if !t.AppliesTo(sche1) && !t.AppliesTo(sche2) && t.AppliesTo(newSche) {
+		if !t.AppliesTo(sche1) && !t.AppliesTo(sche2) && t.AppliesTo(&newSche) {
 			result = append(result, t)
 		}
 	}
