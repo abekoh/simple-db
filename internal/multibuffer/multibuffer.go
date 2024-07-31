@@ -408,7 +408,7 @@ func (p MultiBufferProductPlan) Open() (query.Scan, error) {
 
 func (p MultiBufferProductPlan) BlockAccessed() int {
 	avail := p.tx.AvailableBuffersNum()
-	size := materialize.NewPlan(p.tx, p.rhs).BlockAccessed()
+	size := materialize.NewMaterializePlan(p.tx, p.rhs).BlockAccessed()
 	numChunks := size / avail
 	return p.rhs.BlockAccessed() + (p.lhs.BlockAccessed() + numChunks)
 }

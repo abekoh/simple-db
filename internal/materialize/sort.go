@@ -231,7 +231,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 }
 
 func (s SortPlan) BlockAccessed() int {
-	return NewPlan(s.tx, s.p).BlockAccessed()
+	return NewMaterializePlan(s.tx, s.p).BlockAccessed()
 }
 
 func (s SortPlan) RecordsOutput() int {

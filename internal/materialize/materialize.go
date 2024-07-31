@@ -40,28 +40,28 @@ func (t TempTable) Layout() *record.Layout {
 	return t.layout
 }
 
-type Plan struct {
+type MaterializePlan struct {
 	srcPlan plan.Plan
 	tx      *transaction.Transaction
 }
 
-var _ plan.Plan = (*Plan)(nil)
+var _ plan.Plan = (*MaterializePlan)(nil)
 
-func NewPlan(tx *transaction.Transaction, p plan.Plan) *Plan {
-	return &Plan{srcPlan: p, tx: tx}
+func NewMaterializePlan(tx *transaction.Transaction, p plan.Plan) *MaterializePlan {
+	return &MaterializePlan{srcPlan: p, tx: tx}
 }
 
-func (p Plan) Result() {}
+func (p MaterializePlan) Result() {}
 
-func (p Plan) String() string {
+func (p MaterializePlan) String() string {
 	return fmt.Sprintf("Materialize{%s}", p.srcPlan)
 }
 
-func (p Plan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+func (p MaterializePlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
 	return p.srcPlan.Placeholders(findSchema)
 }
 
-func (p Plan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+func (p MaterializePlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
 	newSrcPlan, err := p.srcPlan.SwapParams(params)
 	if err != nil {
 		return nil, fmt.Errorf("srcPlan.SwapParams error: %w", err)
@@ -71,11 +71,11 @@ func (p Plan) SwapParams(params map[int]schema.Constant) (statement.Bound, error
 		return nil, fmt.Errorf("newSrcPlan is not a plan.Plan")
 	}
 	return &plan.BoundPlan{
-		Plan: NewPlan(p.tx, np.Plan),
+		Plan: NewMaterializePlan(p.tx, np.Plan),
 	}, nil
 }
 
-func (p Plan) Open() (query.Scan, error) {
+func (p MaterializePlan) Open() (query.Scan, error) {
 	sche := p.srcPlan.Schema()
 	temp := NewTempTable(p.tx, *sche)
 	src, err := p.srcPlan.Open()
@@ -116,20 +116,20 @@ func (p Plan) Open() (query.Scan, error) {
 	return dest, nil
 }
 
-func (p Plan) BlockAccessed() int {
+func (p MaterializePlan) BlockAccessed() int {
 	l := record.NewLayoutSchema(*p.srcPlan.Schema())
 	rpb := float64(p.tx.BlockSize()) / float64(l.SlotSize())
 	return int(math.Ceil(float64(p.srcPlan.RecordsOutput()) / rpb))
 }
 
-func (p Plan) RecordsOutput() int {
+func (p MaterializePlan) RecordsOutput() int {
 	return p.srcPlan.RecordsOutput()
 }
 
-func (p Plan) DistinctValues(fieldName schema.FieldName) int {
+func (p MaterializePlan) DistinctValues(fieldName schema.FieldName) int {
 	return p.srcPlan.DistinctValues(fieldName)
 }
 
-func (p Plan) Schema() *schema.Schema {
+func (p MaterializePlan) Schema() *schema.Schema {
 	return p.srcPlan.Schema()
 }
