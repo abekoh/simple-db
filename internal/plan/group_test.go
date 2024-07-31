@@ -1,4 +1,4 @@
-package materialize_test
+package plan_test
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/abekoh/simple-db/internal/materialize"
 	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
@@ -72,17 +71,17 @@ func TestGroupByPlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	groupByPlan := materialize.NewGroupByPlan(tx,
+	groupByPlan := plan.NewGroupByPlan(tx,
 		tablePlan,
 		[]schema.FieldName{"department"},
-		[]materialize.AggregationFunc{
-			materialize.NewCountFunc("count_score"),
-			materialize.NewMaxFunc("score", "max_score"),
-			materialize.NewMinFunc("score", "min_score"),
-			materialize.NewSumFunc("score", "sum_score"),
+		[]plan.AggregationFunc{
+			plan.NewCountFunc("count_score"),
+			plan.NewMaxFunc("score", "max_score"),
+			plan.NewMinFunc("score", "min_score"),
+			plan.NewSumFunc("score", "sum_score"),
 		},
 	)
-	sortPlan := materialize.NewSortPlan(tx, groupByPlan, []schema.FieldName{"department"})
+	sortPlan := plan.NewSortPlan(tx, groupByPlan, []schema.FieldName{"department"})
 	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"department", "count_score", "max_score", "min_score"})
 
 	queryScan, err := projectPlan.Open()

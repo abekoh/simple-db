@@ -1,4 +1,4 @@
-package multibuffer_test
+package plan_test
 
 import (
 	"context"
@@ -6,8 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/abekoh/simple-db/internal/multibuffer"
-	plan2 "github.com/abekoh/simple-db/internal/plan"
+	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
@@ -86,17 +85,17 @@ func TestProductPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tablePlan1, err := plan2.NewTablePlan("T1", tx, db.MetadataMgr())
+	tablePlan1, err := plan.NewTablePlan("T1", tx, db.MetadataMgr())
 	if err != nil {
 		t.Fatal(err)
 	}
-	tablePlan2, err := plan2.NewTablePlan("T2", tx, db.MetadataMgr())
+	tablePlan2, err := plan.NewTablePlan("T2", tx, db.MetadataMgr())
 	if err != nil {
 		t.Fatal(err)
 	}
-	prodPlan := multibuffer.NewMultiBufferProductPlan(tx, tablePlan1, tablePlan2)
-	selectPlan := plan2.NewSelectPlan(prodPlan, query.NewPredicate(query.NewTerm(schema.FieldName("A"), schema.FieldName("C"))))
-	projectPlan := plan2.NewProjectPlan(selectPlan, []schema.FieldName{"B", "D"})
+	prodPlan := plan.NewMultiBufferProductPlan(tx, tablePlan1, tablePlan2)
+	selectPlan := plan.NewSelectPlan(prodPlan, query.NewPredicate(query.NewTerm(schema.FieldName("A"), schema.FieldName("C"))))
+	projectPlan := plan.NewProjectPlan(selectPlan, []schema.FieldName{"B", "D"})
 
 	s, err := projectPlan.Open()
 	if err != nil {

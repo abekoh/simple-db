@@ -1,10 +1,9 @@
-package materialize
+package plan
 
 import (
 	"fmt"
 	"math"
 
-	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
@@ -41,13 +40,13 @@ func (t TempTable) Layout() *record.Layout {
 }
 
 type MaterializePlan struct {
-	srcPlan plan.Plan
+	srcPlan Plan
 	tx      *transaction.Transaction
 }
 
-var _ plan.Plan = (*MaterializePlan)(nil)
+var _ Plan = (*MaterializePlan)(nil)
 
-func NewMaterializePlan(tx *transaction.Transaction, p plan.Plan) *MaterializePlan {
+func NewMaterializePlan(tx *transaction.Transaction, p Plan) *MaterializePlan {
 	return &MaterializePlan{srcPlan: p, tx: tx}
 }
 
@@ -66,11 +65,11 @@ func (p MaterializePlan) SwapParams(params map[int]schema.Constant) (statement.B
 	if err != nil {
 		return nil, fmt.Errorf("srcPlan.SwapParams error: %w", err)
 	}
-	np, ok := newSrcPlan.(plan.BoundPlan)
+	np, ok := newSrcPlan.(BoundPlan)
 	if !ok {
 		return nil, fmt.Errorf("newSrcPlan is not a plan.Plan")
 	}
-	return &plan.BoundPlan{
+	return &BoundPlan{
 		Plan: NewMaterializePlan(p.tx, np.Plan),
 	}, nil
 }

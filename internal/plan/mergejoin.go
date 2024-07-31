@@ -1,9 +1,8 @@
-package materialize
+package plan
 
 import (
 	"fmt"
 
-	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/statement"
@@ -163,14 +162,14 @@ func (m *MergeJoinScan) Close() error {
 
 type MergeJoinPlan struct {
 	tx                     *transaction.Transaction
-	p1, p2                 plan.Plan
+	p1, p2                 Plan
 	fieldName1, fieldName2 schema.FieldName
 	sche                   schema.Schema
 }
 
-var _ plan.Plan = (*MergeJoinPlan)(nil)
+var _ Plan = (*MergeJoinPlan)(nil)
 
-func NewMergeJoinPlan(tx *transaction.Transaction, p1, p2 plan.Plan, fieldName1, fieldName2 schema.FieldName) (*MergeJoinPlan, error) {
+func NewMergeJoinPlan(tx *transaction.Transaction, p1, p2 Plan, fieldName1, fieldName2 schema.FieldName) (*MergeJoinPlan, error) {
 	sp1 := NewSortPlan(tx, p1, []schema.FieldName{fieldName1})
 	sp2 := NewSortPlan(tx, p2, []schema.FieldName{fieldName2})
 	sche := schema.NewSchema()
@@ -198,7 +197,7 @@ func (m MergeJoinPlan) SwapParams(params map[int]schema.Constant) (statement.Bou
 	if err != nil {
 		return nil, fmt.Errorf("p1.SwapParams error: %w", err)
 	}
-	newBP1, ok := newP1.(*plan.BoundPlan)
+	newBP1, ok := newP1.(*BoundPlan)
 	if !ok {
 		return nil, fmt.Errorf("newP1 is not a plan.BoundPlan")
 	}
@@ -206,7 +205,7 @@ func (m MergeJoinPlan) SwapParams(params map[int]schema.Constant) (statement.Bou
 	if err != nil {
 		return nil, fmt.Errorf("p2.SwapParams error: %w", err)
 	}
-	newBP2, ok := newP2.(*plan.BoundPlan)
+	newBP2, ok := newP2.(*BoundPlan)
 	if !ok {
 		return nil, fmt.Errorf("newP2 is not a plan.BoundPlan")
 	}
@@ -214,7 +213,7 @@ func (m MergeJoinPlan) SwapParams(params map[int]schema.Constant) (statement.Bou
 	if err != nil {
 		return nil, fmt.Errorf("NewMergeJoinPlan error: %w", err)
 	}
-	return &plan.BoundPlan{
+	return &BoundPlan{
 		Plan: newMergeJoinPlan,
 	}, nil
 }

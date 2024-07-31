@@ -1,12 +1,11 @@
-package materialize_test
+package plan_test
 
 import (
 	"context"
 	"reflect"
 	"testing"
 
-	"github.com/abekoh/simple-db/internal/materialize"
-	plan2 "github.com/abekoh/simple-db/internal/plan"
+	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/simpledb"
@@ -54,12 +53,12 @@ func TestSortPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tablePlan, err := plan2.NewTablePlan("mytable", tx, db.MetadataMgr())
+	tablePlan, err := plan.NewTablePlan("mytable", tx, db.MetadataMgr())
 	if err != nil {
 		t.Fatal(err)
 	}
-	sortPlan := materialize.NewSortPlan(tx, tablePlan, []schema.FieldName{"B"})
-	projectPlan := plan2.NewProjectPlan(sortPlan, []schema.FieldName{"B"})
+	sortPlan := plan.NewSortPlan(tx, tablePlan, []schema.FieldName{"B"})
+	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"B"})
 	queryScan, err := projectPlan.Open()
 	if err != nil {
 		t.Fatal(err)

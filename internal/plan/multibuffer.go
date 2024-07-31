@@ -1,12 +1,10 @@
-package multibuffer
+package plan
 
 import (
 	"fmt"
 	"math"
 
 	"github.com/abekoh/simple-db/internal/file"
-	"github.com/abekoh/simple-db/internal/materialize"
-	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
@@ -305,13 +303,13 @@ func (p *MultiBufferProductScan) useNextChunk() (bool, error) {
 
 type MultiBufferProductPlan struct {
 	tx       *transaction.Transaction
-	lhs, rhs plan.Plan
+	lhs, rhs Plan
 	sche     schema.Schema
 }
 
-var _ plan.Plan = (*MultiBufferProductPlan)(nil)
+var _ Plan = (*MultiBufferProductPlan)(nil)
 
-func NewMultiBufferProductPlan(tx *transaction.Transaction, lhs, rhs plan.Plan) *MultiBufferProductPlan {
+func NewMultiBufferProductPlan(tx *transaction.Transaction, lhs, rhs Plan) *MultiBufferProductPlan {
 	sche := schema.NewSchema()
 	sche.AddAll(*lhs.Schema())
 	sche.AddAll(*rhs.Schema())
@@ -343,7 +341,7 @@ func (p MultiBufferProductPlan) SwapParams(params map[int]schema.Constant) (stat
 	if err != nil {
 		return nil, fmt.Errorf("p.lhs.SwapParams error: %w", err)
 	}
-	lhsPlan, ok := lhsBound.(plan.Plan)
+	lhsPlan, ok := lhsBound.(Plan)
 	if !ok {
 		return nil, fmt.Errorf("lhsBound is not a plan.Plan")
 	}
@@ -351,11 +349,11 @@ func (p MultiBufferProductPlan) SwapParams(params map[int]schema.Constant) (stat
 	if err != nil {
 		return nil, fmt.Errorf("p.rhs.SwapParams error: %w", err)
 	}
-	rhsPlan, ok := rhsBound.(plan.Plan)
+	rhsPlan, ok := rhsBound.(Plan)
 	if !ok {
 		return nil, fmt.Errorf("rhsBound is not a plan.Plan")
 	}
-	return &plan.BoundPlan{
+	return &BoundPlan{
 		Plan: NewMultiBufferProductPlan(p.tx, lhsPlan, rhsPlan),
 	}, nil
 }
@@ -371,7 +369,7 @@ func (p MultiBufferProductPlan) Open() (query.Scan, error) {
 		return nil, fmt.Errorf("p.rhs.Open error: %w", err)
 	}
 	rhsSche := p.rhs.Schema()
-	tempTable := materialize.NewTempTable(p.tx, *rhsSche)
+	tempTable := NewTempTable(p.tx, *rhsSche)
 	dest, err := tempTable.Open()
 	if err != nil {
 		return nil, fmt.Errorf("tempTable.Open error: %w", err)
@@ -408,7 +406,7 @@ func (p MultiBufferProductPlan) Open() (query.Scan, error) {
 
 func (p MultiBufferProductPlan) BlockAccessed() int {
 	avail := p.tx.AvailableBuffersNum()
-	size := materialize.NewMaterializePlan(p.tx, p.rhs).BlockAccessed()
+	size := NewMaterializePlan(p.tx, p.rhs).BlockAccessed()
 	numChunks := size / avail
 	return p.rhs.BlockAccessed() + (p.lhs.BlockAccessed() + numChunks)
 }

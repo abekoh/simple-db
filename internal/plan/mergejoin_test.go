@@ -1,11 +1,10 @@
-package materialize_test
+package plan_test
 
 import (
 	"context"
 	"reflect"
 	"testing"
 
-	"github.com/abekoh/simple-db/internal/materialize"
 	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
@@ -117,11 +116,11 @@ func TestMergeJoinPlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	joinPlan, err := materialize.NewMergeJoinPlan(tx, tablePlan1, tablePlan2, "department_id", "department_id")
+	joinPlan, err := plan.NewMergeJoinPlan(tx, tablePlan1, tablePlan2, "department_id", "department_id")
 	if err != nil {
 		t.Fatal(err)
 	}
-	sortPlan := materialize.NewSortPlan(tx, joinPlan, []schema.FieldName{"student_name"})
+	sortPlan := plan.NewSortPlan(tx, joinPlan, []schema.FieldName{"student_name"})
 	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"student_name", "department_name"})
 
 	queryScan, err := projectPlan.Open()

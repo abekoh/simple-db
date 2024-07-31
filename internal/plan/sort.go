@@ -1,10 +1,9 @@
-package materialize
+package plan
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/statement"
@@ -50,15 +49,15 @@ func (c Comparator) Compare(s1, s2 query.Scan) (int, error) {
 
 type SortPlan struct {
 	tx         *transaction.Transaction
-	p          plan.Plan
+	p          Plan
 	sche       schema.Schema
 	sortFields []schema.FieldName
 	comparator *Comparator
 }
 
-var _ plan.Plan = (*SortPlan)(nil)
+var _ Plan = (*SortPlan)(nil)
 
-func NewSortPlan(tx *transaction.Transaction, p plan.Plan, sortFields []schema.FieldName) *SortPlan {
+func NewSortPlan(tx *transaction.Transaction, p Plan, sortFields []schema.FieldName) *SortPlan {
 	return &SortPlan{tx: tx, p: p, sche: *p.Schema(), sortFields: sortFields, comparator: NewComparator(sortFields)}
 }
 
@@ -81,11 +80,11 @@ func (s SortPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, e
 	if err != nil {
 		return nil, err
 	}
-	bp, ok := bound.(*plan.BoundPlan)
+	bp, ok := bound.(*BoundPlan)
 	if !ok {
 		return nil, fmt.Errorf("bound.(*plan.BoundPlan) error")
 	}
-	return &plan.BoundPlan{
+	return &BoundPlan{
 		Plan: NewSortPlan(s.tx, bp, s.sortFields),
 	}, nil
 }

@@ -1,4 +1,4 @@
-package materialize
+package plan
 
 import (
 	"errors"
@@ -6,7 +6,6 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/statement"
@@ -305,15 +304,15 @@ func (g *GroupByScan) Close() error {
 }
 
 type GroupByPlan struct {
-	p                plan.Plan
+	p                Plan
 	groupFields      []schema.FieldName
 	aggregationFuncs []AggregationFunc
 	sche             schema.Schema
 }
 
-var _ plan.Plan = (*GroupByPlan)(nil)
+var _ Plan = (*GroupByPlan)(nil)
 
-func NewGroupByPlan(tx *transaction.Transaction, p plan.Plan, groupFields []schema.FieldName, aggregationFuncs []AggregationFunc) *GroupByPlan {
+func NewGroupByPlan(tx *transaction.Transaction, p Plan, groupFields []schema.FieldName, aggregationFuncs []AggregationFunc) *GroupByPlan {
 	s := schema.NewSchema()
 	for _, fn := range groupFields {
 		s.Add(fn, *p.Schema())
@@ -345,11 +344,11 @@ func (g GroupByPlan) SwapParams(params map[int]schema.Constant) (statement.Bound
 	if err != nil {
 		return nil, fmt.Errorf("g.p.SwapParams error: %w", err)
 	}
-	bp, ok := newP.(*plan.BoundPlan)
+	bp, ok := newP.(*BoundPlan)
 	if !ok {
 		return nil, errors.New("type assertion failed")
 	}
-	return &plan.BoundPlan{
+	return &BoundPlan{
 		Plan: bp,
 	}, nil
 }
