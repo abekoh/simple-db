@@ -65,7 +65,7 @@ func (tp *TablePlanner) MakeJoinPlan(current Plan) (Plan, bool) {
 
 func (tp *TablePlanner) MakeProductPlan(current Plan) Plan {
 	p := tp.addSelectPred(tp.myPlan)
-	return multibuffer.NewProductPlan(tp.tx, p, current)
+	return multibuffer.NewMultiBufferProductPlan(tp.tx, p, current)
 }
 
 func (tp *TablePlanner) MakeIndexSelect() (Plan, bool) {

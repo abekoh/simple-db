@@ -160,7 +160,7 @@ func (c *ChunkScan) moveToBlock(blockNum int32) {
 	c.currentSlot = -1
 }
 
-type ProductScan struct {
+type MultiBufferProductScan struct {
 	tx                                *transaction.Transaction
 	lhsScan, rhsScan, prodScan        query.Scan
 	filename                          string
@@ -168,21 +168,21 @@ type ProductScan struct {
 	chunkSize, nextBlockNum, fileSize int32
 }
 
-var _ query.Scan = (*ProductScan)(nil)
+var _ query.Scan = (*MultiBufferProductScan)(nil)
 
-func NewProductScan(
+func NewMultiBufferProductScan(
 	tx *transaction.Transaction,
 	lshScan query.Scan,
 	tableName string,
 	layout *record.Layout,
-) (*ProductScan, error) {
+) (*MultiBufferProductScan, error) {
 	filename := fmt.Sprintf("%s.tbl", tableName)
 	fileSize, err := tx.Size(filename)
 	if err != nil {
 		return nil, fmt.Errorf("tx.Size error: %w", err)
 	}
 	chunkSize := bestFactor(int32(tx.AvailableBuffersNum()), fileSize)
-	ps := ProductScan{
+	ps := MultiBufferProductScan{
 		tx:        tx,
 		lhsScan:   lshScan,
 		filename:  filename,
@@ -196,7 +196,7 @@ func NewProductScan(
 	return &ps, nil
 }
 
-func (p *ProductScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
+func (p *MultiBufferProductScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
 	if p.prodScan == nil {
 		return nil, fmt.Errorf("p.prodScan is nil")
 	}
@@ -207,7 +207,7 @@ func (p *ProductScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
 	return v, nil
 }
 
-func (p *ProductScan) BeforeFirst() error {
+func (p *MultiBufferProductScan) BeforeFirst() error {
 	p.nextBlockNum = 0
 	if _, err := p.useNextChunk(); err != nil {
 		return fmt.Errorf("p.useNextChunk error: %w", err)
@@ -215,7 +215,7 @@ func (p *ProductScan) BeforeFirst() error {
 	return nil
 }
 
-func (p *ProductScan) Next() (bool, error) {
+func (p *MultiBufferProductScan) Next() (bool, error) {
 	if p.prodScan == nil {
 		return false, fmt.Errorf("p.prodScan is nil")
 	}
@@ -238,7 +238,7 @@ func (p *ProductScan) Next() (bool, error) {
 	return true, nil
 }
 
-func (p *ProductScan) Int32(fieldName schema.FieldName) (int32, error) {
+func (p *MultiBufferProductScan) Int32(fieldName schema.FieldName) (int32, error) {
 	if p.prodScan == nil {
 		return 0, fmt.Errorf("p.prodScan is nil")
 	}
@@ -249,7 +249,7 @@ func (p *ProductScan) Int32(fieldName schema.FieldName) (int32, error) {
 	return v, nil
 }
 
-func (p *ProductScan) Str(fieldName schema.FieldName) (string, error) {
+func (p *MultiBufferProductScan) Str(fieldName schema.FieldName) (string, error) {
 	if p.prodScan == nil {
 		return "", fmt.Errorf("p.prodScan is nil")
 	}
@@ -260,11 +260,11 @@ func (p *ProductScan) Str(fieldName schema.FieldName) (string, error) {
 	return v, nil
 }
 
-func (p *ProductScan) HasField(fieldName schema.FieldName) bool {
+func (p *MultiBufferProductScan) HasField(fieldName schema.FieldName) bool {
 	return p.prodScan.HasField(fieldName)
 }
 
-func (p *ProductScan) Close() error {
+func (p *MultiBufferProductScan) Close() error {
 	if p.prodScan == nil {
 		return nil
 	}
@@ -274,7 +274,7 @@ func (p *ProductScan) Close() error {
 	return nil
 }
 
-func (p *ProductScan) useNextChunk() (bool, error) {
+func (p *MultiBufferProductScan) useNextChunk() (bool, error) {
 	if p.nextBlockNum >= p.fileSize {
 		return false, nil
 	}
@@ -296,26 +296,26 @@ func (p *ProductScan) useNextChunk() (bool, error) {
 	}
 	prodScan, err := query.NewProductScan(p.lhsScan, rhsScan)
 	if err != nil {
-		return false, fmt.Errorf("query.NewProductScan error: %w", err)
+		return false, fmt.Errorf("query.NewMultiBufferProductScan error: %w", err)
 	}
 	p.prodScan = prodScan
 	p.nextBlockNum = end + 1
 	return true, nil
 }
 
-type ProductPlan struct {
+type MultiBufferProductPlan struct {
 	tx       *transaction.Transaction
 	lhs, rhs plan.Plan
 	sche     schema.Schema
 }
 
-var _ plan.Plan = (*ProductPlan)(nil)
+var _ plan.Plan = (*MultiBufferProductPlan)(nil)
 
-func NewProductPlan(tx *transaction.Transaction, lhs, rhs plan.Plan) *ProductPlan {
+func NewMultiBufferProductPlan(tx *transaction.Transaction, lhs, rhs plan.Plan) *MultiBufferProductPlan {
 	sche := schema.NewSchema()
 	sche.AddAll(*lhs.Schema())
 	sche.AddAll(*rhs.Schema())
-	return &ProductPlan{
+	return &MultiBufferProductPlan{
 		tx:   tx,
 		lhs:  lhs,
 		rhs:  rhs,
@@ -323,14 +323,14 @@ func NewProductPlan(tx *transaction.Transaction, lhs, rhs plan.Plan) *ProductPla
 	}
 }
 
-func (p ProductPlan) Result() {}
+func (p MultiBufferProductPlan) Result() {}
 
-func (p ProductPlan) String() string {
+func (p MultiBufferProductPlan) String() string {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p ProductPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
+func (p MultiBufferProductPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
 	placeholders := p.lhs.Placeholders(findSchema)
 	for k, v := range p.rhs.Placeholders(findSchema) {
 		placeholders[k] = v
@@ -338,7 +338,7 @@ func (p ProductPlan) Placeholders(findSchema func(tableName string) (*schema.Sch
 	return placeholders
 }
 
-func (p ProductPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+func (p MultiBufferProductPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
 	lhsBound, err := p.lhs.SwapParams(params)
 	if err != nil {
 		return nil, fmt.Errorf("p.lhs.SwapParams error: %w", err)
@@ -356,11 +356,11 @@ func (p ProductPlan) SwapParams(params map[int]schema.Constant) (statement.Bound
 		return nil, fmt.Errorf("rhsBound is not a plan.Plan")
 	}
 	return &plan.BoundPlan{
-		Plan: NewProductPlan(p.tx, lhsPlan, rhsPlan),
+		Plan: NewMultiBufferProductPlan(p.tx, lhsPlan, rhsPlan),
 	}, nil
 }
 
-func (p ProductPlan) Open() (query.Scan, error) {
+func (p MultiBufferProductPlan) Open() (query.Scan, error) {
 	leftScan, err := p.lhs.Open()
 	if err != nil {
 		return nil, fmt.Errorf("p.lhs.Open error: %w", err)
@@ -403,21 +403,21 @@ func (p ProductPlan) Open() (query.Scan, error) {
 	if err := dest.Close(); err != nil {
 		return nil, fmt.Errorf("dest.Close error: %w", err)
 	}
-	return NewProductScan(p.tx, leftScan, tempTable.TableName(), tempTable.Layout())
+	return NewMultiBufferProductScan(p.tx, leftScan, tempTable.TableName(), tempTable.Layout())
 }
 
-func (p ProductPlan) BlockAccessed() int {
+func (p MultiBufferProductPlan) BlockAccessed() int {
 	avail := p.tx.AvailableBuffersNum()
 	size := materialize.NewPlan(p.tx, p.rhs).BlockAccessed()
 	numChunks := size / avail
 	return p.rhs.BlockAccessed() + (p.lhs.BlockAccessed() + numChunks)
 }
 
-func (p ProductPlan) RecordsOutput() int {
+func (p MultiBufferProductPlan) RecordsOutput() int {
 	return p.lhs.RecordsOutput() * p.rhs.RecordsOutput()
 }
 
-func (p ProductPlan) DistinctValues(fieldName schema.FieldName) int {
+func (p MultiBufferProductPlan) DistinctValues(fieldName schema.FieldName) int {
 	if p.lhs.Schema().HasField(fieldName) {
 		return p.lhs.DistinctValues(fieldName)
 	} else {
@@ -425,6 +425,6 @@ func (p ProductPlan) DistinctValues(fieldName schema.FieldName) int {
 	}
 }
 
-func (p ProductPlan) Schema() *schema.Schema {
+func (p MultiBufferProductPlan) Schema() *schema.Schema {
 	return &p.sche
 }

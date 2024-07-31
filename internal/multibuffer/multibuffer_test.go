@@ -94,7 +94,7 @@ func TestProductPlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prodPlan := multibuffer.NewProductPlan(tx, tablePlan1, tablePlan2)
+	prodPlan := multibuffer.NewMultiBufferProductPlan(tx, tablePlan1, tablePlan2)
 	selectPlan := plan2.NewSelectPlan(prodPlan, query.NewPredicate(query.NewTerm(schema.FieldName("A"), schema.FieldName("C"))))
 	projectPlan := plan2.NewProjectPlan(selectPlan, []schema.FieldName{"B", "D"})
 
