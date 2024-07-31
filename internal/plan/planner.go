@@ -25,6 +25,11 @@ type UpdatePlanner interface {
 	ExecuteCreateIndex(d *parse.CreateIndexData, tx *transaction.Transaction) (int, error)
 }
 
+type (
+	QueryPlannerInitializer  func(*metadata.Manager) QueryPlanner
+	UpdatePlannerInitializer func(*metadata.Manager) UpdatePlanner
+)
+
 type Planner struct {
 	qp  QueryPlanner
 	up  UpdatePlanner
@@ -144,7 +149,7 @@ type BasicQueryPlanner struct {
 	mdm *metadata.Manager
 }
 
-func NewBasicQueryPlanner(mdm *metadata.Manager) *BasicQueryPlanner {
+func NewBasicQueryPlanner(mdm *metadata.Manager) QueryPlanner {
 	return &BasicQueryPlanner{mdm: mdm}
 }
 
@@ -299,7 +304,7 @@ type HeuristicQueryPlanner struct {
 
 var _ QueryPlanner = (*HeuristicQueryPlanner)(nil)
 
-func NewHeuristicQueryPlanner(mdm *metadata.Manager) *HeuristicQueryPlanner {
+func NewHeuristicQueryPlanner(mdm *metadata.Manager) QueryPlanner {
 	return &HeuristicQueryPlanner{mdm: mdm}
 }
 
@@ -374,7 +379,7 @@ type BasicUpdatePlanner struct {
 	mdm *metadata.Manager
 }
 
-func NewBasicUpdatePlanner(mdm *metadata.Manager) *BasicUpdatePlanner {
+func NewBasicUpdatePlanner(mdm *metadata.Manager) UpdatePlanner {
 	return &BasicUpdatePlanner{mdm: mdm}
 }
 
@@ -509,7 +514,7 @@ type IndexUpdatePlanner struct {
 	mdm *metadata.Manager
 }
 
-func NewIndexUpdatePlanner(mdm *metadata.Manager) *IndexUpdatePlanner {
+func NewIndexUpdatePlanner(mdm *metadata.Manager) UpdatePlanner {
 	return &IndexUpdatePlanner{mdm: mdm}
 }
 

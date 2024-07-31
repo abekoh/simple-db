@@ -13,6 +13,11 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
+type Config struct {
+	QueryPlannerInitializer  QueryPlannerInitializer
+	UpdatePlannerInitializer UpdatePlannerInitializer
+}
+
 type Result interface {
 	Result()
 }
