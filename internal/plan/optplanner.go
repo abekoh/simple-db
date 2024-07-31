@@ -132,20 +132,58 @@ func (h HeuristicQueryPlanner) CreatePlan(d *parse.QueryData, tx *transaction.Tr
 		tablePlanners[i] = *tp
 	}
 
+	var currentPlan Plan
+
 	// Step2
-	var bestTablePlanner *TablePlanner
-	var bestPlan Plan
-	var bestPlanIndex int
+	var (
+		lowestSelectPlan Plan
+		lowestSelectIdx  int
+	)
 	for i, tp := range tablePlanners {
 		p := tp.MakeSelectPlan()
-		if bestPlan == nil ||
-			p.RecordsOutput() < bestPlan.RecordsOutput() {
-			bestTablePlanner = &tp
-			bestPlan = p
-			bestPlanIndex = i
+		if lowestSelectPlan == nil ||
+			p.RecordsOutput() < lowestSelectPlan.RecordsOutput() {
+			lowestSelectPlan = p
+			lowestSelectIdx = i
 		}
 	}
-	tablePlanners = append(tablePlanners[:bestPlanIndex], tablePlanners[bestPlanIndex+1:]...)
+	tablePlanners = append(tablePlanners[:lowestSelectIdx], tablePlanners[lowestSelectIdx+1:]...)
+	currentPlan = lowestSelectPlan
 
 	// Step3
+	for len(tablePlanners) > 0 {
+		var (
+			lowestJoinPlan Plan
+			lowestJoinIdx  int
+		)
+		for i, tp := range tablePlanners {
+			p, ok := tp.MakeJoinPlan(lowestSelectPlan)
+			if ok && (lowestJoinPlan == nil ||
+				p.RecordsOutput() < lowestJoinPlan.RecordsOutput()) {
+				lowestJoinPlan = p
+				lowestJoinIdx = i
+			}
+			tablePlanners = append(tablePlanners[:lowestJoinIdx], tablePlanners[lowestJoinIdx+1:]...)
+		}
+		if lowestJoinPlan != nil {
+			currentPlan = lowestJoinPlan
+		} else {
+			var (
+				lowestProductPlan Plan
+				lowestProductIdx  int
+			)
+			for i, tp := range tablePlanners {
+				p := tp.MakeProductPlan(currentPlan)
+				if lowestProductPlan == nil ||
+					p.RecordsOutput() < lowestProductPlan.RecordsOutput() {
+					lowestProductPlan = p
+					lowestProductIdx = i
+				}
+			}
+			tablePlanners = append(tablePlanners[:lowestProductIdx], tablePlanners[lowestProductIdx+1:]...)
+			currentPlan = lowestProductPlan
+		}
+	}
+
+	return NewProjectPlan(currentPlan, d.Fields()), nil
 }
