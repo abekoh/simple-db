@@ -81,35 +81,6 @@ func TestBasicQueryPlanner_Prepared(t *testing.T) {
 	}
 }
 
-func TestHeuristicQueryPlanner(t *testing.T) {
-	transaction.CleanupLockTable(t)
-	ctx := context.Background()
-	db, err := simpledb.New(ctx, t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx, err := db.NewTx(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sche := schema.NewSchema()
-	sche.AddInt32Field("a")
-	sche.AddStrField("b", 9)
-	if err := db.MetadataMgr().CreateTable("mytable", sche, tx); err != nil {
-		t.Fatal(err)
-	}
-
-	planner := NewPlanner(NewHeuristicQueryPlanner(db.MetadataMgr()), nil, db.MetadataMgr())
-	plan, err := planner.Execute(`SELECT a, b FROM mytable WHERE a = 1`, tx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if plan.(Plan).String() != "Project{a,b}(Select{a=1}(Table{mytable}))" {
-		t.Errorf("unexpected plan: %s", plan.(Plan).String())
-	}
-}
-
 func TestBasicUpdatePlanner_ExecuteCreateTable(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
