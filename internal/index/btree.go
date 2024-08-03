@@ -761,6 +761,9 @@ func (btd *BTreeDir) Insert(e DirEntry) (*DirEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("child.Insert error: %w", err)
 	}
+	if err := child.Close(); err != nil {
+		return nil, fmt.Errorf("child.Close error: %w", err)
+	}
 	if myEntry != nil {
 		ne, err := btd.InsertEntry(e)
 		if err != nil {
