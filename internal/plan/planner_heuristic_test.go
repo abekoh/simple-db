@@ -22,7 +22,7 @@ func TestHeuristicQueryPlanner(t *testing.T) {
 	}
 
 	// TODO
-	sqlIter := testdata.Iterator("create_tables.sql", "insert_data.sql")
+	sqlIter := testdata.SQLIterator("create_tables.sql", "insert_data.sql")
 	for sql, err := range sqlIter {
 		t.Logf("execute %s", sql)
 		if err != nil {

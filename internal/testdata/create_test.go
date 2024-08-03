@@ -32,9 +32,9 @@ func TestCreateTestdata(t *testing.T) {
 	w, c := writer("create_tables.sql")
 	defer c()
 	w("CREATE TABLE departments (department_id INT, department_name VARCHAR(10));")
-	w("CREATE TABLE students (student_id INT, name VARCHAR(10), major_department_id INT, grad_year INT);")
-	w("CREATE TABLE courses(course_id int, title varchar(20), department_id int);")
-	w("CREATE TABLE sections(section_id int, course_id int, professor varchar(8), year_offered int)")
+	w("CREATE TABLE students (student_id INT, name VARCHAR(10), major_id INT, grad_year INT);")
+	w("CREATE TABLE courses(course_id INT, title VARCHAR(20), department_id INT);")
+	w("CREATE TABLE sections(section_id INT, course_id INT, professor VARCHAR(8), year_offered int)")
 
 	w, c = writer("create_indexes.sql")
 	defer c()
@@ -53,7 +53,7 @@ func TestCreateTestdata(t *testing.T) {
 		departmentLength = 100
 	)
 	for i := 1; i <= departmentLength; i++ {
-		w(fmt.Sprintf("INSERT INTO departments VALUES (%d, '%s');", departmentOffset+i, faker.Company()))
+		w(fmt.Sprintf("INSERT INTO departments (department_id, department_name) VALUES (%d, '%s');", departmentOffset+i, faker.Language()))
 	}
 
 	w("-- students")
@@ -62,7 +62,7 @@ func TestCreateTestdata(t *testing.T) {
 		studentLength = 10000
 	)
 	for i := 1; i <= studentLength; i++ {
-		w(fmt.Sprintf("INSERT INTO students VALUES (%d, '%s', %d, %d);", studentOffset+i, faker.FirstName(), faker.Number(departmentOffset, departmentOffset+departmentLength-1), faker.Year()))
+		w(fmt.Sprintf("INSERT INTO students (student_id, name, major_id, grad_year) VALUES (%d, '%s', %d, %d);", studentOffset+i, faker.FirstName(), faker.Number(departmentOffset, departmentOffset+departmentLength-1), faker.Year()))
 	}
 
 	w("-- courses")
@@ -74,7 +74,7 @@ func TestCreateTestdata(t *testing.T) {
 	for i := 1; i <= departmentLength; i++ {
 		sectionN := faker.Number(0, len(sectionTitles))
 		for j := 0; j < sectionN; j++ {
-			w(fmt.Sprintf("INSERT INTO courses VALUES (%d, '%s', %d);", courseOffset+courseCount, sectionTitles[j], departmentOffset+i))
+			w(fmt.Sprintf("INSERT INTO courses (course_id, title, department_id) VALUES (%d, '%s', %d);", courseOffset+courseCount, sectionTitles[j], departmentOffset+i))
 			courseCount++
 		}
 	}
@@ -85,7 +85,7 @@ func TestCreateTestdata(t *testing.T) {
 	)
 	sectionCount := 1
 	for i := 1; i <= courseCount; i++ {
-		w(fmt.Sprintf("INSERT INTO sections VALUES (%d, %d, '%s', %d);", sectionOffset+sectionCount, courseOffset+i, faker.FirstName(), faker.Year()))
+		w(fmt.Sprintf("INSERT INTO sections (section_id, course_id, professor, year_offered) VALUES (%d, %d, '%s', %d);", sectionOffset+sectionCount, courseOffset+i, faker.FirstName(), faker.Year()))
 		sectionCount++
 	}
 }
