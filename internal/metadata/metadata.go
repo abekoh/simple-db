@@ -384,14 +384,16 @@ func NewIndexInfo(
 	statInfo StatInfo,
 	cfg *index.Config,
 ) (*IndexInfo, error) {
-	return &IndexInfo{
+	ii := &IndexInfo{
 		indexName:   indexName,
 		fieldName:   fieldName,
 		tx:          tx,
 		tableSchema: tableSchema,
 		statInfo:    statInfo,
 		cfg:         cfg,
-	}, nil
+	}
+	ii.indexLayout = ii.createIndexLayout()
+	return ii, nil
 }
 
 func (i *IndexInfo) IndexName() string {
