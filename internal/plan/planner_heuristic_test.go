@@ -22,11 +22,12 @@ func TestHeuristicQueryPlanner(t *testing.T) {
 	}
 
 	// TODO
-	sqlIter, err := testdata.Iterator("create_tables.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for sql := range sqlIter {
+	sqlIter := testdata.Iterator("create_tables.sql")
+	for sql, err := range sqlIter {
+		t.Logf("execute %s", sql)
+		if err != nil {
+			t.Fatal(err)
+		}
 		_, err := db.Planner().Execute(sql, tx)
 		if err != nil {
 			t.Fatal(err)

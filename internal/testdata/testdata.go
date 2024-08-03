@@ -3,25 +3,29 @@ package testdata
 import (
 	"bufio"
 	"embed"
-	"fmt"
 )
 
 //go:embed *
-var files embed.FS
+var embedFiles embed.FS
 
-func Iterator(filename string) (func(func(string) bool), error) {
-	f, err := files.Open(filename)
-	if err != nil {
-		return nil, fmt.Errorf("could not read file: %w", err)
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	return func(fn func(string) bool) {
-		for scanner.Scan() {
-			if !fn(scanner.Text()) {
-				break
+func Iterator(filenames ...string) func(func(string, error) bool) {
+	return func(yield func(string, error) bool) {
+		for _, filename := range filenames {
+			f, err := embedFiles.Open(filename)
+			if err != nil {
+				if !yield("", err) {
+					return
+				}
+				continue
 			}
+			scanner := bufio.NewScanner(f)
+			for scanner.Scan() {
+				if !yield(scanner.Text(), nil) {
+					_ = f.Close()
+					return
+				}
+			}
+			_ = f.Close()
 		}
-	}, nil
+	}
 }
