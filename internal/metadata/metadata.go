@@ -461,7 +461,7 @@ func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatMa
 	if err != nil {
 		return nil, fmt.Errorf("layout error: %w", err)
 	}
-	indexCfg := index.ConfigHash
+	indexCfg := index.ConfigBTree
 	if cfg.Index != nil {
 		indexCfg = cfg.Index
 	}
