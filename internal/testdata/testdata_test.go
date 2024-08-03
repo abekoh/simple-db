@@ -1,10 +1,14 @@
 package testdata_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 
+	"github.com/abekoh/simple-db/internal/simpledb"
+	"github.com/abekoh/simple-db/internal/testdata"
+	"github.com/abekoh/simple-db/internal/transaction"
 	"github.com/brianvoe/gofakeit/v7"
 )
 
@@ -88,4 +92,51 @@ func TestCreateTestdata(t *testing.T) {
 		w(fmt.Sprintf("INSERT INTO sections (section_id, course_id, professor, year_offered) VALUES (%d, %d, '%s', %d);", sectionOffset+sectionCount, courseOffset+i, faker.FirstName(), faker.Year()))
 		sectionCount++
 	}
+}
+
+func TestCreateSnapshots(t *testing.T) {
+	createSnapshot := func(t *testing.T, dirname string, sqlFilenames ...string) {
+		t.Helper()
+
+		err := os.RemoveAll(dirname)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = os.MkdirAll(dirname, 0755)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		db, err := simpledb.New(ctx, dirname)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx, err := db.NewTx(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sqlIter := testdata.SQLIterator(sqlFilenames...)
+		for sql, err := range sqlIter {
+			t.Logf("execute %s", sql)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err := db.Planner().Execute(sql, tx)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Run("snapshots/tables", func(t *testing.T) {
+		transaction.CleanupLockTable(t)
+		createSnapshot(t, "snapshots/tables", "create_tables.sql")
+	})
+	t.Run("snapshots/tables_data", func(t *testing.T) {
+		t.Skip()
+		transaction.CleanupLockTable(t)
+		createSnapshot(t, "snapshots/tables_data", "create_tables.sql", "insert_data.sql")
+	})
 }

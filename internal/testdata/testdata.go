@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-//go:embed *
+//go:embed *.sql
 var embedFiles embed.FS
 
 func SQLIterator(filenames ...string) func(func(string, error) bool) {
