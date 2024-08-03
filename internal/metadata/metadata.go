@@ -106,9 +106,11 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 		return nil, fmt.Errorf("table catalog scan error: %w", err)
 	}
 	for {
-		if ok, err := tableCatalog.Next(); err != nil {
+		ok, err := tableCatalog.Next()
+		if err != nil {
 			return nil, fmt.Errorf("table catalog next error: %w", err)
-		} else if !ok {
+		}
+		if !ok {
 			break
 		}
 		if name, err := tableCatalog.Str("table_name"); err != nil {
