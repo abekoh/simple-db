@@ -392,7 +392,7 @@ func NewIndexInfo(
 		statInfo:    statInfo,
 		cfg:         cfg,
 	}
-	ii.indexLayout = ii.createIndexLayout()
+	ii.indexLayout = index.NewIndexLayout(schema.NewField(tableSchema.Typ(fieldName), tableSchema.Length(fieldName)))
 	return ii, nil
 }
 
@@ -427,19 +427,6 @@ func (i *IndexInfo) DistinctValues(fieldName schema.FieldName) int {
 		return 1
 	}
 	return i.statInfo.DistinctValues(fieldName)
-}
-
-func (i *IndexInfo) createIndexLayout() *record.Layout {
-	s := schema.NewSchema()
-	s.AddInt32Field("block")
-	s.AddInt32Field("id")
-	switch i.tableSchema.Typ(i.fieldName) {
-	case schema.Integer32:
-		s.AddInt32Field("data_value")
-	case schema.Varchar:
-		s.AddStrField("data_value", i.tableSchema.Length(i.fieldName))
-	}
-	return record.NewLayoutSchema(s)
 }
 
 type IndexManager struct {
