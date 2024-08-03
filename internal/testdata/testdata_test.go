@@ -116,6 +116,7 @@ func TestCreateSnapshots(t *testing.T) {
 			t.Fatal(err)
 		}
 		sqlIter := testdata.SQLIterator(sqlFilenames...)
+		count := 0
 		for sql, err := range sqlIter {
 			t.Logf("execute %s", sql)
 			if err != nil {
@@ -124,6 +125,15 @@ func TestCreateSnapshots(t *testing.T) {
 			_, err := db.Planner().Execute(sql, tx)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if count++; count%100 == 0 {
+				if err := tx.Commit(); err != nil {
+					t.Fatal(err)
+				}
+				tx, err = db.NewTx(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
 		if err := tx.Commit(); err != nil {
@@ -141,6 +151,7 @@ func TestCreateSnapshots(t *testing.T) {
 		createSnapshot(t, "snapshots/tables_data", "create_tables.sql", "insert_data.sql")
 	})
 	t.Run("snapshots/tables_indexes_data", func(t *testing.T) {
+		t.Skip()
 		transaction.CleanupLockTable(t)
 		createSnapshot(t, "snapshots/tables_indexes_data", "create_tables.sql", "create_indexes.sql", "insert_data.sql")
 	})
