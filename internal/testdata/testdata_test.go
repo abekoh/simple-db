@@ -42,10 +42,10 @@ func TestCreateTestdata(t *testing.T) {
 
 	w, c = writer("create_indexes.sql")
 	defer c()
-	w("CREATE INDEX idx_departments_department_id ON departments (department_id);")
-	w("CREATE INDEX idx_students_student_id ON students (student_id);")
-	w("CREATE INDEX idx_courses_course_id ON courses (course_id);")
-	w("CREATE INDEX idx_sections_section_id ON sections (section_id);")
+	w("CREATE INDEX departments_pkey ON departments (department_id);")
+	w("CREATE INDEX students_pkey ON students (student_id);")
+	w("CREATE INDEX courses_pkey ON courses (course_id);")
+	w("CREATE INDEX sections_pkey ON sections (section_id);")
 
 	faker := gofakeit.New(523207)
 
@@ -131,6 +131,7 @@ func TestCreateSnapshots(t *testing.T) {
 		}
 	}
 	t.Run("snapshots/tables", func(t *testing.T) {
+		t.Skip()
 		transaction.CleanupLockTable(t)
 		createSnapshot(t, "snapshots/tables", "create_tables.sql")
 	})
@@ -138,5 +139,9 @@ func TestCreateSnapshots(t *testing.T) {
 		t.Skip()
 		transaction.CleanupLockTable(t)
 		createSnapshot(t, "snapshots/tables_data", "create_tables.sql", "insert_data.sql")
+	})
+	t.Run("snapshots/tables_indexes_data", func(t *testing.T) {
+		transaction.CleanupLockTable(t)
+		createSnapshot(t, "snapshots/tables_indexes_data", "create_tables.sql", "create_indexes.sql", "insert_data.sql")
 	})
 }
