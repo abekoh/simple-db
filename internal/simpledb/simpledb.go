@@ -63,13 +63,13 @@ func NewWithConfig(ctx context.Context, dirname string, cfg *Config) (*DB, error
 		return nil, fmt.Errorf("could not create SimpleDB: %w", err)
 
 	}
-	queryPlannerInitializer := cfg.Plan.QueryPlannerInitializer
-	if queryPlannerInitializer == nil {
-		queryPlannerInitializer = plan.NewHeuristicQueryPlanner
+	queryPlannerInitializer := plan.NewHeuristicQueryPlanner
+	if cfg.Plan != nil && cfg.Plan.QueryPlannerInitializer != nil {
+		queryPlannerInitializer = cfg.Plan.QueryPlannerInitializer
 	}
-	updatePlannerInitializer := cfg.Plan.UpdatePlannerInitializer
-	if updatePlannerInitializer == nil {
-		updatePlannerInitializer = plan.NewIndexUpdatePlanner
+	updatePlannerInitializer := plan.NewIndexUpdatePlanner
+	if cfg.Plan != nil && cfg.Plan.UpdatePlannerInitializer != nil {
+		updatePlannerInitializer = cfg.Plan.UpdatePlannerInitializer
 	}
 	db.metadataMgr = metadataMgr
 	db.planner = plan.NewPlanner(

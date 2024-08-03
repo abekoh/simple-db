@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/simpledb"
+	"github.com/abekoh/simple-db/internal/testdata"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
@@ -19,7 +20,16 @@ func TestHeuristicQueryPlanner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = tx
 
 	// TODO
+	sqlIter, err := testdata.Iterator("create_tables.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for sql := range sqlIter {
+		_, err := db.Planner().Execute(sql, tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 }
