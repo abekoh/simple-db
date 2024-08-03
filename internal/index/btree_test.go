@@ -39,7 +39,7 @@ func TestNewBTreeIndex_OneIndex(t *testing.T) {
 
 	vals := make([]schema.Constant, 0)
 	cnt := 0
-	for range 6 {
+	for range 10 {
 		for c := 'a'; c <= 'z'; c++ {
 			vals = append(vals, schema.ConstantStr(fmt.Sprintf("%s%d", strings.Repeat(string(c), 5), cnt)))
 			cnt++
