@@ -3,12 +3,13 @@ package testdata
 import (
 	"bufio"
 	"embed"
+	"strings"
 )
 
 //go:embed *
 var embedFiles embed.FS
 
-func Iterator(filenames ...string) func(func(string, error) bool) {
+func SQLIterator(filenames ...string) func(func(string, error) bool) {
 	return func(yield func(string, error) bool) {
 		for _, filename := range filenames {
 			f, err := embedFiles.Open(filename)
@@ -20,7 +21,11 @@ func Iterator(filenames ...string) func(func(string, error) bool) {
 			}
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
-				if !yield(scanner.Text(), nil) {
+				text := scanner.Text()
+				if strings.HasPrefix(text, "--") {
+					continue
+				}
+				if !yield(text, nil) {
 					_ = f.Close()
 					return
 				}
