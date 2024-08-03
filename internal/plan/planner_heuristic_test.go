@@ -12,7 +12,11 @@ import (
 func TestHeuristicQueryPlanner(t *testing.T) {
 	transaction.CleanupLockTable(t)
 	ctx := context.Background()
-	db, err := simpledb.New(ctx, t.TempDir())
+	dir := t.TempDir()
+	if err := testdata.CopySnapshotData("tables_indexes_data", dir); err != nil {
+		t.Fatal(err)
+	}
+	db, err := simpledb.New(ctx, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,17 +24,9 @@ func TestHeuristicQueryPlanner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// TODO
-	sqlIter := testdata.SQLIterator("create_tables.sql", "insert_data.sql")
-	for sql, err := range sqlIter {
-		t.Logf("execute %s", sql)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err := db.Planner().Execute(sql, tx)
-		if err != nil {
-			t.Fatal(err)
-		}
+	res, err := db.Planner().Execute("SELECT name FROM students WHERE student_id = 202820", tx)
+	if err != nil {
+		t.Fatal(err)
 	}
+	_ = res
 }
