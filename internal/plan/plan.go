@@ -414,7 +414,17 @@ func (i IndexSelectPlan) Placeholders(findSchema func(tableName string) (*schema
 }
 
 func (i IndexSelectPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
-	return BoundPlan{Plan: i}, nil
+	b, err := i.p.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p.SwapParams error: %w", err)
+	}
+	bp, ok := b.(*BoundPlan)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast to *BoundPlan from %T", b)
+	}
+	return BoundPlan{
+		Plan: NewIndexSelectPlan(bp.Plan, i.indexInfo, i.val),
+	}, nil
 }
 
 func (i IndexSelectPlan) Open() (query.Scan, error) {
