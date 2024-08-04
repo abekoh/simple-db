@@ -124,7 +124,7 @@ func (t TablePlan) Info() Info {
 	return Info{
 		NodeType: "Table",
 		Conditions: map[string][]string{
-			"tableName": {t.tableName},
+			"table": {t.tableName},
 		},
 		BlockAccessed: t.BlockAccessed(),
 		RecordsOutput: t.RecordsOutput(),
@@ -368,7 +368,7 @@ func (p ProjectPlan) SwapParams(params map[int]schema.Constant) (statement.Bound
 func (p ProjectPlan) Info() Info {
 	conditions := make(map[string][]string)
 	for _, name := range p.sche.FieldNames() {
-		conditions["fieldNames"] = append(conditions["fieldNames"], string(name))
+		conditions["fields"] = append(conditions["fields"], string(name))
 	}
 	return Info{
 		NodeType:      "Project",

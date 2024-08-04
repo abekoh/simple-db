@@ -39,7 +39,7 @@ func TestBasicQueryPlanner(t *testing.T) {
 	if !reflect.DeepEqual(info, Info{
 		NodeType: "Project",
 		Conditions: map[string][]string{
-			"fieldNames": {"a", "b"},
+			"fields": {"a", "b"},
 		},
 		Children: []Info{
 			{
@@ -51,7 +51,7 @@ func TestBasicQueryPlanner(t *testing.T) {
 					{
 						NodeType: "Table",
 						Conditions: map[string][]string{
-							"tableName": {"mytable"},
+							"table": {"mytable"},
 						},
 					},
 				},
@@ -89,7 +89,7 @@ func TestBasicQueryPlanner_Prepared(t *testing.T) {
 	info := prepared.(Plan).Info()
 	if !reflect.DeepEqual(info, Info{
 		NodeType:   "Project",
-		Conditions: map[string][]string{"fieldNames": {"a", "b"}},
+		Conditions: map[string][]string{"fields": {"a", "b"}},
 		Children: []Info{
 			{
 				NodeType:   "Select",
@@ -97,7 +97,7 @@ func TestBasicQueryPlanner_Prepared(t *testing.T) {
 				Children: []Info{
 					{
 						NodeType:   "Table",
-						Conditions: map[string][]string{"tableName": {"mytable"}},
+						Conditions: map[string][]string{"table": {"mytable"}},
 					},
 				},
 			},
@@ -117,7 +117,7 @@ func TestBasicQueryPlanner_Prepared(t *testing.T) {
 	info = p.(Plan).Info()
 	if !reflect.DeepEqual(info, Info{
 		NodeType:   "Project",
-		Conditions: map[string][]string{"fieldNames": {"a", "b"}},
+		Conditions: map[string][]string{"fields": {"a", "b"}},
 		Children: []Info{
 			{
 				NodeType:   "Select",
@@ -125,7 +125,7 @@ func TestBasicQueryPlanner_Prepared(t *testing.T) {
 				Children: []Info{
 					{
 						NodeType:   "Table",
-						Conditions: map[string][]string{"tableName": {"mytable"}},
+						Conditions: map[string][]string{"table": {"mytable"}},
 					},
 				},
 			},
