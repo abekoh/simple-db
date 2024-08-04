@@ -248,6 +248,41 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:     "group by (max)",
+			snapshot: "tables_data",
+			query:    "SELECT major_id, MAX(grad_year) AS max_grad_year FROM students GROUP BY major_id",
+			planInfo: plan.Info{
+				NodeType:      "Project",
+				Conditions:    map[string][]string{"fields": {"major_id", "max_grad_year"}},
+				BlockAccessed: 750,
+				RecordsOutput: 3334,
+				Children: []plan.Info{
+					{
+						NodeType:      "GroupBy",
+						Conditions:    map[string][]string{"aggregationFuncs": {"MAX(grad_year) AS max_grad_year"}, "groupFields": {"major_id"}},
+						BlockAccessed: 750,
+						RecordsOutput: 3334,
+						Children: []plan.Info{
+							{
+								NodeType:      "Sort",
+								Conditions:    map[string][]string{"sortFields": {"major_id"}},
+								BlockAccessed: 750,
+								RecordsOutput: 10000,
+								Children: []plan.Info{
+									{
+										NodeType:      "Table",
+										Conditions:    map[string][]string{"table": {"students"}},
+										BlockAccessed: 770,
+										RecordsOutput: 10000,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			transaction.CleanupLockTable(t)
