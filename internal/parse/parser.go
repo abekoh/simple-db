@@ -260,6 +260,36 @@ func (p *Parser) fieldDefs() (schema.Schema, token, error) {
 	return s, tk, nil
 }
 
+func (p *Parser) order() (query.Order, token, error) {
+	order := make(query.Order, 0, 1)
+	tok := p.lexer.NextToken()
+	if tok.typ != by {
+		return nil, tok, fmt.Errorf("expected BY, got %s", tok.literal)
+	}
+	for {
+		tok = p.lexer.NextToken()
+		if tok.typ != identifier {
+			return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+		}
+		field := schema.FieldName(tok.literal)
+		tok = p.lexer.NextToken()
+		switch tok.typ {
+		case asc:
+			order = append(order, query.OrderElement{Field: field, OrderType: query.Asc})
+			tok = p.lexer.NextToken()
+		case desc:
+			order = append(order, query.OrderElement{Field: field, OrderType: query.Desc})
+			tok = p.lexer.NextToken()
+		default:
+			order = append(order, query.OrderElement{Field: field, OrderType: query.Asc})
+		}
+		if tok.typ != comma {
+			break
+		}
+	}
+	return order, tok, nil
+}
+
 type Data interface {
 	Data()
 }
@@ -452,6 +482,13 @@ func (p *Parser) Query() (*QueryData, error) {
 			return nil, fmt.Errorf("failed to parse predicate: %w", err)
 		}
 		q.pred = append(q.pred, pred...)
+	}
+	if tok.typ == order {
+		order, _, err := p.order()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse order: %w", err)
+		}
+		q.order = order
 	}
 	return q, nil
 }

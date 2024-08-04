@@ -99,7 +99,31 @@ func TestParser_Query(t *testing.T) {
 			want: &QueryData{
 				fields: []schema.FieldName{"a", "b"},
 				tables: []string{"mytable"},
-				// TODO
+				order: query.Order{
+					query.OrderElement{Field: "a", OrderType: query.Asc},
+				},
+			},
+		},
+		{
+			name: "SELECT with ORDER BY DESC",
+			s:    "SELECT a, b FROM mytable ORDER BY a DESC",
+			want: &QueryData{
+				fields: []schema.FieldName{"a", "b"},
+				tables: []string{"mytable"},
+				order: query.Order{
+					query.OrderElement{Field: "a", OrderType: query.Desc},
+				},
+			},
+		},
+		{
+			name: "SELECT with ORDER BY ASC",
+			s:    "SELECT a, b FROM mytable ORDER BY a ASC",
+			want: &QueryData{
+				fields: []schema.FieldName{"a", "b"},
+				tables: []string{"mytable"},
+				order: query.Order{
+					query.OrderElement{Field: "a", OrderType: query.Asc},
+				},
 			},
 		},
 	}
