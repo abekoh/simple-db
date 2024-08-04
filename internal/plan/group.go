@@ -242,6 +242,6 @@ func (g GroupByPlan) Info() Info {
 		Conditions:    conditions,
 		BlockAccessed: g.BlockAccessed(),
 		RecordsOutput: g.RecordsOutput(),
-		Children:      []Info{g.Info()},
+		Children:      []Info{g.p.Info()},
 	}
 }

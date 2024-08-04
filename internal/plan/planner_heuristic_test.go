@@ -213,6 +213,41 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:     "group by (count)",
+			snapshot: "tables_data",
+			query:    "SELECT grad_year, COUNT(*) AS cnt FROM students GROUP BY grad_year",
+			planInfo: plan.Info{
+				NodeType:      "Project",
+				Conditions:    map[string][]string{"fields": {"grad_year", "cnt"}},
+				BlockAccessed: 750,
+				RecordsOutput: 3334,
+				Children: []plan.Info{
+					{
+						NodeType:      "GroupBy",
+						Conditions:    map[string][]string{"aggregationFuncs": {"COUNT(*) AS cnt"}, "groupFields": {"grad_year"}},
+						BlockAccessed: 750,
+						RecordsOutput: 3334,
+						Children: []plan.Info{
+							{
+								NodeType:      "Sort",
+								Conditions:    map[string][]string{"sortFields": {"grad_year"}},
+								BlockAccessed: 750,
+								RecordsOutput: 10000,
+								Children: []plan.Info{
+									{
+										NodeType:      "Table",
+										Conditions:    map[string][]string{"table": {"students"}},
+										BlockAccessed: 770,
+										RecordsOutput: 10000,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			transaction.CleanupLockTable(t)
