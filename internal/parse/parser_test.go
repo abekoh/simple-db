@@ -68,6 +68,18 @@ func TestParser_Query(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "SELECT with 2 joins",
+			s:    "SELECT a, x, y FROM mytable1 JOIN mytable2 ON a = x JOIN mytable3 ON x = y",
+			want: &QueryData{
+				fields: []schema.FieldName{"a", "x", "y"},
+				tables: []string{"mytable1", "mytable2", "mytable3"},
+				pred: query.Predicate{
+					query.NewTerm(schema.FieldName("a"), schema.FieldName("x")),
+					query.NewTerm(schema.FieldName("x"), schema.FieldName("y")),
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

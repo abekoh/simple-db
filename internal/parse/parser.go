@@ -435,7 +435,7 @@ func (p *Parser) Query() (*QueryData, error) {
 	}
 	q.tables = tableList
 
-	if tok.typ == join {
+	for tok.typ == join {
 		joinTables, joinPred, tok2, err := p.join()
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse join: %w", err)
