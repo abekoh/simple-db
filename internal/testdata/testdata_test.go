@@ -149,12 +149,12 @@ func TestCreateSnapshots(t *testing.T) {
 		createSnapshot(t, "snapshots/tables", "create_tables.sql")
 	})
 	t.Run("snapshots/tables_data", func(t *testing.T) {
-		//t.Skip()
+		t.Skip()
 		transaction.CleanupLockTable(t)
 		createSnapshot(t, "snapshots/tables_data", "create_tables.sql", "insert_data.sql")
 	})
 	t.Run("snapshots/tables_indexes_data", func(t *testing.T) {
-		//t.Skip()
+		t.Skip()
 		transaction.CleanupLockTable(t)
 		createSnapshot(t, "snapshots/tables_indexes_data", "create_tables.sql", "create_indexes.sql", "insert_data.sql")
 	})
