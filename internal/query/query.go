@@ -446,28 +446,31 @@ const (
 	Desc
 )
 
-type Order struct {
-	fields    []schema.FieldName
-	orderType OrderType
+type (
+	Order        []OrderElement
+	OrderElement struct {
+		field     schema.FieldName
+		orderType OrderType
+	}
+)
+
+func NewOrder(elements ...OrderElement) Order {
+	return elements
 }
 
-func NewOrder(fields []schema.FieldName) *Order {
-	return &Order{fields: fields, orderType: Asc}
-}
-
-func (c Order) Compare(s1, s2 Scan) (int, error) {
-	for _, fld := range c.fields {
-		val1, err := s1.Val(fld)
+func (o Order) Compare(s1, s2 Scan) (int, error) {
+	for _, el := range o {
+		val1, err := s1.Val(el.field)
 		if err != nil {
 			return 0, fmt.Errorf("s1.Val error: %w", err)
 		}
-		val2, err := s2.Val(fld)
+		val2, err := s2.Val(el.field)
 		if err != nil {
 			return 0, fmt.Errorf("s2.Val error: %w", err)
 		}
 		cmp := val1.Compare(val2)
 		if cmp != 0 {
-			if c.orderType == Desc {
+			if el.orderType == Desc {
 				cmp = -cmp
 			}
 			return cmp, nil

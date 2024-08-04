@@ -376,6 +376,7 @@ type QueryData struct {
 	fields []schema.FieldName
 	tables []string
 	pred   query.Predicate
+	order  query.Order
 }
 
 func (d QueryData) Data() {}
