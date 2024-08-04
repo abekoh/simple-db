@@ -50,8 +50,35 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 				t.Fatalf("unexpected type %T", res)
 			}
 			info := p.Info()
-			if !reflect.DeepEqual(info, plan.Info{}) {
-				t.Errorf("info: got %v, want %v", info, plan.Info{})
+			if !reflect.DeepEqual(info, plan.Info{
+				NodeType:      "Project",
+				Conditions:    map[string][]string{"field": {"student_name"}},
+				BlockAccessed: 2,
+				RecordsOutput: 2,
+				Children: []plan.Info{
+					{
+						NodeType:      "Select",
+						Conditions:    map[string][]string{"predicate": {"student_id=200588"}},
+						BlockAccessed: 2,
+						RecordsOutput: 2,
+						Children: []plan.Info{
+							{
+								NodeType:   "IndexSelect",
+								Conditions: map[string][]string{"index": {"students_pkey"}, "value": {"200588"}},
+								Children: []plan.Info{
+									{
+										NodeType:      "Table",
+										Conditions:    map[string][]string{"table": {"students"}},
+										BlockAccessed: 770,
+										RecordsOutput: 10000,
+									},
+								},
+							},
+						},
+					},
+				},
+			}) {
+				t.Errorf("unexpected plan: %v", info)
 			}
 		})
 	}

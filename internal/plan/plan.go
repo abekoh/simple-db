@@ -451,8 +451,8 @@ func (i IndexSelectPlan) Info() Info {
 	return Info{
 		NodeType: "IndexSelect",
 		Conditions: map[string][]string{
-			"indexName": {i.indexInfo.IndexName()},
-			"value":     {i.val.String()},
+			"index": {i.indexInfo.IndexName()},
+			"value": {i.val.String()},
 		},
 		BlockAccessed: i.BlockAccessed(),
 		RecordsOutput: i.RecordsOutput(),
@@ -484,8 +484,8 @@ func (i IndexJoinPlan) Info() Info {
 	return Info{
 		NodeType: "IndexJoin",
 		Conditions: map[string][]string{
-			"indexName": {i.indexInfo.IndexName()},
-			"joinField": {string(i.joinField)},
+			"index": {i.indexInfo.IndexName()},
+			"field": {string(i.joinField)},
 		},
 		BlockAccessed: i.BlockAccessed(),
 		RecordsOutput: i.RecordsOutput(),
