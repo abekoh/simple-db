@@ -518,23 +518,25 @@ func (d QueryData) Order() query.Order {
 
 func (d QueryData) String() string {
 	var b strings.Builder
-	b.WriteString("SELECT ")
-	for i, f := range d.fields {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(string(f))
+	b.WriteString("Field:            ")
+	b.WriteString(fmt.Sprintf("%v\n", d.fields))
+	if len(d.groupFields) > 0 {
+		b.WriteString("GroupFields:      ")
+		b.WriteString(fmt.Sprintf("%v\n", d.groupFields))
 	}
-	b.WriteString(" FROM ")
-	for i, t := range d.tables {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(t)
+	b.WriteString("Tables:           ")
+	b.WriteString(fmt.Sprintf("%v\n", d.tables))
+	if len(d.pred) > 0 {
+		b.WriteString("Predicate:        ")
+		b.WriteString(fmt.Sprintf("%v\n", d.pred))
 	}
-	if d.pred != nil {
-		b.WriteString(" WHERE ")
-		b.WriteString(d.pred.String())
+	if len(d.aggregationFuncs) > 0 {
+		b.WriteString("AggregationFuncs: ")
+		b.WriteString(fmt.Sprintf("%v\n", d.aggregationFuncs))
+	}
+	if len(d.order) > 0 {
+		b.WriteString("Order:            ")
+		b.WriteString(fmt.Sprintf("%v\n", d.order))
 	}
 	return b.String()
 }
