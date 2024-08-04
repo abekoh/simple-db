@@ -93,6 +93,15 @@ func TestParser_Query(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "SELECT with ORDER BY",
+			s:    "SELECT a, b FROM mytable ORDER BY a",
+			want: &QueryData{
+				fields: []schema.FieldName{"a", "b"},
+				tables: []string{"mytable"},
+				// TODO
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
