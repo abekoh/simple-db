@@ -87,7 +87,22 @@ func TestBasicQueryPlanner_Prepared(t *testing.T) {
 		t.Fatal(err)
 	}
 	info := prepared.(Plan).Info()
-	if !reflect.DeepEqual(info, Info{}) {
+	if !reflect.DeepEqual(info, Info{
+		NodeType:   "Project",
+		Conditions: map[string][]string{"fieldNames": {"a", "b"}},
+		Children: []Info{
+			{
+				NodeType:   "Select",
+				Conditions: map[string][]string{"predicate": {"a=$1 AND b=$2"}},
+				Children: []Info{
+					{
+						NodeType:   "Table",
+						Conditions: map[string][]string{"tableName": {"mytable"}},
+					},
+				},
+			},
+		},
+	}) {
 		t.Errorf("unexpected prepared: %v", info)
 	}
 
@@ -100,7 +115,22 @@ func TestBasicQueryPlanner_Prepared(t *testing.T) {
 		t.Fatal(err)
 	}
 	info = p.(Plan).Info()
-	if !reflect.DeepEqual(info, Info{}) {
+	if !reflect.DeepEqual(info, Info{
+		NodeType:   "Project",
+		Conditions: map[string][]string{"fieldNames": {"a", "b"}},
+		Children: []Info{
+			{
+				NodeType:   "Select",
+				Conditions: map[string][]string{"predicate": {"a=1 AND b=foo"}},
+				Children: []Info{
+					{
+						NodeType:   "Table",
+						Conditions: map[string][]string{"tableName": {"mytable"}},
+					},
+				},
+			},
+		},
+	}) {
 		t.Errorf("unexpected plan: %v", info)
 	}
 }
