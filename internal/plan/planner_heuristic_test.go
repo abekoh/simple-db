@@ -2,13 +2,13 @@ package plan_test
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/simpledb"
 	"github.com/abekoh/simple-db/internal/testdata"
 	"github.com/abekoh/simple-db/internal/transaction"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
@@ -49,10 +49,10 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 			if !ok {
 				t.Fatalf("unexpected type %T", res)
 			}
-			info := p.Info()
-			if !reflect.DeepEqual(info, plan.Info{
+			got := p.Info()
+			expected := plan.Info{
 				NodeType:      "Project",
-				Conditions:    map[string][]string{"field": {"student_name"}},
+				Conditions:    map[string][]string{"fields": {"student_name"}},
 				BlockAccessed: 2,
 				RecordsOutput: 2,
 				Children: []plan.Info{
@@ -63,8 +63,10 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 						RecordsOutput: 2,
 						Children: []plan.Info{
 							{
-								NodeType:   "IndexSelect",
-								Conditions: map[string][]string{"index": {"students_pkey"}, "value": {"200588"}},
+								NodeType:      "IndexSelect",
+								Conditions:    map[string][]string{"index": {"students_pkey"}, "value": {"200588"}},
+								BlockAccessed: 2,
+								RecordsOutput: 2,
 								Children: []plan.Info{
 									{
 										NodeType:      "Table",
@@ -77,8 +79,9 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 						},
 					},
 				},
-			}) {
-				t.Errorf("unexpected plan: %v", info)
+			}
+			if diff := cmp.Diff(expected, got); diff != "" {
+				t.Errorf("(-got, +expected)\n%s", diff)
 			}
 		})
 	}

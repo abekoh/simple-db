@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/abekoh/simple-db/internal/index"
@@ -48,6 +49,11 @@ type Info struct {
 	BlockAccessed int                 `json:"blockAccessed"`
 	RecordsOutput int                 `json:"recordsOutput"`
 	Children      []Info              `json:"children,omitempty"`
+}
+
+func (i Info) JSON() json.RawMessage {
+	b, _ := json.Marshal(i)
+	return b
 }
 
 type Plan interface {
