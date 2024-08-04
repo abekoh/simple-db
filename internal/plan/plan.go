@@ -43,6 +43,14 @@ const (
 	Rollback
 )
 
+type Info struct {
+	NodeType      string `json:"nodeType"`
+	Condition     string `json:"condition,omitempty"`
+	BlockAccessed int    `json:"blockAccessed"`
+	RecordsOutput int    `json:"recordsOutput"`
+	Children      []Info `json:"children,omitempty"`
+}
+
 type Plan interface {
 	Result
 	fmt.Stringer
