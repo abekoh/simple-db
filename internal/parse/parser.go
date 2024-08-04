@@ -18,30 +18,30 @@ func NewParser(s string) *Parser {
 	return &Parser{lexer: NewLexer(s)}
 }
 
-func (p *Parser) aggregation(initializer query.AggregationFuncInitializer) (query.AggregationFunc, token, error) {
+func (p *Parser) aggregation(initializer query.AggregationFuncInitializer) (schema.FieldName, query.AggregationFunc, token, error) {
 	tok := p.lexer.NextToken()
 	if tok.typ != lparen {
-		return nil, tok, fmt.Errorf("expected (, got %s", tok.literal)
+		return "", nil, tok, fmt.Errorf("expected (, got %s", tok.literal)
 	}
 	tok = p.lexer.NextToken()
 	if tok.typ != identifier {
-		return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+		return "", nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
 	}
 	aggFuncIdent := tok.literal
 	tok = p.lexer.NextToken()
 	if tok.typ != rparen {
-		return nil, tok, fmt.Errorf("expected ), got %s", tok.literal)
+		return "", nil, tok, fmt.Errorf("expected ), got %s", tok.literal)
 	}
 	tok = p.lexer.NextToken()
 	if tok.typ != as {
-		return nil, tok, fmt.Errorf("expected AS, got %s", tok.literal)
+		return "", nil, tok, fmt.Errorf("expected AS, got %s", tok.literal)
 	}
 	tok = p.lexer.NextToken()
 	if tok.typ != identifier {
-		return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+		return "", nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
 	}
 	alias := tok.literal
-	return initializer(schema.FieldName(aggFuncIdent), schema.FieldName(alias)), tok, nil
+	return schema.FieldName(alias), initializer(schema.FieldName(aggFuncIdent), schema.FieldName(alias)), tok, nil
 }
 
 func (p *Parser) selectList() ([]schema.FieldName, []query.AggregationFunc, token, error) {
@@ -50,31 +50,35 @@ func (p *Parser) selectList() ([]schema.FieldName, []query.AggregationFunc, toke
 	tok := p.lexer.NextToken()
 	switch tok.typ {
 	case sum:
-		aggregationFunc, tok2, err := p.aggregation(query.NewSumFunc)
+		alias, aggregationFunc, tok2, err := p.aggregation(query.NewSumFunc)
 		if err != nil {
 			return nil, nil, tok, fmt.Errorf("failed to parse sum aggregation: %w", err)
 		}
+		fields = append(fields, alias)
 		aggregationFuncs = append(aggregationFuncs, aggregationFunc)
 		tok = tok2
 	case max:
-		aggregationFunc, tok2, err := p.aggregation(query.NewMaxFunc)
+		alias, aggregationFunc, tok2, err := p.aggregation(query.NewMaxFunc)
 		if err != nil {
 			return nil, nil, tok, fmt.Errorf("failed to parse max aggregation: %w", err)
 		}
+		fields = append(fields, alias)
 		aggregationFuncs = append(aggregationFuncs, aggregationFunc)
 		tok = tok2
 	case min:
-		aggregationFunc, tok2, err := p.aggregation(query.NewMinFunc)
+		alias, aggregationFunc, tok2, err := p.aggregation(query.NewMinFunc)
 		if err != nil {
 			return nil, nil, tok, fmt.Errorf("failed to parse min aggregation: %w", err)
 		}
+		fields = append(fields, alias)
 		aggregationFuncs = append(aggregationFuncs, aggregationFunc)
 		tok = tok2
 	case count:
-		aggregationFunc, tok2, err := p.aggregation(query.NewCountFunc)
+		alias, aggregationFunc, tok2, err := p.aggregation(query.NewCountFunc)
 		if err != nil {
 			return nil, nil, tok, fmt.Errorf("failed to parse count aggregation: %w", err)
 		}
+		fields = append(fields, alias)
 		aggregationFuncs = append(aggregationFuncs, aggregationFunc)
 		tok = tok2
 	case identifier:
