@@ -9,16 +9,16 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
-type SortType int
+type OrderType int
 
 const (
-	Asc SortType = iota
+	Asc OrderType = iota
 	Desc
 )
 
 type Comparator struct {
 	fields   []schema.FieldName
-	sortType SortType
+	sortType OrderType
 }
 
 func NewComparator(fields []schema.FieldName) *Comparator {
