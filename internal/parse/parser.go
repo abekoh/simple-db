@@ -58,7 +58,7 @@ func (p *Parser) aggregation(initializer query.AggregationFuncInitializer) (sche
 		return "", nil, tok, fmt.Errorf("expected (, got %s", tok.literal)
 	}
 	tok = p.lexer.NextToken()
-	if tok.typ != identifier {
+	if tok.typ != identifier && tok.typ != asterisk {
 		return "", nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
 	}
 	aggFuncIdent := tok.literal
