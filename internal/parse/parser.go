@@ -403,10 +403,11 @@ func (d InsertData) SwapParams(params map[int]schema.Constant) (statement.Bound,
 }
 
 type QueryData struct {
-	fields []schema.FieldName
-	tables []string
-	pred   query.Predicate
-	order  query.Order
+	fields           []schema.FieldName
+	tables           []string
+	pred             query.Predicate
+	aggregationFuncs []query.AggregationFunc
+	order            query.Order
 }
 
 func (d QueryData) Data() {}

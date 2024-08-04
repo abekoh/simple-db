@@ -12,195 +12,17 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
-type AggregationFunc interface {
-	fmt.Stringer
-	First(s query.Scan) error
-	Next(s query.Scan) error
-	AliasName() schema.FieldName
-	Val() schema.Constant
-}
-
-type CountFunc struct {
-	aliasName schema.FieldName
-	count     int
-}
-
-var _ AggregationFunc = (*CountFunc)(nil)
-
-func NewCountFunc(aliasName schema.FieldName) *CountFunc {
-	return &CountFunc{aliasName: aliasName}
-}
-
-func (c *CountFunc) First(s query.Scan) error {
-	c.count = 1
-	return nil
-}
-
-func (c *CountFunc) Next(s query.Scan) error {
-	c.count++
-	return nil
-}
-
-func (c *CountFunc) AliasName() schema.FieldName {
-	return c.aliasName
-}
-
-func (c *CountFunc) Val() schema.Constant {
-	return schema.ConstantInt32(int32(c.count))
-}
-
-func (c *CountFunc) String() string {
-	return fmt.Sprintf("COUNT(*) AS %s", c.aliasName)
-}
-
-type MaxFunc struct {
-	fieldName, aliasName schema.FieldName
-	maxVal               schema.Constant
-}
-
-var _ AggregationFunc = (*MaxFunc)(nil)
-
-func NewMaxFunc(fieldName, aliasName schema.FieldName) *MaxFunc {
-	return &MaxFunc{fieldName: fieldName, aliasName: aliasName}
-}
-
-func (m *MaxFunc) First(s query.Scan) error {
-	val, err := s.Val(m.fieldName)
-	if err != nil {
-		return fmt.Errorf("s.Val error: %w", err)
-	}
-	m.maxVal = val
-	return nil
-}
-
-func (m *MaxFunc) Next(s query.Scan) error {
-	val, err := s.Val(m.fieldName)
-	if err != nil {
-		return fmt.Errorf("s.Val error: %w", err)
-	}
-	if val.Compare(m.maxVal) > 0 {
-		m.maxVal = val
-	}
-	return nil
-}
-
-func (m *MaxFunc) AliasName() schema.FieldName {
-	return m.aliasName
-}
-
-func (m *MaxFunc) Val() schema.Constant {
-	return m.maxVal
-}
-
-func (m *MaxFunc) String() string {
-	return fmt.Sprintf("MAX(%s) AS %s", m.fieldName, m.aliasName)
-}
-
-type MinFunc struct {
-	fieldName, aliasName schema.FieldName
-	minVal               schema.Constant
-}
-
-var _ AggregationFunc = (*MinFunc)(nil)
-
-func NewMinFunc(fieldName, aliasName schema.FieldName) *MinFunc {
-	return &MinFunc{fieldName: fieldName, aliasName: aliasName}
-}
-
-func (m *MinFunc) First(s query.Scan) error {
-	val, err := s.Val(m.fieldName)
-	if err != nil {
-		return fmt.Errorf("s.Val error: %w", err)
-	}
-	m.minVal = val
-	return nil
-}
-
-func (m *MinFunc) Next(s query.Scan) error {
-	val, err := s.Val(m.fieldName)
-	if err != nil {
-		return fmt.Errorf("s.Val error: %w", err)
-	}
-	if val.Compare(m.minVal) < 0 {
-		m.minVal = val
-	}
-	return nil
-}
-
-func (m *MinFunc) AliasName() schema.FieldName {
-	return m.aliasName
-}
-
-func (m *MinFunc) Val() schema.Constant {
-	return m.minVal
-}
-
-func (m *MinFunc) String() string {
-	return fmt.Sprintf("MIN(%s) AS %s", m.fieldName, m.aliasName)
-}
-
-type SumFunc struct {
-	fieldName, aliasName schema.FieldName
-	sum                  int32
-}
-
-var _ AggregationFunc = (*SumFunc)(nil)
-
-func NewSumFunc(fieldName, aliasName schema.FieldName) *SumFunc {
-	return &SumFunc{fieldName: fieldName, aliasName: aliasName}
-}
-
-func (s *SumFunc) First(scan query.Scan) error {
-	val, err := scan.Val(s.fieldName)
-	if err != nil {
-		return fmt.Errorf("scan.Int32 error: %w", err)
-	}
-	switch val.(type) {
-	case schema.ConstantInt32:
-		s.sum = int32(val.(schema.ConstantInt32))
-	default:
-		return errors.New("type assertion failed")
-	}
-	return nil
-}
-
-func (s *SumFunc) Next(scan query.Scan) error {
-	val, err := scan.Val(s.fieldName)
-	if err != nil {
-		return fmt.Errorf("scan.Int32 error: %w", err)
-	}
-	switch val.(type) {
-	case schema.ConstantInt32:
-		s.sum += int32(val.(schema.ConstantInt32))
-	default:
-		return errors.New("type assertion failed")
-	}
-	return nil
-}
-
-func (s *SumFunc) AliasName() schema.FieldName {
-	return s.aliasName
-}
-
-func (s *SumFunc) Val() schema.Constant {
-	return schema.ConstantInt32(s.sum)
-}
-
-func (s *SumFunc) String() string {
-	return fmt.Sprintf("SUM(%s) AS %s", s.fieldName, s.aliasName)
-}
-
 type GroupByScan struct {
 	scan             query.Scan
 	groupFields      []schema.FieldName
 	groupValues      map[schema.FieldName]schema.Constant
-	aggregationFuncs []AggregationFunc
+	aggregationFuncs []query.AggregationFunc
 	moreGroups       bool
 }
 
 var _ query.Scan = (*GroupByScan)(nil)
 
-func NewGroupByScan(scan query.Scan, fields []schema.FieldName, aggregationFuncs []AggregationFunc) (*GroupByScan, error) {
+func NewGroupByScan(scan query.Scan, fields []schema.FieldName, aggregationFuncs []query.AggregationFunc) (*GroupByScan, error) {
 	gs := GroupByScan{scan: scan, groupFields: fields, aggregationFuncs: aggregationFuncs}
 	if err := gs.BeforeFirst(); err != nil {
 		return nil, err
@@ -323,13 +145,13 @@ func (g *GroupByScan) Close() error {
 type GroupByPlan struct {
 	p                Plan
 	groupFields      []schema.FieldName
-	aggregationFuncs []AggregationFunc
+	aggregationFuncs []query.AggregationFunc
 	sche             schema.Schema
 }
 
 var _ Plan = (*GroupByPlan)(nil)
 
-func NewGroupByPlan(tx *transaction.Transaction, p Plan, groupFields []schema.FieldName, aggregationFuncs []AggregationFunc) *GroupByPlan {
+func NewGroupByPlan(tx *transaction.Transaction, p Plan, groupFields []schema.FieldName, aggregationFuncs []query.AggregationFunc) *GroupByPlan {
 	s := schema.NewSchema()
 	for _, fn := range groupFields {
 		s.Add(fn, *p.Schema())

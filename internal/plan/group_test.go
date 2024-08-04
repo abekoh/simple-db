@@ -75,11 +75,11 @@ func TestGroupByPlan(t *testing.T) {
 	groupByPlan := plan.NewGroupByPlan(tx,
 		tablePlan,
 		[]schema.FieldName{"department"},
-		[]plan.AggregationFunc{
-			plan.NewCountFunc("count_score"),
-			plan.NewMaxFunc("score", "max_score"),
-			plan.NewMinFunc("score", "min_score"),
-			plan.NewSumFunc("score", "sum_score"),
+		[]query.AggregationFunc{
+			query.NewCountFunc("count_score"),
+			query.NewMaxFunc("score", "max_score"),
+			query.NewMinFunc("score", "min_score"),
+			query.NewSumFunc("score", "sum_score"),
 		},
 	)
 	sortPlan := plan.NewSortPlan(tx, groupByPlan, query.Order{query.OrderElement{Field: "department", OrderType: query.Asc}})

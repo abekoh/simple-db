@@ -1,6 +1,7 @@
 package query
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -477,4 +478,182 @@ func (o Order) Compare(s1, s2 Scan) (int, error) {
 		}
 	}
 	return 0, nil
+}
+
+type AggregationFunc interface {
+	fmt.Stringer
+	First(s Scan) error
+	Next(s Scan) error
+	AliasName() schema.FieldName
+	Val() schema.Constant
+}
+
+type CountFunc struct {
+	aliasName schema.FieldName
+	count     int
+}
+
+var _ AggregationFunc = (*CountFunc)(nil)
+
+func NewCountFunc(aliasName schema.FieldName) *CountFunc {
+	return &CountFunc{aliasName: aliasName}
+}
+
+func (c *CountFunc) First(s Scan) error {
+	c.count = 1
+	return nil
+}
+
+func (c *CountFunc) Next(s Scan) error {
+	c.count++
+	return nil
+}
+
+func (c *CountFunc) AliasName() schema.FieldName {
+	return c.aliasName
+}
+
+func (c *CountFunc) Val() schema.Constant {
+	return schema.ConstantInt32(int32(c.count))
+}
+
+func (c *CountFunc) String() string {
+	return fmt.Sprintf("COUNT(*) AS %s", c.aliasName)
+}
+
+type MaxFunc struct {
+	fieldName, aliasName schema.FieldName
+	maxVal               schema.Constant
+}
+
+var _ AggregationFunc = (*MaxFunc)(nil)
+
+func NewMaxFunc(fieldName, aliasName schema.FieldName) *MaxFunc {
+	return &MaxFunc{fieldName: fieldName, aliasName: aliasName}
+}
+
+func (m *MaxFunc) First(s Scan) error {
+	val, err := s.Val(m.fieldName)
+	if err != nil {
+		return fmt.Errorf("s.Val error: %w", err)
+	}
+	m.maxVal = val
+	return nil
+}
+
+func (m *MaxFunc) Next(s Scan) error {
+	val, err := s.Val(m.fieldName)
+	if err != nil {
+		return fmt.Errorf("s.Val error: %w", err)
+	}
+	if val.Compare(m.maxVal) > 0 {
+		m.maxVal = val
+	}
+	return nil
+}
+
+func (m *MaxFunc) AliasName() schema.FieldName {
+	return m.aliasName
+}
+
+func (m *MaxFunc) Val() schema.Constant {
+	return m.maxVal
+}
+
+func (m *MaxFunc) String() string {
+	return fmt.Sprintf("MAX(%s) AS %s", m.fieldName, m.aliasName)
+}
+
+type MinFunc struct {
+	fieldName, aliasName schema.FieldName
+	minVal               schema.Constant
+}
+
+var _ AggregationFunc = (*MinFunc)(nil)
+
+func NewMinFunc(fieldName, aliasName schema.FieldName) *MinFunc {
+	return &MinFunc{fieldName: fieldName, aliasName: aliasName}
+}
+
+func (m *MinFunc) First(s Scan) error {
+	val, err := s.Val(m.fieldName)
+	if err != nil {
+		return fmt.Errorf("s.Val error: %w", err)
+	}
+	m.minVal = val
+	return nil
+}
+
+func (m *MinFunc) Next(s Scan) error {
+	val, err := s.Val(m.fieldName)
+	if err != nil {
+		return fmt.Errorf("s.Val error: %w", err)
+	}
+	if val.Compare(m.minVal) < 0 {
+		m.minVal = val
+	}
+	return nil
+}
+
+func (m *MinFunc) AliasName() schema.FieldName {
+	return m.aliasName
+}
+
+func (m *MinFunc) Val() schema.Constant {
+	return m.minVal
+}
+
+func (m *MinFunc) String() string {
+	return fmt.Sprintf("MIN(%s) AS %s", m.fieldName, m.aliasName)
+}
+
+type SumFunc struct {
+	fieldName, aliasName schema.FieldName
+	sum                  int32
+}
+
+var _ AggregationFunc = (*SumFunc)(nil)
+
+func NewSumFunc(fieldName, aliasName schema.FieldName) *SumFunc {
+	return &SumFunc{fieldName: fieldName, aliasName: aliasName}
+}
+
+func (s *SumFunc) First(scan Scan) error {
+	val, err := scan.Val(s.fieldName)
+	if err != nil {
+		return fmt.Errorf("scan.Int32 error: %w", err)
+	}
+	switch val.(type) {
+	case schema.ConstantInt32:
+		s.sum = int32(val.(schema.ConstantInt32))
+	default:
+		return errors.New("type assertion failed")
+	}
+	return nil
+}
+
+func (s *SumFunc) Next(scan Scan) error {
+	val, err := scan.Val(s.fieldName)
+	if err != nil {
+		return fmt.Errorf("scan.Int32 error: %w", err)
+	}
+	switch val.(type) {
+	case schema.ConstantInt32:
+		s.sum += int32(val.(schema.ConstantInt32))
+	default:
+		return errors.New("type assertion failed")
+	}
+	return nil
+}
+
+func (s *SumFunc) AliasName() schema.FieldName {
+	return s.aliasName
+}
+
+func (s *SumFunc) Val() schema.Constant {
+	return schema.ConstantInt32(s.sum)
+}
+
+func (s *SumFunc) String() string {
+	return fmt.Sprintf("SUM(%s) AS %s", s.fieldName, s.aliasName)
 }
