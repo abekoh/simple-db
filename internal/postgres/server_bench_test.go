@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/testdata"
@@ -12,6 +13,8 @@ import (
 func BenchmarkPostgres_SelectOneRow(b *testing.B) {
 	run := func(b *testing.B, srcDirname string) {
 		b.Helper()
+
+		slog.SetLogLoggerLevel(slog.LevelError)
 
 		transaction.CleanupLockTable(b)
 		ctx, cancel := context.WithCancel(context.Background())
