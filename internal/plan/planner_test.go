@@ -36,8 +36,29 @@ func TestBasicQueryPlanner(t *testing.T) {
 		t.Fatal(err)
 	}
 	info := plan.(Plan).Info()
-	if !reflect.DeepEqual(info, Info{}) {
-		t.Errorf("unexpected plan")
+	if !reflect.DeepEqual(info, Info{
+		NodeType: "Project",
+		Conditions: map[string][]string{
+			"fieldNames": {"a", "b"},
+		},
+		Children: []Info{
+			{
+				NodeType: "Select",
+				Conditions: map[string][]string{
+					"predicate": {"a=1"},
+				},
+				Children: []Info{
+					{
+						NodeType: "Table",
+						Conditions: map[string][]string{
+							"tableName": {"mytable"},
+						},
+					},
+				},
+			},
+		},
+	}) {
+		t.Errorf("unexpected plan: %v", info)
 	}
 }
 
