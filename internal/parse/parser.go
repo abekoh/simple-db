@@ -60,6 +60,38 @@ func (p *Parser) tableList() ([]string, token, error) {
 	return tables, tok, nil
 }
 
+func (p *Parser) join() ([]string, query.Predicate, token, error) {
+	tables := make([]string, 0, 1)
+	tok := p.lexer.NextToken()
+	if tok.typ != identifier {
+		return nil, nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+	}
+	tables = append(tables, tok.literal)
+
+	tok = p.lexer.NextToken()
+	if tok.typ != on {
+		return nil, nil, tok, fmt.Errorf("expected ON, got %s", tok.literal)
+	}
+	pred := make(query.Predicate, 0, 1)
+	t, tok, err := p.term()
+	if err != nil {
+		return nil, nil, tok, fmt.Errorf("failed to parse term: %w", err)
+	}
+	pred = append(pred, t)
+	for {
+		tok = p.lexer.NextToken()
+		if tok.typ != and {
+			break
+		}
+		t, tok, err := p.term()
+		if err != nil {
+			return nil, nil, tok, fmt.Errorf("failed to parse term: %w", err)
+		}
+		pred = append(pred, t)
+	}
+	return tables, pred, tok, nil
+}
+
 func (p *Parser) fieldList() ([]schema.FieldName, token, error) {
 	fields := make([]schema.FieldName, 0, 1)
 	tok := p.lexer.NextToken()
@@ -402,12 +434,23 @@ func (p *Parser) Query() (*QueryData, error) {
 		return nil, fmt.Errorf("failed to parse table list: %w", err)
 	}
 	q.tables = tableList
+
+	if tok.typ == join {
+		joinTables, joinPred, tok2, err := p.join()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse join: %w", err)
+		}
+		q.tables = append(q.tables, joinTables...)
+		q.pred = append(q.pred, joinPred...)
+		tok = tok2
+	}
+
 	if tok.typ == where {
 		pred, _, err := p.predicate()
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse predicate: %w", err)
 		}
-		q.pred = pred
+		q.pred = append(q.pred, pred...)
 	}
 	return q, nil
 }

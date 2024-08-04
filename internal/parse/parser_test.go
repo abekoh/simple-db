@@ -56,6 +56,18 @@ func TestParser_Query(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "SELECT with join",
+			s:    "SELECT a, x FROM mytable1 JOIN mytable2 ON a = x",
+			want: &QueryData{
+				fields: []schema.FieldName{"a", "x"},
+				tables: []string{"mytable1", "mytable2"},
+				pred: query.Predicate{
+					query.NewTerm(schema.FieldName("a"), schema.FieldName("x")),
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
