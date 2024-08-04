@@ -491,10 +491,10 @@ func (d InsertData) SwapParams(params map[int]schema.Constant) (statement.Bound,
 
 type QueryData struct {
 	fields           []schema.FieldName
-	groupFields      []schema.FieldName
+	aggregationFuncs []query.AggregationFunc
 	tables           []string
 	pred             query.Predicate
-	aggregationFuncs []query.AggregationFunc
+	groupFields      []schema.FieldName
 	order            query.Order
 }
 
@@ -520,9 +520,9 @@ func (d QueryData) String() string {
 	var b strings.Builder
 	b.WriteString("Field:            ")
 	b.WriteString(fmt.Sprintf("%v\n", d.fields))
-	if len(d.groupFields) > 0 {
-		b.WriteString("GroupFields:      ")
-		b.WriteString(fmt.Sprintf("%v\n", d.groupFields))
+	if len(d.aggregationFuncs) > 0 {
+		b.WriteString("AggregationFuncs: ")
+		b.WriteString(fmt.Sprintf("%v\n", d.aggregationFuncs))
 	}
 	b.WriteString("Tables:           ")
 	b.WriteString(fmt.Sprintf("%v\n", d.tables))
@@ -530,9 +530,9 @@ func (d QueryData) String() string {
 		b.WriteString("Predicate:        ")
 		b.WriteString(fmt.Sprintf("%v\n", d.pred))
 	}
-	if len(d.aggregationFuncs) > 0 {
-		b.WriteString("AggregationFuncs: ")
-		b.WriteString(fmt.Sprintf("%v\n", d.aggregationFuncs))
+	if len(d.groupFields) > 0 {
+		b.WriteString("GroupFields:      ")
+		b.WriteString(fmt.Sprintf("%v\n", d.groupFields))
 	}
 	if len(d.order) > 0 {
 		b.WriteString("Order:            ")
