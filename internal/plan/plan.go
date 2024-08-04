@@ -53,13 +53,13 @@ type Info struct {
 
 type Plan interface {
 	Result
-	fmt.Stringer
 	statement.Prepared
 	Open() (query.Scan, error)
 	BlockAccessed() int
 	RecordsOutput() int
 	DistinctValues(fieldName schema.FieldName) int
 	Schema() *schema.Schema
+	Info() Info
 }
 
 type TablePlan struct {

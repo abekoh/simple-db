@@ -13,6 +13,7 @@ import (
 )
 
 type AggregationFunc interface {
+	fmt.Stringer
 	First(s query.Scan) error
 	Next(s query.Scan) error
 	AliasName() schema.FieldName
@@ -46,6 +47,10 @@ func (c *CountFunc) AliasName() schema.FieldName {
 
 func (c *CountFunc) Val() schema.Constant {
 	return schema.ConstantInt32(int32(c.count))
+}
+
+func (c *CountFunc) String() string {
+	return fmt.Sprintf("COUNT(*) AS %s", c.aliasName)
 }
 
 type MaxFunc struct {
@@ -87,6 +92,10 @@ func (m *MaxFunc) Val() schema.Constant {
 	return m.maxVal
 }
 
+func (m *MaxFunc) String() string {
+	return fmt.Sprintf("MAX(%s) AS %s", m.fieldName, m.aliasName)
+}
+
 type MinFunc struct {
 	fieldName, aliasName schema.FieldName
 	minVal               schema.Constant
@@ -124,6 +133,10 @@ func (m *MinFunc) AliasName() schema.FieldName {
 
 func (m *MinFunc) Val() schema.Constant {
 	return m.minVal
+}
+
+func (m *MinFunc) String() string {
+	return fmt.Sprintf("MIN(%s) AS %s", m.fieldName, m.aliasName)
 }
 
 type SumFunc struct {
@@ -171,6 +184,10 @@ func (s *SumFunc) AliasName() schema.FieldName {
 
 func (s *SumFunc) Val() schema.Constant {
 	return schema.ConstantInt32(s.sum)
+}
+
+func (s *SumFunc) String() string {
+	return fmt.Sprintf("SUM(%s) AS %s", s.fieldName, s.aliasName)
 }
 
 type GroupByScan struct {
@@ -330,11 +347,6 @@ func NewGroupByPlan(tx *transaction.Transaction, p Plan, groupFields []schema.Fi
 
 func (g GroupByPlan) Result() {}
 
-func (g GroupByPlan) String() string {
-	// TODO implement me
-	panic("implement me")
-}
-
 func (g GroupByPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
 	return g.p.Placeholders(findSchema)
 }
@@ -386,4 +398,14 @@ func (g GroupByPlan) DistinctValues(fieldName schema.FieldName) int {
 
 func (g GroupByPlan) Schema() *schema.Schema {
 	return &g.sche
+}
+
+func (g GroupByPlan) Info() Info {
+	return Info{
+		NodeType:      "GroupBy",
+		Condition:     fmt.Sprintf("groupFields=%v, aggregationFuncs=%v", g.groupFields, g.aggregationFuncs),
+		BlockAccessed: g.BlockAccessed(),
+		RecordsOutput: g.RecordsOutput(),
+		Children:      []Info{g.Info()},
+	}
 }
