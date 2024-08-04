@@ -54,13 +54,15 @@ func BenchmarkPostgres_SelectOneRow(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for _, studentID := range studentIDs {
-			var r Row
-			if err := conn.QueryRow(ctx, "SELECT student_id, name FROM students WHERE student_id = $1", studentID).Scan(&r.StudentID, &r.Name); err != nil {
-				b.Fatal(err)
-			}
-			if r.StudentID != studentID {
-				b.Errorf("unexpected student_id: %d", r.StudentID)
+		for range b.N {
+			for _, studentID := range studentIDs {
+				var r Row
+				if err := conn.QueryRow(ctx, "SELECT student_id, name FROM students WHERE student_id = $1", studentID).Scan(&r.StudentID, &r.Name); err != nil {
+					b.Fatal(err)
+				}
+				if r.StudentID != studentID {
+					b.Errorf("unexpected student_id: %d", r.StudentID)
+				}
 			}
 		}
 	}
