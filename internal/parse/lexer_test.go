@@ -41,6 +41,24 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			input: `SELECT a, b FROM mytable1 JOIN mytable2 ON mytable1.a = mytable2.b`,
+			want: []token{
+				{typ: selectTok, literal: "SELECT"},
+				{typ: identifier, literal: "a"},
+				{typ: comma, literal: ","},
+				{typ: identifier, literal: "b"},
+				{typ: from, literal: "FROM"},
+				{typ: identifier, literal: "mytable1"},
+				{typ: join, literal: "JOIN"},
+				{typ: identifier, literal: "mytable2"},
+				{typ: on, literal: "ON"},
+				{typ: identifier, literal: "mytable1.a"},
+				{typ: equal, literal: "="},
+				{typ: identifier, literal: "mytable2.b"},
+				{typ: eof, literal: ""},
+			},
+		},
+		{
 			input: `INSERT INTO mytable (a, b) VALUES (1, 'foo', $1)`,
 			want: []token{
 				{typ: insert, literal: "INSERT"},

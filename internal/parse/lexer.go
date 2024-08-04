@@ -27,6 +27,7 @@ const (
 	view        tokenType = "VIEW"
 	as          tokenType = "AS"
 	index       tokenType = "INDEX"
+	join        tokenType = "JOIN"
 	on          tokenType = "ON"
 	placeholder tokenType = "PLACEHOLDER"
 	begin       tokenType = "BEGIN"
@@ -64,6 +65,7 @@ var keywords = map[tokenType]struct{}{
 	view:      {},
 	as:        {},
 	index:     {},
+	join:      {},
 	on:        {},
 	begin:     {},
 	commit:    {},
@@ -162,7 +164,7 @@ func (l *Lexer) readChar() {
 
 func (l *Lexer) readIdentifier() string {
 	start := l.cursor
-	for isLetter(l.char) {
+	for isLetter(l.char) || isDigit(l.char) || l.char == '.' {
 		l.readChar()
 	}
 	return l.s[start:l.cursor]
