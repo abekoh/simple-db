@@ -22,10 +22,10 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 		{
 			name:     "one table, no index",
 			snapshot: "tables_data",
-			query:    "SELECT student_name FROM students WHERE student_id = 200588",
+			query:    "SELECT name FROM students WHERE student_id = 200588",
 			planInfo: plan.Info{
 				NodeType:      "Project",
-				Conditions:    map[string][]string{"fields": {"student_name"}},
+				Conditions:    map[string][]string{"fields": {"name"}},
 				BlockAccessed: 770,
 				RecordsOutput: 2,
 				Children: []plan.Info{
@@ -49,10 +49,10 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 		{
 			name:     "one table, use index",
 			snapshot: "tables_indexes_data",
-			query:    "SELECT student_name FROM students WHERE student_id = 200588",
+			query:    "SELECT name FROM students WHERE student_id = 200588",
 			planInfo: plan.Info{
 				NodeType:      "Project",
-				Conditions:    map[string][]string{"fields": {"student_name"}},
+				Conditions:    map[string][]string{"fields": {"name"}},
 				BlockAccessed: 2,
 				RecordsOutput: 2,
 				Children: []plan.Info{
@@ -84,10 +84,10 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 		{
 			name:     "join two tables, no index",
 			snapshot: "tables_data",
-			query:    "SELECT student_name, department_name FROM students JOIN departments ON major_id = department_id WHERE student_id = 200588",
+			query:    "SELECT name, department_name FROM students JOIN departments ON major_id = department_id WHERE student_id = 200588",
 			planInfo: plan.Info{
 				NodeType:      "Project",
-				Conditions:    map[string][]string{"fields": {"student_name", "department_name"}},
+				Conditions:    map[string][]string{"fields": {"name", "department_name"}},
 				BlockAccessed: 776,
 				RecordsOutput: 0,
 				Children: []plan.Info{
@@ -132,10 +132,10 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 		{
 			name:     "join two tables, use index",
 			snapshot: "tables_indexes_data",
-			query:    "SELECT student_name, department_name FROM students JOIN departments ON major_id = department_id WHERE student_id = 200588",
+			query:    "SELECT name, department_name FROM students JOIN departments ON major_id = department_id WHERE student_id = 200588",
 			planInfo: plan.Info{
 				NodeType:      "Project",
-				Conditions:    map[string][]string{"fields": {"student_name", "department_name"}},
+				Conditions:    map[string][]string{"fields": {"name", "department_name"}},
 				BlockAccessed: 8,
 				RecordsOutput: 0,
 				Children: []plan.Info{
