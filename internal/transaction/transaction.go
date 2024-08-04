@@ -117,7 +117,7 @@ func (t *Transaction) Recover() error {
 		switch r.Type() {
 		case Checkpoint:
 			break
-		case Commit | Rollback:
+		case Commit, Rollback:
 			finishedTxSet[r.TxNum()] = struct{}{}
 		default:
 			if _, ok := finishedTxSet[r.TxNum()]; !ok {
