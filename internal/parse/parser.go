@@ -18,11 +18,12 @@ func NewParser(s string) *Parser {
 	return &Parser{lexer: NewLexer(s)}
 }
 
-func (p *Parser) selectList() ([]schema.FieldName, token, error) {
+func (p *Parser) selectList() ([]schema.FieldName, []query.AggregationFunc, token, error) {
 	fields := make([]schema.FieldName, 0, 1)
+	aggregationFuncs := make([]query.AggregationFunc, 0, 1)
 	tok := p.lexer.NextToken()
 	if tok.typ != identifier {
-		return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+		return nil, nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
 	}
 	fields = append(fields, schema.FieldName(tok.literal))
 	for {
@@ -32,11 +33,11 @@ func (p *Parser) selectList() ([]schema.FieldName, token, error) {
 		}
 		tok = p.lexer.NextToken()
 		if tok.typ != identifier {
-			return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+			return nil, nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
 		}
 		fields = append(fields, schema.FieldName(tok.literal))
 	}
-	return fields, tok, nil
+	return fields, aggregationFuncs, tok, nil
 }
 
 func (p *Parser) tableList() ([]string, token, error) {
@@ -290,6 +291,26 @@ func (p *Parser) order() (query.Order, token, error) {
 	return order, tok, nil
 }
 
+func (p *Parser) group() ([]schema.FieldName, token, error) {
+	tok := p.lexer.NextToken()
+	if tok.typ != by {
+		return nil, tok, fmt.Errorf("expected BY, got %s", tok.literal)
+	}
+	groupFields := make([]schema.FieldName, 0, 1)
+	for {
+		tok = p.lexer.NextToken()
+		if tok.typ != identifier {
+			return nil, tok, fmt.Errorf("expected identifier, got %s", tok.literal)
+		}
+		groupFields = append(groupFields, schema.FieldName(tok.literal))
+		tok = p.lexer.NextToken()
+		if tok.typ != comma {
+			break
+		}
+	}
+	return groupFields, tok, nil
+}
+
 type Data interface {
 	Data()
 }
@@ -404,6 +425,7 @@ func (d InsertData) SwapParams(params map[int]schema.Constant) (statement.Bound,
 
 type QueryData struct {
 	fields           []schema.FieldName
+	groupFields      []schema.FieldName
 	tables           []string
 	pred             query.Predicate
 	aggregationFuncs []query.AggregationFunc
@@ -457,11 +479,12 @@ func (p *Parser) Query() (*QueryData, error) {
 	if tok.typ != selectTok {
 		return nil, fmt.Errorf("expected SELECT, got %s", tok.literal)
 	}
-	selectList, tok, err := p.selectList()
+	selectList, aggregationFuncs, tok, err := p.selectList()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse select list: %w", err)
 	}
 	q.fields = selectList
+	q.aggregationFuncs = aggregationFuncs
 	if tok.typ != from {
 		return nil, fmt.Errorf("expected FROM, got %s", tok.literal)
 	}
@@ -482,18 +505,28 @@ func (p *Parser) Query() (*QueryData, error) {
 	}
 
 	if tok.typ == where {
-		pred, _, err := p.predicate()
+		pred, tok2, err := p.predicate()
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse predicate: %w", err)
 		}
 		q.pred = append(q.pred, pred...)
+		tok = tok2
+	}
+	if tok.typ == group {
+		groupFields, tok2, err := p.group()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse group: %w", err)
+		}
+		q.groupFields = groupFields
+		tok = tok2
 	}
 	if tok.typ == order {
-		order, _, err := p.order()
+		order, tok2, err := p.order()
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse order: %w", err)
 		}
 		q.order = order
+		tok = tok2
 	}
 	return q, nil
 }
