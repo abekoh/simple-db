@@ -34,6 +34,7 @@ const (
 	commit      tokenType = "COMMIT"
 	rollback    tokenType = "ROLLBACK"
 	order       tokenType = "ORDER"
+	group       tokenType = "GROUP"
 	by          tokenType = "BY"
 	asc         tokenType = "ASC"
 	desc        tokenType = "DESC"
@@ -47,6 +48,11 @@ const (
 	rparen tokenType = "RPAREN"
 
 	illegal tokenType = "ILLEGAL"
+
+	max   tokenType = "MAX"
+	min   tokenType = "MIN"
+	sum   tokenType = "SUM"
+	count tokenType = "COUNT"
 
 	eof tokenType = "EOF"
 )
@@ -75,9 +81,14 @@ var keywords = map[tokenType]struct{}{
 	commit:    {},
 	rollback:  {},
 	order:     {},
+	group:     {},
 	by:        {},
 	asc:       {},
 	desc:      {},
+	max:       {},
+	min:       {},
+	sum:       {},
+	count:     {},
 }
 
 func lookupToken(ident string) tokenType {
