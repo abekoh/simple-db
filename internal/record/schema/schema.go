@@ -248,5 +248,5 @@ func (p Placeholder) Compare(Constant) int {
 }
 
 func (p Placeholder) AppliesTo(_ *Schema) bool {
-	panic("don't use placeholder as value")
+	return true
 }
