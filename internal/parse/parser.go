@@ -504,12 +504,20 @@ func (d QueryData) Fields() []schema.FieldName {
 	return d.fields
 }
 
+func (d QueryData) AggregationFuncs() []query.AggregationFunc {
+	return d.aggregationFuncs
+}
+
 func (d QueryData) Tables() []string {
 	return d.tables
 }
 
 func (d QueryData) Predicate() query.Predicate {
 	return d.pred
+}
+
+func (d QueryData) GroupFields() []schema.FieldName {
+	return d.groupFields
 }
 
 func (d QueryData) Order() query.Order {

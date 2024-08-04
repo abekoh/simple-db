@@ -372,7 +372,12 @@ func (h HeuristicQueryPlanner) CreatePlan(d *parse.QueryData, tx *transaction.Tr
 		}
 	}
 
-	// Step4 sort
+	// Step4 group
+	if d.GroupFields() != nil && d.AggregationFuncs() != nil {
+		currentPlan = NewGroupByPlan(tx, currentPlan, d.GroupFields(), d.AggregationFuncs())
+	}
+
+	// Step5 sort
 	if d.Order() != nil {
 		currentPlan = NewSortPlan(tx, currentPlan, d.Order())
 	}
