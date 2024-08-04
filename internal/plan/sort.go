@@ -63,12 +63,18 @@ func NewSortPlan(tx *transaction.Transaction, p Plan, sortFields []schema.FieldN
 
 func (s SortPlan) Result() {}
 
-func (s SortPlan) String() string {
+func (s SortPlan) Info() Info {
 	fields := make([]string, len(s.sortFields))
-	for i, fld := range s.sortFields {
-		fields[i] = string(fld)
+	for i, f := range s.sortFields {
+		fields[i] = string(f)
 	}
-	return fmt.Sprintf("Sort(%s){%s}", strings.Join(fields, ","), s.p)
+	return Info{
+		NodeType:      "Sort",
+		Condition:     fmt.Sprintf("sortFields=%v", strings.Join(fields, ",")),
+		BlockAccessed: s.BlockAccessed(),
+		RecordsOutput: s.RecordsOutput(),
+		Children:      []Info{s.p.Info()},
+	}
 }
 
 func (s SortPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {

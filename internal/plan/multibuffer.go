@@ -323,9 +323,13 @@ func NewMultiBufferProductPlan(tx *transaction.Transaction, lhs, rhs Plan) *Mult
 
 func (p MultiBufferProductPlan) Result() {}
 
-func (p MultiBufferProductPlan) String() string {
-	//TODO implement me
-	panic("implement me")
+func (p MultiBufferProductPlan) Info() Info {
+	return Info{
+		NodeType:      "MultiBufferProduct",
+		BlockAccessed: p.BlockAccessed(),
+		RecordsOutput: p.RecordsOutput(),
+		Children:      []Info{p.lhs.Info(), p.rhs.Info()},
+	}
 }
 
 func (p MultiBufferProductPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {

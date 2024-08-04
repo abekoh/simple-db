@@ -113,16 +113,21 @@ func (t TablePlan) Schema() *schema.Schema {
 	return t.layout.Schema()
 }
 
-func (t TablePlan) String() string {
-	return fmt.Sprintf("Table{%s}", t.tableName)
-}
-
 func (t TablePlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
 	return nil
 }
 
 func (t TablePlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
 	return BoundPlan{Plan: t}, nil
+}
+
+func (t TablePlan) Info() Info {
+	return Info{
+		NodeType:      "Table",
+		Condition:     fmt.Sprintf("tableName=%s", t.tableName),
+		BlockAccessed: t.BlockAccessed(),
+		RecordsOutput: t.RecordsOutput(),
+	}
 }
 
 type ProductPlan struct {
@@ -173,8 +178,16 @@ func (p ProductPlan) Schema() *schema.Schema {
 	return &p.sche
 }
 
-func (p ProductPlan) String() string {
-	return fmt.Sprintf("Product(%v, %v)", p.p1, p.p2)
+func (p ProductPlan) Info() Info {
+	return Info{
+		NodeType:      "Product",
+		BlockAccessed: p.BlockAccessed(),
+		RecordsOutput: p.RecordsOutput(),
+		Children: []Info{
+			p.p1.Info(),
+			p.p2.Info(),
+		},
+	}
 }
 
 func (p ProductPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
@@ -253,8 +266,16 @@ func (s SelectPlan) Schema() *schema.Schema {
 	return s.p.Schema()
 }
 
-func (s SelectPlan) String() string {
-	return fmt.Sprintf("Select{%s}(%v)", s.pred, s.p)
+func (s SelectPlan) Info() Info {
+	return Info{
+		NodeType:      "Select",
+		Condition:     s.pred.String(),
+		BlockAccessed: s.BlockAccessed(),
+		RecordsOutput: s.RecordsOutput(),
+		Children: []Info{
+			s.p.Info(),
+		},
+	}
 }
 
 func (s SelectPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
@@ -329,14 +350,6 @@ func (p ProjectPlan) Schema() *schema.Schema {
 	return &p.sche
 }
 
-func (p ProjectPlan) String() string {
-	fieldNames := make([]string, len(p.sche.FieldNames()))
-	for i, name := range p.sche.FieldNames() {
-		fieldNames[i] = string(name)
-	}
-	return fmt.Sprintf("Project{%s}(%v)", strings.Join(fieldNames, ","), p.p)
-}
-
 func (p ProjectPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
 	return p.p.Placeholders(findSchema)
 }
@@ -347,6 +360,22 @@ func (p ProjectPlan) SwapParams(params map[int]schema.Constant) (statement.Bound
 		return nil, fmt.Errorf("p.SwapParams error: %w", err)
 	}
 	return &BoundPlan{Plan: &ProjectPlan{p: b.(Plan), sche: p.sche}}, nil
+}
+
+func (p ProjectPlan) Info() Info {
+	fields := make([]string, len(p.sche.FieldNames()))
+	for i, f := range p.sche.FieldNames() {
+		fields[i] = string(f)
+	}
+	return Info{
+		NodeType:      "Project",
+		Condition:     strings.Join(fields, ", "),
+		BlockAccessed: p.BlockAccessed(),
+		RecordsOutput: p.RecordsOutput(),
+		Children: []Info{
+			p.p.Info(),
+		},
+	}
 }
 
 type BoundPlan struct {
@@ -370,10 +399,6 @@ func NewIndexSelectPlan(p Plan, indexInfo *metadata.IndexInfo, val schema.Consta
 var _ Plan = (*IndexSelectPlan)(nil)
 
 func (i IndexSelectPlan) Result() {}
-
-func (i IndexSelectPlan) String() string {
-	return fmt.Sprintf("IndexSelect{%s=%s(%s)}(%v)", i.indexInfo.FieldName(), i.val, i.indexInfo.IndexName(), i.p)
-}
 
 func (i IndexSelectPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
 	return i.p.Placeholders(findSchema)
@@ -419,6 +444,18 @@ func (i IndexSelectPlan) Schema() *schema.Schema {
 	return i.p.Schema()
 }
 
+func (i IndexSelectPlan) Info() Info {
+	return Info{
+		NodeType:      "IndexSelect",
+		Condition:     fmt.Sprintf("indexName=%s, value=%s", i.indexInfo.IndexName(), i.val),
+		BlockAccessed: i.BlockAccessed(),
+		RecordsOutput: i.RecordsOutput(),
+		Children: []Info{
+			i.p.Info(),
+		},
+	}
+}
+
 type IndexJoinPlan struct {
 	p1, p2    Plan
 	indexInfo *metadata.IndexInfo
@@ -437,8 +474,17 @@ var _ Plan = (*IndexJoinPlan)(nil)
 
 func (i IndexJoinPlan) Result() {}
 
-func (i IndexJoinPlan) String() string {
-	return fmt.Sprintf("IndexJoin{%s=%s(%s)}(%v, %v)", i.joinField, i.indexInfo.FieldName(), i.indexInfo.IndexName(), i.p1, i.p2)
+func (i IndexJoinPlan) Info() Info {
+	return Info{
+		NodeType:      "IndexJoin",
+		Condition:     fmt.Sprintf("indexName=%s, joinField=%s", i.indexInfo.IndexName(), i.joinField),
+		BlockAccessed: i.BlockAccessed(),
+		RecordsOutput: i.RecordsOutput(),
+		Children: []Info{
+			i.p1.Info(),
+			i.p2.Info(),
+		},
+	}
 }
 
 func (i IndexJoinPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {

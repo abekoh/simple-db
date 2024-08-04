@@ -180,8 +180,13 @@ func NewMergeJoinPlan(tx *transaction.Transaction, p1, p2 Plan, fieldName1, fiel
 
 func (m MergeJoinPlan) Result() {}
 
-func (m MergeJoinPlan) String() string {
-	return fmt.Sprintf("MergeJoin(%s,%s){%s,%s}", m.fieldName1, m.fieldName2, m.p1, m.p2)
+func (m MergeJoinPlan) Info() Info {
+	return Info{
+		NodeType:      "MergeJoin",
+		BlockAccessed: m.BlockAccessed(),
+		RecordsOutput: m.RecordsOutput(),
+		Children:      []Info{m.p1.Info(), m.p2.Info()},
+	}
 }
 
 func (m MergeJoinPlan) Placeholders(findSchema func(tableName string) (*schema.Schema, error)) map[int]schema.FieldType {
