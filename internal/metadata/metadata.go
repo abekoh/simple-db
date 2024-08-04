@@ -166,9 +166,6 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 	if err := fieldCatalog.Close(); err != nil {
 		return nil, fmt.Errorf("field catalog close error: %w", err)
 	}
-	if size == -1 {
-		return nil, fmt.Errorf("table not found: %s", tableName)
-	}
 	return record.NewLayout(sche, offsets, size), nil
 }
 
