@@ -418,12 +418,8 @@ func (i IndexSelectPlan) SwapParams(params map[int]schema.Constant) (statement.B
 	if err != nil {
 		return nil, fmt.Errorf("p.SwapParams error: %w", err)
 	}
-	bp, ok := b.(*BoundPlan)
-	if !ok {
-		return nil, fmt.Errorf("failed to cast to *BoundPlan from %T", b)
-	}
 	return BoundPlan{
-		Plan: NewIndexSelectPlan(bp.Plan, i.indexInfo, i.val),
+		Plan: NewIndexSelectPlan(b.(Plan), i.indexInfo, i.val),
 	}, nil
 }
 

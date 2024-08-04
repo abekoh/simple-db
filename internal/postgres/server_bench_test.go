@@ -11,6 +11,8 @@ import (
 
 func BenchmarkPostgres_SelectOneRow(b *testing.B) {
 	run := func(b *testing.B, srcDirname string) {
+		b.Helper()
+
 		transaction.CleanupLockTable(b)
 		ctx, cancel := context.WithCancel(context.Background())
 		b.Cleanup(cancel)
