@@ -306,13 +306,17 @@ func (s SelectPlan) Placeholders(findSchema func(tableName string) (*schema.Sche
 }
 
 func (s SelectPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+	bp, err := s.p.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("p.SwapParams error: %w", err)
+	}
 	pred, err := s.pred.SwapParams(params)
 	if err != nil {
 		return nil, fmt.Errorf("pred.SwapParams error: %w", err)
 	}
 	return &BoundPlan{
 		Plan: &SelectPlan{
-			p:    s.p,
+			p:    bp.(Plan),
 			pred: pred,
 		},
 	}, nil
@@ -418,8 +422,16 @@ func (i IndexSelectPlan) SwapParams(params map[int]schema.Constant) (statement.B
 	if err != nil {
 		return nil, fmt.Errorf("p.SwapParams error: %w", err)
 	}
+	placeholderVal, ok := i.val.(schema.Placeholder)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast to schema.ConstantInt32 from %T", i.val)
+	}
+	newVal, ok := params[int(placeholderVal)]
+	if !ok {
+		newVal = i.val
+	}
 	return BoundPlan{
-		Plan: NewIndexSelectPlan(b.(Plan), i.indexInfo, i.val),
+		Plan: NewIndexSelectPlan(b.(Plan), i.indexInfo, newVal),
 	}, nil
 }
 
