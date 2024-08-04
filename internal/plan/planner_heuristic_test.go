@@ -81,6 +81,63 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:     "join two tables, use index",
+			snapshot: "tables_indexes_data",
+			query:    "SELECT student_name, department_name FROM students JOIN departments ON major_id = department_id WHERE student_id = 200588",
+			planInfo: plan.Info{
+				NodeType:      "Project",
+				Conditions:    map[string][]string{"fields": {"student_name", "department_name"}},
+				BlockAccessed: 8,
+				RecordsOutput: 0,
+				Children: []plan.Info{
+					{
+						NodeType:      "Select",
+						Conditions:    map[string][]string{"predicate": {"major_id=department_id"}},
+						BlockAccessed: 8,
+						RecordsOutput: 0,
+						Children: []plan.Info{
+							{
+								NodeType:      "IndexJoin",
+								Conditions:    map[string][]string{"index": {"departments_pkey"}, "field": {"major_id"}},
+								BlockAccessed: 8,
+								RecordsOutput: 4,
+								Children: []plan.Info{
+									{
+										NodeType:      "Select",
+										Conditions:    map[string][]string{"predicate": {"student_id=200588"}},
+										BlockAccessed: 2,
+										RecordsOutput: 2,
+										Children: []plan.Info{
+											{
+												NodeType:      "IndexSelect",
+												Conditions:    map[string][]string{"index": {"students_pkey"}, "value": {"200588"}},
+												BlockAccessed: 2,
+												RecordsOutput: 2,
+												Children: []plan.Info{
+													{
+														NodeType:      "Table",
+														Conditions:    map[string][]string{"table": {"students"}},
+														BlockAccessed: 770,
+														RecordsOutput: 10000,
+													},
+												},
+											},
+										},
+									},
+									{
+										NodeType:      "Table",
+										Conditions:    map[string][]string{"table": {"departments"}},
+										BlockAccessed: 6,
+										RecordsOutput: 100,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			transaction.CleanupLockTable(t)
