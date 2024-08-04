@@ -372,6 +372,11 @@ func (h HeuristicQueryPlanner) CreatePlan(d *parse.QueryData, tx *transaction.Tr
 		}
 	}
 
+	// Step4 sort
+	if d.Order() != nil {
+		currentPlan = NewSortPlan(tx, currentPlan, d.Order())
+	}
+
 	return NewProjectPlan(currentPlan, d.Fields()), nil
 }
 

@@ -423,6 +423,10 @@ func (d QueryData) Predicate() query.Predicate {
 	return d.pred
 }
 
+func (d QueryData) Order() query.Order {
+	return d.order
+}
+
 func (d QueryData) String() string {
 	var b strings.Builder
 	b.WriteString("SELECT ")

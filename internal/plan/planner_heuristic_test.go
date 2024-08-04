@@ -186,6 +186,33 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:     "sort",
+			snapshot: "tables_data",
+			query:    "SELECT name FROM students ORDER BY name",
+			planInfo: plan.Info{
+				NodeType:      "Project",
+				Conditions:    map[string][]string{"fields": {"name"}},
+				BlockAccessed: 750,
+				RecordsOutput: 10000,
+				Children: []plan.Info{
+					{
+						NodeType:      "Sort",
+						Conditions:    map[string][]string{"sortFields": {"name"}},
+						BlockAccessed: 750,
+						RecordsOutput: 10000,
+						Children: []plan.Info{
+							{
+								NodeType:      "Table",
+								Conditions:    map[string][]string{"table": {"students"}},
+								BlockAccessed: 770,
+								RecordsOutput: 10000,
+							},
+						},
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			transaction.CleanupLockTable(t)
