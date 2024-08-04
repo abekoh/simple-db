@@ -47,6 +47,15 @@ func TestParser_Query(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "SELECT product",
+			s:    "SELECT a, x FROM mytable1, mytable2",
+			want: &QueryData{
+				fields: []schema.FieldName{"a", "x"},
+				tables: []string{"mytable1", "mytable2"},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
