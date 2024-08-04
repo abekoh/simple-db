@@ -446,16 +446,16 @@ const (
 	Desc
 )
 
-type Comparator struct {
+type Order struct {
 	fields    []schema.FieldName
 	orderType OrderType
 }
 
-func NewComparator(fields []schema.FieldName) *Comparator {
-	return &Comparator{fields: fields, orderType: Asc}
+func NewOrder(fields []schema.FieldName) *Order {
+	return &Order{fields: fields, orderType: Asc}
 }
 
-func (c Comparator) Compare(s1, s2 Scan) (int, error) {
+func (c Order) Compare(s1, s2 Scan) (int, error) {
 	for _, fld := range c.fields {
 		val1, err := s1.Val(fld)
 		if err != nil {

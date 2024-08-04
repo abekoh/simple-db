@@ -14,13 +14,13 @@ type SortPlan struct {
 	p          Plan
 	sche       schema.Schema
 	sortFields []schema.FieldName
-	comparator *query.Comparator
+	comparator *query.Order
 }
 
 var _ Plan = (*SortPlan)(nil)
 
 func NewSortPlan(tx *transaction.Transaction, p Plan, sortFields []schema.FieldName) *SortPlan {
-	return &SortPlan{tx: tx, p: p, sche: *p.Schema(), sortFields: sortFields, comparator: query.NewComparator(sortFields)}
+	return &SortPlan{tx: tx, p: p, sche: *p.Schema(), sortFields: sortFields, comparator: query.NewOrder(sortFields)}
 }
 
 func (s SortPlan) Result() {}
@@ -89,7 +89,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 			}
 			cmpRes, err := s.comparator.Compare(src, currentScan)
 			if err != nil {
-				return nil, fmt.Errorf("NewComparator.Compare error: %w", err)
+				return nil, fmt.Errorf("NewOrder.Compare error: %w", err)
 			}
 			if cmpRes < 0 {
 				if err := currentScan.Close(); err != nil {
@@ -145,7 +145,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 			for ok1 && ok2 {
 				cmpRes, err := s.comparator.Compare(src1, src2)
 				if err != nil {
-					return nil, fmt.Errorf("NewComparator.Compare error: %w", err)
+					return nil, fmt.Errorf("NewOrder.Compare error: %w", err)
 				}
 				if cmpRes < 0 {
 					ok1, err = s.copy(src1, dest)
@@ -190,7 +190,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 		}
 		runs = newRuns
 	}
-	newScan, err := NewSortScan(runs, query.NewComparator(s.sortFields))
+	newScan, err := NewSortScan(runs, query.NewOrder(s.sortFields))
 	if err != nil {
 		return nil, fmt.Errorf("NewSortScan error: %w", err)
 	}
@@ -235,14 +235,14 @@ func (s SortPlan) copy(src query.Scan, dest query.UpdateScan) (bool, error) {
 
 type SortScan struct {
 	s1, s2, currentScan            query.UpdateScan
-	comparator                     *query.Comparator
+	order                          *query.Order
 	hasMore1, hasMore2             bool
 	savedPosition1, savedPosition2 *schema.RID
 }
 
 var _ query.Scan = (*SortScan)(nil)
 
-func NewSortScan(runs []TempTable, comperator *query.Comparator) (*SortScan, error) {
+func NewSortScan(runs []TempTable, order *query.Order) (*SortScan, error) {
 	if len(runs) == 0 || len(runs) > 2 {
 		return nil, fmt.Errorf("runs length error")
 	}
@@ -270,11 +270,11 @@ func NewSortScan(runs []TempTable, comperator *query.Comparator) (*SortScan, err
 		hasMore2 = ok
 	}
 	return &SortScan{
-		s1:         s1,
-		s2:         s2,
-		comparator: comperator,
-		hasMore1:   hasMore1,
-		hasMore2:   hasMore2,
+		s1:       s1,
+		s2:       s2,
+		order:    order,
+		hasMore1: hasMore1,
+		hasMore2: hasMore2,
 	}, nil
 }
 
@@ -327,7 +327,7 @@ func (s *SortScan) Next() (bool, error) {
 	if !s.hasMore1 && !s.hasMore2 {
 		return false, nil
 	} else if s.hasMore1 && s.hasMore2 {
-		cmpRes, err := s.comparator.Compare(s.s1, s.s2)
+		cmpRes, err := s.order.Compare(s.s1, s.s2)
 		if err != nil {
 			return false, fmt.Errorf("comparator.Compare error: %w", err)
 		}
