@@ -11,7 +11,10 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
-const maxTableNameLength = 16
+const (
+	maxTableNameLength = 32
+	maxFieldNameLength = 32
+)
 
 const (
 	tableCatalogTableName = "table_catalog"
@@ -315,7 +318,7 @@ type ViewManager struct {
 func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Transaction) (*ViewManager, error) {
 	if isNew {
 		s := schema.NewSchema()
-		s.AddStrField(viewNameField, maxTableNameLength)
+		s.AddStrField(viewNameField, maxFieldNameLength)
 		s.AddStrField(viewDefField, maxViewDef)
 		if err := tableManager.CreateTable(viewCatalogTableName, s, tx); err != nil {
 			return nil, fmt.Errorf("create view catalog error: %w", err)
@@ -459,9 +462,9 @@ type IndexManager struct {
 func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatManager, tx *transaction.Transaction, cfg *Config) (*IndexManager, error) {
 	if isNew {
 		s := schema.NewSchema()
-		s.AddStrField(indexNameField, maxTableNameLength)
-		s.AddStrField(tableNameField, maxTableNameLength)
-		s.AddStrField(fieldNameField, maxTableNameLength)
+		s.AddStrField(indexNameField, maxFieldNameLength)
+		s.AddStrField(tableNameField, maxFieldNameLength)
+		s.AddStrField(fieldNameField, maxFieldNameLength)
 		if err := tableManager.CreateTable(indexCatalogTableName, s, tx); err != nil {
 			return nil, fmt.Errorf("create index catalog error: %w", err)
 		}

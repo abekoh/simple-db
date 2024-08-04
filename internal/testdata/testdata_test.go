@@ -36,9 +36,9 @@ func TestCreateTestdata(t *testing.T) {
 	w, c := writer("create_tables.sql")
 	defer c()
 	w("CREATE TABLE departments (department_id INT, department_name VARCHAR(10));")
-	w("CREATE TABLE students (student_id INT, name VARCHAR(10), major_id INT, grad_year INT);")
-	w("CREATE TABLE courses(course_id INT, title VARCHAR(20), department_id INT);")
-	w("CREATE TABLE sections(section_id INT, course_id INT, professor VARCHAR(8), year_offered int)")
+	w("CREATE TABLE students (student_id INT, name VARCHAR(10), major_department_id INT, grad_year INT);")
+	w("CREATE TABLE courses(course_id INT, title VARCHAR(20), course_department_id INT);")
+	w("CREATE TABLE sections(section_id INT, section_course_id INT, professor VARCHAR(8), year_offered int)")
 
 	w, c = writer("create_indexes.sql")
 	defer c()
@@ -46,6 +46,9 @@ func TestCreateTestdata(t *testing.T) {
 	w("CREATE INDEX students_pkey ON students (student_id);")
 	w("CREATE INDEX courses_pkey ON courses (course_id);")
 	w("CREATE INDEX sections_pkey ON sections (section_id);")
+	w("CREATE INDEX students_major_department_id ON students (major_department_id);")
+	w("CREATE INDEX courses_course_department_id ON courses (course_department_id);")
+	w("CREATE INDEX sections_section_course_id ON sections (section_course_id);")
 
 	faker := gofakeit.New(523207)
 
