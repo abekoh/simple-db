@@ -401,9 +401,16 @@ func (g GroupByPlan) Schema() *schema.Schema {
 }
 
 func (g GroupByPlan) Info() Info {
+	conditions := make(map[string][]string)
+	for _, f := range g.groupFields {
+		conditions["groupFields"] = append(conditions["groupFields"], string(f))
+	}
+	for _, f := range g.aggregationFuncs {
+		conditions["aggregationFuncs"] = append(conditions["aggregationFuncs"], f.String())
+	}
 	return Info{
 		NodeType:      "GroupBy",
-		Condition:     fmt.Sprintf("groupFields=%v, aggregationFuncs=%v", g.groupFields, g.aggregationFuncs),
+		Conditions:    conditions,
 		BlockAccessed: g.BlockAccessed(),
 		RecordsOutput: g.RecordsOutput(),
 		Children:      []Info{g.Info()},

@@ -2,7 +2,6 @@ package plan
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/abekoh/simple-db/internal/index"
 	"github.com/abekoh/simple-db/internal/metadata"
@@ -44,11 +43,11 @@ const (
 )
 
 type Info struct {
-	NodeType      string `json:"nodeType"`
-	Condition     string `json:"condition,omitempty"`
-	BlockAccessed int    `json:"blockAccessed"`
-	RecordsOutput int    `json:"recordsOutput"`
-	Children      []Info `json:"children,omitempty"`
+	NodeType      string              `json:"nodeType"`
+	Conditions    map[string][]string `json:"conditions,omitempty"`
+	BlockAccessed int                 `json:"blockAccessed"`
+	RecordsOutput int                 `json:"recordsOutput"`
+	Children      []Info              `json:"children,omitempty"`
 }
 
 type Plan interface {
@@ -123,8 +122,10 @@ func (t TablePlan) SwapParams(params map[int]schema.Constant) (statement.Bound, 
 
 func (t TablePlan) Info() Info {
 	return Info{
-		NodeType:      "Table",
-		Condition:     fmt.Sprintf("tableName=%s", t.tableName),
+		NodeType: "Table",
+		Conditions: map[string][]string{
+			"tableName": {t.tableName},
+		},
 		BlockAccessed: t.BlockAccessed(),
 		RecordsOutput: t.RecordsOutput(),
 	}
@@ -268,8 +269,10 @@ func (s SelectPlan) Schema() *schema.Schema {
 
 func (s SelectPlan) Info() Info {
 	return Info{
-		NodeType:      "Select",
-		Condition:     s.pred.String(),
+		NodeType: "Select",
+		Conditions: map[string][]string{
+			"predicate": {s.pred.String()},
+		},
 		BlockAccessed: s.BlockAccessed(),
 		RecordsOutput: s.RecordsOutput(),
 		Children: []Info{
@@ -363,13 +366,13 @@ func (p ProjectPlan) SwapParams(params map[int]schema.Constant) (statement.Bound
 }
 
 func (p ProjectPlan) Info() Info {
-	fields := make([]string, len(p.sche.FieldNames()))
-	for i, f := range p.sche.FieldNames() {
-		fields[i] = string(f)
+	conditions := make(map[string][]string)
+	for _, name := range p.sche.FieldNames() {
+		conditions["fieldNames"] = append(conditions["fieldNames"], string(name))
 	}
 	return Info{
 		NodeType:      "Project",
-		Condition:     strings.Join(fields, ", "),
+		Conditions:    conditions,
 		BlockAccessed: p.BlockAccessed(),
 		RecordsOutput: p.RecordsOutput(),
 		Children: []Info{
@@ -446,8 +449,11 @@ func (i IndexSelectPlan) Schema() *schema.Schema {
 
 func (i IndexSelectPlan) Info() Info {
 	return Info{
-		NodeType:      "IndexSelect",
-		Condition:     fmt.Sprintf("indexName=%s, value=%s", i.indexInfo.IndexName(), i.val),
+		NodeType: "IndexSelect",
+		Conditions: map[string][]string{
+			"indexName": {i.indexInfo.IndexName()},
+			"value":     {i.val.String()},
+		},
 		BlockAccessed: i.BlockAccessed(),
 		RecordsOutput: i.RecordsOutput(),
 		Children: []Info{
@@ -476,8 +482,11 @@ func (i IndexJoinPlan) Result() {}
 
 func (i IndexJoinPlan) Info() Info {
 	return Info{
-		NodeType:      "IndexJoin",
-		Condition:     fmt.Sprintf("indexName=%s, joinField=%s", i.indexInfo.IndexName(), i.joinField),
+		NodeType: "IndexJoin",
+		Conditions: map[string][]string{
+			"indexName": {i.indexInfo.IndexName()},
+			"joinField": {string(i.joinField)},
+		},
 		BlockAccessed: i.BlockAccessed(),
 		RecordsOutput: i.RecordsOutput(),
 		Children: []Info{

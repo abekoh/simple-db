@@ -2,7 +2,6 @@ package plan
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record/schema"
@@ -64,13 +63,13 @@ func NewSortPlan(tx *transaction.Transaction, p Plan, sortFields []schema.FieldN
 func (s SortPlan) Result() {}
 
 func (s SortPlan) Info() Info {
-	fields := make([]string, len(s.sortFields))
-	for i, f := range s.sortFields {
-		fields[i] = string(f)
+	conditions := make(map[string][]string)
+	for _, fld := range s.sortFields {
+		conditions["sortFields"] = append(conditions["sortFields"], string(fld))
 	}
 	return Info{
 		NodeType:      "Sort",
-		Condition:     fmt.Sprintf("sortFields=%v", strings.Join(fields, ",")),
+		Conditions:    conditions,
 		BlockAccessed: s.BlockAccessed(),
 		RecordsOutput: s.RecordsOutput(),
 		Children:      []Info{s.p.Info()},
