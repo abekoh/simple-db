@@ -449,8 +449,8 @@ const (
 type (
 	Order        []OrderElement
 	OrderElement struct {
-		field     schema.FieldName
-		orderType OrderType
+		Field     schema.FieldName
+		OrderType OrderType
 	}
 )
 
@@ -460,17 +460,17 @@ func NewOrder(elements ...OrderElement) Order {
 
 func (o Order) Compare(s1, s2 Scan) (int, error) {
 	for _, el := range o {
-		val1, err := s1.Val(el.field)
+		val1, err := s1.Val(el.Field)
 		if err != nil {
 			return 0, fmt.Errorf("s1.Val error: %w", err)
 		}
-		val2, err := s2.Val(el.field)
+		val2, err := s2.Val(el.Field)
 		if err != nil {
 			return 0, fmt.Errorf("s2.Val error: %w", err)
 		}
 		cmp := val1.Compare(val2)
 		if cmp != 0 {
-			if el.orderType == Desc {
+			if el.OrderType == Desc {
 				cmp = -cmp
 			}
 			return cmp, nil

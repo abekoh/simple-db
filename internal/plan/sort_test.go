@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/plan"
+	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/simpledb"
@@ -57,7 +58,7 @@ func TestSortPlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sortPlan := plan.NewSortPlan(tx, tablePlan, []schema.FieldName{"B"})
+	sortPlan := plan.NewSortPlan(tx, tablePlan, query.Order{query.OrderElement{Field: "B", OrderType: query.Asc}})
 	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"B"})
 	queryScan, err := projectPlan.Open()
 	if err != nil {

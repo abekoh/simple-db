@@ -170,8 +170,8 @@ type MergeJoinPlan struct {
 var _ Plan = (*MergeJoinPlan)(nil)
 
 func NewMergeJoinPlan(tx *transaction.Transaction, p1, p2 Plan, fieldName1, fieldName2 schema.FieldName) (*MergeJoinPlan, error) {
-	sp1 := NewSortPlan(tx, p1, []schema.FieldName{fieldName1})
-	sp2 := NewSortPlan(tx, p2, []schema.FieldName{fieldName2})
+	sp1 := NewSortPlan(tx, p1, query.Order{query.OrderElement{Field: fieldName1, OrderType: query.Asc}})
+	sp2 := NewSortPlan(tx, p2, query.Order{query.OrderElement{Field: fieldName2, OrderType: query.Asc}})
 	sche := schema.NewSchema()
 	sche.AddAll(*p1.Schema())
 	sche.AddAll(*p2.Schema())

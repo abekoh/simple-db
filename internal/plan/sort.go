@@ -14,13 +14,17 @@ type SortPlan struct {
 	p          Plan
 	sche       schema.Schema
 	sortFields []schema.FieldName
-	comparator *query.Order
+	order      query.Order
 }
 
 var _ Plan = (*SortPlan)(nil)
 
-func NewSortPlan(tx *transaction.Transaction, p Plan, sortFields []schema.FieldName) *SortPlan {
-	return &SortPlan{tx: tx, p: p, sche: *p.Schema(), sortFields: sortFields, comparator: query.NewOrder(sortFields)}
+func NewSortPlan(tx *transaction.Transaction, p Plan, order query.Order) *SortPlan {
+	sortFields := make([]schema.FieldName, 0)
+	for _, el := range order {
+		sortFields = append(sortFields, el.Field)
+	}
+	return &SortPlan{tx: tx, p: p, sche: *p.Schema(), sortFields: sortFields, order: order}
 }
 
 func (s SortPlan) Result() {}
@@ -53,7 +57,7 @@ func (s SortPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, e
 		return nil, fmt.Errorf("bound.(*plan.BoundPlan) error")
 	}
 	return &BoundPlan{
-		Plan: NewSortPlan(s.tx, bp, s.sortFields),
+		Plan: NewSortPlan(s.tx, bp, s.order),
 	}, nil
 }
 
@@ -87,7 +91,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 			if !ok {
 				break
 			}
-			cmpRes, err := s.comparator.Compare(src, currentScan)
+			cmpRes, err := s.order.Compare(src, currentScan)
 			if err != nil {
 				return nil, fmt.Errorf("NewOrder.Compare error: %w", err)
 			}
@@ -143,7 +147,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 				return nil, fmt.Errorf("src2.Next error: %w", err)
 			}
 			for ok1 && ok2 {
-				cmpRes, err := s.comparator.Compare(src1, src2)
+				cmpRes, err := s.order.Compare(src1, src2)
 				if err != nil {
 					return nil, fmt.Errorf("NewOrder.Compare error: %w", err)
 				}
@@ -190,7 +194,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 		}
 		runs = newRuns
 	}
-	newScan, err := NewSortScan(runs, query.NewOrder(s.sortFields))
+	newScan, err := NewSortScan(runs, s.order)
 	if err != nil {
 		return nil, fmt.Errorf("NewSortScan error: %w", err)
 	}
@@ -235,14 +239,14 @@ func (s SortPlan) copy(src query.Scan, dest query.UpdateScan) (bool, error) {
 
 type SortScan struct {
 	s1, s2, currentScan            query.UpdateScan
-	order                          *query.Order
+	order                          query.Order
 	hasMore1, hasMore2             bool
 	savedPosition1, savedPosition2 *schema.RID
 }
 
 var _ query.Scan = (*SortScan)(nil)
 
-func NewSortScan(runs []TempTable, order *query.Order) (*SortScan, error) {
+func NewSortScan(runs []TempTable, order query.Order) (*SortScan, error) {
 	if len(runs) == 0 || len(runs) > 2 {
 		return nil, fmt.Errorf("runs length error")
 	}

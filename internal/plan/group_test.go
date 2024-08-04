@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/plan"
+	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/simpledb"
@@ -81,7 +82,7 @@ func TestGroupByPlan(t *testing.T) {
 			plan.NewSumFunc("score", "sum_score"),
 		},
 	)
-	sortPlan := plan.NewSortPlan(tx, groupByPlan, []schema.FieldName{"department"})
+	sortPlan := plan.NewSortPlan(tx, groupByPlan, query.Order{query.OrderElement{Field: "department", OrderType: query.Asc}})
 	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"department", "count_score", "max_score", "min_score"})
 
 	queryScan, err := projectPlan.Open()

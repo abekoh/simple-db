@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/plan"
+	"github.com/abekoh/simple-db/internal/query"
 	"github.com/abekoh/simple-db/internal/record"
 	"github.com/abekoh/simple-db/internal/record/schema"
 	"github.com/abekoh/simple-db/internal/simpledb"
@@ -120,7 +121,7 @@ func TestMergeJoinPlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sortPlan := plan.NewSortPlan(tx, joinPlan, []schema.FieldName{"student_name"})
+	sortPlan := plan.NewSortPlan(tx, joinPlan, query.Order{query.OrderElement{Field: "student_name", OrderType: query.Asc}})
 	projectPlan := plan.NewProjectPlan(sortPlan, []schema.FieldName{"student_name", "department_name"})
 
 	queryScan, err := projectPlan.Open()

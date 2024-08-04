@@ -337,8 +337,15 @@ func NewGroupByPlan(tx *transaction.Transaction, p Plan, groupFields []schema.Fi
 	for _, f := range aggregationFuncs {
 		s.AddInt32Field(f.AliasName())
 	}
+	order := make(query.Order, len(groupFields))
+	for i, f := range groupFields {
+		order[i] = query.OrderElement{
+			Field:     f,
+			OrderType: query.Asc,
+		}
+	}
 	return &GroupByPlan{
-		p:                NewSortPlan(tx, p, groupFields),
+		p:                NewSortPlan(tx, p, order),
 		groupFields:      groupFields,
 		aggregationFuncs: aggregationFuncs,
 		sche:             s,
