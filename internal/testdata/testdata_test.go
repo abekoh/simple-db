@@ -69,7 +69,7 @@ func TestCreateTestdata(t *testing.T) {
 		studentLength = 10000
 	)
 	for i := 1; i <= studentLength; i++ {
-		w(fmt.Sprintf("INSERT INTO students (student_id, name, major_id, grad_year) VALUES (%d, '%s', %d, %d);", studentOffset+i, faker.FirstName(), faker.Number(departmentOffset, departmentOffset+departmentLength-1), faker.Year()))
+		w(fmt.Sprintf("INSERT INTO students (student_id, name, major_department_id, grad_year) VALUES (%d, '%s', %d, %d);", studentOffset+i, faker.FirstName(), faker.Number(departmentOffset, departmentOffset+departmentLength-1), faker.Year()))
 	}
 
 	w("-- courses")
@@ -81,7 +81,7 @@ func TestCreateTestdata(t *testing.T) {
 	for i := 1; i <= departmentLength; i++ {
 		sectionN := faker.Number(0, len(sectionTitles))
 		for j := 0; j < sectionN; j++ {
-			w(fmt.Sprintf("INSERT INTO courses (course_id, title, department_id) VALUES (%d, '%s', %d);", courseOffset+courseCount, sectionTitles[j], departmentOffset+i))
+			w(fmt.Sprintf("INSERT INTO courses (course_id, title, course_department_id) VALUES (%d, '%s', %d);", courseOffset+courseCount, sectionTitles[j], departmentOffset+i))
 			courseCount++
 		}
 	}
@@ -92,7 +92,7 @@ func TestCreateTestdata(t *testing.T) {
 	)
 	sectionCount := 1
 	for i := 1; i <= courseCount; i++ {
-		w(fmt.Sprintf("INSERT INTO sections (section_id, course_id, professor, year_offered) VALUES (%d, %d, '%s', %d);", sectionOffset+sectionCount, courseOffset+i, faker.FirstName(), faker.Year()))
+		w(fmt.Sprintf("INSERT INTO sections (section_id, section_course_id, professor, year_offered) VALUES (%d, %d, '%s', %d);", sectionOffset+sectionCount, courseOffset+i, faker.FirstName(), faker.Year()))
 		sectionCount++
 	}
 }
@@ -149,7 +149,7 @@ func TestCreateSnapshots(t *testing.T) {
 		createSnapshot(t, "snapshots/tables", "create_tables.sql")
 	})
 	t.Run("snapshots/tables_data", func(t *testing.T) {
-		t.Skip()
+		//t.Skip()
 		transaction.CleanupLockTable(t)
 		createSnapshot(t, "snapshots/tables_data", "create_tables.sql", "insert_data.sql")
 	})
