@@ -36,7 +36,7 @@ func TestCreateTestdata(t *testing.T) {
 	w, c := writer("create_tables.sql")
 	defer c()
 	w("CREATE TABLE departments (department_id INT, department_name VARCHAR(10));")
-	w("CREATE TABLE students (student_id INT, name VARCHAR(10), major_department_id INT, grad_year INT);")
+	w("CREATE TABLE students (student_id INT, name VARCHAR(10), major_id INT, grad_year INT);")
 	w("CREATE TABLE courses(course_id INT, title VARCHAR(20), course_department_id INT);")
 	w("CREATE TABLE sections(section_id INT, section_course_id INT, professor VARCHAR(8), year_offered int)")
 
@@ -69,7 +69,7 @@ func TestCreateTestdata(t *testing.T) {
 		studentLength = 10000
 	)
 	for i := 1; i <= studentLength; i++ {
-		w(fmt.Sprintf("INSERT INTO students (student_id, name, major_department_id, grad_year) VALUES (%d, '%s', %d, %d);", studentOffset+i, faker.FirstName(), faker.Number(departmentOffset, departmentOffset+departmentLength-1), faker.Year()))
+		w(fmt.Sprintf("INSERT INTO students (student_id, name, major_id, grad_year) VALUES (%d, '%s', %d, %d);", studentOffset+i, faker.FirstName(), faker.Number(departmentOffset, departmentOffset+departmentLength-1), faker.Year()))
 	}
 
 	w("-- courses")
@@ -154,7 +154,7 @@ func TestCreateSnapshots(t *testing.T) {
 		createSnapshot(t, "snapshots/tables_data", "create_tables.sql", "insert_data.sql")
 	})
 	t.Run("snapshots/tables_indexes_data", func(t *testing.T) {
-		t.Skip()
+		//t.Skip()
 		transaction.CleanupLockTable(t)
 		createSnapshot(t, "snapshots/tables_indexes_data", "create_tables.sql", "create_indexes.sql", "insert_data.sql")
 	})
