@@ -4,29 +4,53 @@ import (
 	"context"
 	"testing"
 
+	"github.com/abekoh/simple-db/internal/plan"
 	"github.com/abekoh/simple-db/internal/simpledb"
 	"github.com/abekoh/simple-db/internal/testdata"
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
-func TestHeuristicQueryPlanner(t *testing.T) {
-	transaction.CleanupLockTable(t)
-	ctx := context.Background()
-	dir := t.TempDir()
-	if err := testdata.CopySnapshotData("tables_indexes_data", dir); err != nil {
-		t.Fatal(err)
+func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
+	type test struct {
+		name     string
+		snapshot string
+		query    string
+		planStr  string
 	}
-	db, err := simpledb.New(ctx, dir)
-	if err != nil {
-		t.Fatal(err)
+	for _, tt := range []test{
+		{
+			name:     "one table, use index",
+			snapshot: "tables_indexes_data",
+			query:    "SELECT student_name FROM students WHERE student_id = 200588",
+			planStr:  "Project{student_name}(Select{student_id=200588}(IndexSelect{student_id=200588(students_pkey)}(Table{students})))",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			transaction.CleanupLockTable(t)
+			ctx := context.Background()
+			dir := t.TempDir()
+			if err := testdata.CopySnapshotData(tt.snapshot, dir); err != nil {
+				t.Fatal(err)
+			}
+			db, err := simpledb.New(ctx, dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tx, err := db.NewTx(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			res, err := db.Planner().Execute(tt.query, tx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p, ok := res.(plan.Plan)
+			if !ok {
+				t.Fatalf("unexpected type %T", res)
+			}
+			if got, want := p.String(), tt.planStr; got != want {
+				t.Errorf("got %s, want %s", got, want)
+			}
+		})
 	}
-	tx, err := db.NewTx(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	res, err := db.Planner().Execute("SELECT table_name FROM table_catalog", tx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_ = res
 }
