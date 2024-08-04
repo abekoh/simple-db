@@ -17,12 +17,12 @@ const (
 )
 
 type Comparator struct {
-	fields   []schema.FieldName
-	sortType OrderType
+	fields    []schema.FieldName
+	orderType OrderType
 }
 
 func NewComparator(fields []schema.FieldName) *Comparator {
-	return &Comparator{fields: fields, sortType: Asc}
+	return &Comparator{fields: fields, orderType: Asc}
 }
 
 func (c Comparator) Compare(s1, s2 query.Scan) (int, error) {
@@ -37,7 +37,7 @@ func (c Comparator) Compare(s1, s2 query.Scan) (int, error) {
 		}
 		cmp := val1.Compare(val2)
 		if cmp != 0 {
-			if c.sortType == Desc {
+			if c.orderType == Desc {
 				cmp = -cmp
 			}
 			return cmp, nil
