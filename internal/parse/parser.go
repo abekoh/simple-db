@@ -37,6 +37,9 @@ func (p *Parser) selectList() ([]schema.FieldName, []query.AggregationFunc, toke
 		}
 		fields = append(fields, schema.FieldName(tok.literal))
 	}
+	if len(aggregationFuncs) == 0 {
+		aggregationFuncs = nil
+	}
 	return fields, aggregationFuncs, tok, nil
 }
 
