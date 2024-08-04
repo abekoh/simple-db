@@ -13,6 +13,13 @@ import (
 
 const maxTableNameLength = 16
 
+const (
+	tableCatalogTableName = "table_catalog"
+	fieldCatalogTableName = "field_catalog"
+	viewCatalogTableName  = "view_catalog"
+	indexCatalogTableName = "index_catalog"
+)
+
 type TableManager struct {
 	tableCatalogLayout *record.Layout
 	fieldCatalogLayout *record.Layout
@@ -35,10 +42,10 @@ func NewTableManager(isNew bool, tx *transaction.Transaction) (*TableManager, er
 	m.fieldCatalogLayout = record.NewLayoutSchema(fieldCatalogSchema)
 
 	if isNew {
-		if err := m.CreateTable("table_catalog", tableCatalogSchema, tx); err != nil {
+		if err := m.CreateTable(tableCatalogTableName, tableCatalogSchema, tx); err != nil {
 			return nil, fmt.Errorf("create table catalog error: %w", err)
 		}
-		if err := m.CreateTable("field_catalog", fieldCatalogSchema, tx); err != nil {
+		if err := m.CreateTable(fieldCatalogTableName, fieldCatalogSchema, tx); err != nil {
 			return nil, fmt.Errorf("create field catalog error: %w", err)
 		}
 	}
@@ -48,7 +55,7 @@ func NewTableManager(isNew bool, tx *transaction.Transaction) (*TableManager, er
 
 func (m *TableManager) CreateTable(tableName string, schema schema.Schema, tx *transaction.Transaction) error {
 	layout := record.NewLayoutSchema(schema)
-	tableCatalog, err := record.NewTableScan(tx, "table_catalog", m.tableCatalogLayout)
+	tableCatalog, err := record.NewTableScan(tx, tableCatalogTableName, m.tableCatalogLayout)
 	if err != nil {
 		return fmt.Errorf("table catalog scan error: %w", err)
 	}
@@ -65,7 +72,7 @@ func (m *TableManager) CreateTable(tableName string, schema schema.Schema, tx *t
 		return fmt.Errorf("table catalog close error: %w", err)
 	}
 
-	fieldCatalog, err := record.NewTableScan(tx, "field_catalog", m.fieldCatalogLayout)
+	fieldCatalog, err := record.NewTableScan(tx, fieldCatalogTableName, m.fieldCatalogLayout)
 	if err != nil {
 		return fmt.Errorf("field catalog scan error: %w", err)
 	}
@@ -101,7 +108,7 @@ func (m *TableManager) CreateTable(tableName string, schema schema.Schema, tx *t
 
 func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*record.Layout, error) {
 	var size int32 = -1
-	tableCatalog, err := record.NewTableScan(tx, "table_catalog", m.tableCatalogLayout)
+	tableCatalog, err := record.NewTableScan(tx, tableCatalogTableName, m.tableCatalogLayout)
 	if err != nil {
 		return nil, fmt.Errorf("table catalog scan error: %w", err)
 	}
@@ -130,7 +137,7 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 
 	sche := schema.NewSchema()
 	offsets := make(map[schema.FieldName]int32)
-	fieldCatalog, err := record.NewTableScan(tx, "field_catalog", m.fieldCatalogLayout)
+	fieldCatalog, err := record.NewTableScan(tx, fieldCatalogTableName, m.fieldCatalogLayout)
 	if err != nil {
 		return nil, fmt.Errorf("field catalog scan error: %w", err)
 	}
@@ -210,7 +217,7 @@ func (m *StatManager) refresh(tx *transaction.Transaction) error {
 	defer m.tableStatsMu.Unlock()
 	m.numCalls.Store(0)
 	m.tableStats = make(map[string]StatInfo)
-	tableCatalog, err := record.NewTableScan(tx, "table_catalog", m.tableManager.tableCatalogLayout)
+	tableCatalog, err := record.NewTableScan(tx, tableCatalogTableName, m.tableManager.tableCatalogLayout)
 	if err != nil {
 		return fmt.Errorf("table catalog scan error: %w", err)
 	}
@@ -228,7 +235,7 @@ func (m *StatManager) refresh(tx *transaction.Transaction) error {
 		if err != nil {
 			return fmt.Errorf("layout error: %w", err)
 		}
-		stat, err := m.calcStats(name, layout, tx)
+		stat, err := m.calcTableStats(name, layout, tx)
 		if err != nil {
 			return fmt.Errorf("calc stats error: %w", err)
 		}
@@ -240,7 +247,7 @@ func (m *StatManager) refresh(tx *transaction.Transaction) error {
 	return nil
 }
 
-func (m *StatManager) calcStats(tableName string, layout *record.Layout, tx *transaction.Transaction) (StatInfo, error) {
+func (m *StatManager) calcTableStats(tableName string, layout *record.Layout, tx *transaction.Transaction) (StatInfo, error) {
 	numRecs := 0
 	numBlocks := 0
 	scan, err := record.NewTableScan(tx, tableName, layout)
@@ -248,9 +255,11 @@ func (m *StatManager) calcStats(tableName string, layout *record.Layout, tx *tra
 		return StatInfo{}, fmt.Errorf("table scan error: %w", err)
 	}
 	for {
-		if ok, err := scan.Next(); err != nil {
+		ok, err := scan.Next()
+		if err != nil {
 			return StatInfo{}, fmt.Errorf("scan next error: %w", err)
-		} else if !ok {
+		}
+		if !ok {
 			break
 		}
 		numRecs++
@@ -273,7 +282,7 @@ func (m *StatManager) StatInfo(tableName string, layout *record.Layout, tx *tran
 	statInfo, ok := m.tableStats[tableName]
 	m.tableStatsMu.RUnlock()
 	if !ok {
-		si, err := m.calcStats(tableName, layout, tx)
+		si, err := m.calcTableStats(tableName, layout, tx)
 		if err != nil {
 			return StatInfo{}, fmt.Errorf("calc stats error: %w", err)
 		}
@@ -296,7 +305,7 @@ func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Tran
 		s := schema.NewSchema()
 		s.AddStrField("view_name", maxTableNameLength)
 		s.AddStrField("view_def", maxViewDef)
-		if err := tableManager.CreateTable("view_catalog", s, tx); err != nil {
+		if err := tableManager.CreateTable(viewCatalogTableName, s, tx); err != nil {
 			return nil, fmt.Errorf("create view catalog error: %w", err)
 		}
 	}
@@ -304,11 +313,11 @@ func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Tran
 }
 
 func (m *ViewManager) CreateView(viewName, viewDef string, tx *transaction.Transaction) error {
-	layout, err := m.tableManager.Layout("view_catalog", tx)
+	layout, err := m.tableManager.Layout(viewCatalogTableName, tx)
 	if err != nil {
 		return fmt.Errorf("layout error: %w", err)
 	}
-	scan, err := record.NewTableScan(tx, "view_catalog", layout)
+	scan, err := record.NewTableScan(tx, viewCatalogTableName, layout)
 	if err != nil {
 		return fmt.Errorf("table scan error: %w", err)
 	}
@@ -332,11 +341,11 @@ func (m *ViewManager) ViewDef(viewName string, tx *transaction.Transaction) (str
 		res   string
 		found bool
 	)
-	layout, err := m.tableManager.Layout("view_catalog", tx)
+	layout, err := m.tableManager.Layout(viewCatalogTableName, tx)
 	if err != nil {
 		return "", false, fmt.Errorf("layout error: %w", err)
 	}
-	scan, err := record.NewTableScan(tx, "view_catalog", layout)
+	scan, err := record.NewTableScan(tx, viewCatalogTableName, layout)
 	if err != nil {
 		return "", false, fmt.Errorf("table scan error: %w", err)
 	}
@@ -441,11 +450,11 @@ func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatMa
 		s.AddStrField("index_name", maxTableNameLength)
 		s.AddStrField("table_name", maxTableNameLength)
 		s.AddStrField("field_name", maxTableNameLength)
-		if err := tableManager.CreateTable("index_catalog", s, tx); err != nil {
+		if err := tableManager.CreateTable(indexCatalogTableName, s, tx); err != nil {
 			return nil, fmt.Errorf("create index catalog error: %w", err)
 		}
 	}
-	layout, err := tableManager.Layout("index_catalog", tx)
+	layout, err := tableManager.Layout(indexCatalogTableName, tx)
 	if err != nil {
 		return nil, fmt.Errorf("layout error: %w", err)
 	}
@@ -457,7 +466,7 @@ func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatMa
 }
 
 func (m *IndexManager) CreateIndex(indexName, tableName string, fieldName schema.FieldName, tx *transaction.Transaction) error {
-	scan, err := record.NewTableScan(tx, "index_catalog", m.layout)
+	scan, err := record.NewTableScan(tx, indexCatalogTableName, m.layout)
 	if err != nil {
 		return fmt.Errorf("table scan error: %w", err)
 	}
@@ -481,7 +490,7 @@ func (m *IndexManager) CreateIndex(indexName, tableName string, fieldName schema
 
 func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) (map[schema.FieldName]IndexInfo, error) {
 	res := make(map[schema.FieldName]IndexInfo)
-	scan, err := record.NewTableScan(tx, "index_catalog", m.layout)
+	scan, err := record.NewTableScan(tx, indexCatalogTableName, m.layout)
 	if err != nil {
 		return nil, fmt.Errorf("table scan error: %w", err)
 	}

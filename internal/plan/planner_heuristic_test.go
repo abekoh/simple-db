@@ -24,7 +24,7 @@ func TestHeuristicQueryPlanner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := db.Planner().Execute("SELECT name FROM students WHERE student_id = 202820", tx)
+	res, err := db.Planner().Execute("SELECT table_name FROM table_catalog", tx)
 	if err != nil {
 		t.Fatal(err)
 	}
