@@ -257,7 +257,7 @@ func (s SelectPlan) RecordsOutput() int {
 }
 
 func (s SelectPlan) DistinctValues(fieldName schema.FieldName) int {
-	if _, ok := s.pred.EquatesWithConstant(fieldName); !ok {
+	if _, ok := s.pred.EquatesWithConstant(fieldName); ok {
 		return 1
 	} else {
 		fieldName2, ok := s.pred.EquatesWithField(fieldName)
