@@ -117,22 +117,22 @@ func (m *TableManager) CreateTable(tableName string, schema schema.Schema, tx *t
 
 func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*record.Layout, error) {
 	var size int32 = -1
-	tableCatalog, err := record.NewTableScan(tx, tableCatalogTableName, m.tableCatalogLayout)
+	tableCatalogScan, err := record.NewTableScan(tx, tableCatalogTableName, m.tableCatalogLayout)
 	if err != nil {
 		return nil, fmt.Errorf("table catalog scan error: %w", err)
 	}
 	for {
-		ok, err := tableCatalog.Next()
+		ok, err := tableCatalogScan.Next()
 		if err != nil {
 			return nil, fmt.Errorf("table catalog next error: %w", err)
 		}
 		if !ok {
 			break
 		}
-		if name, err := tableCatalog.Str(tableNameField); err != nil {
+		if name, err := tableCatalogScan.Str(tableNameField); err != nil {
 			return nil, fmt.Errorf("table catalog get string error: %w", err)
 		} else if name == tableName {
-			s, err := tableCatalog.Int32(slotSizeField)
+			s, err := tableCatalogScan.Int32(slotSizeField)
 			if err != nil {
 				return nil, fmt.Errorf("table catalog get int32 error: %w", err)
 			}
@@ -140,7 +140,7 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 			break
 		}
 	}
-	if err := tableCatalog.Close(); err != nil {
+	if err := tableCatalogScan.Close(); err != nil {
 		return nil, fmt.Errorf("table catalog close error: %w", err)
 	}
 
