@@ -126,6 +126,17 @@ func TestParser_Query(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "SELECT with GROUP BY",
+			s:    "SELECT a, MAX(b) AS max_b FROM mytable GROUP BY a",
+			want: &QueryData{
+				fields: []schema.FieldName{"a", "max_b"},
+				tables: []string{"mytable"},
+				aggregationFuncs: []query.AggregationFunc{
+					query.NewMaxFunc("b", "max_b"),
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
