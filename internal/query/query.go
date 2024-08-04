@@ -486,6 +486,7 @@ type AggregationFunc interface {
 	Next(s Scan) error
 	AliasName() schema.FieldName
 	Val() schema.Constant
+	NeedSorted() bool
 }
 
 type AggregationFuncInitializer func(fieldName, aliasName schema.FieldName) AggregationFunc
@@ -521,6 +522,10 @@ func (c *CountFunc) Val() schema.Constant {
 
 func (c *CountFunc) String() string {
 	return fmt.Sprintf("COUNT(*) AS %s", c.aliasName)
+}
+
+func (c *CountFunc) NeedSorted() bool {
+	return false
 }
 
 type MaxFunc struct {
@@ -566,6 +571,10 @@ func (m *MaxFunc) String() string {
 	return fmt.Sprintf("MAX(%s) AS %s", m.fieldName, m.aliasName)
 }
 
+func (m *MaxFunc) NeedSorted() bool {
+	return true
+}
+
 type MinFunc struct {
 	fieldName, aliasName schema.FieldName
 	minVal               schema.Constant
@@ -607,6 +616,10 @@ func (m *MinFunc) Val() schema.Constant {
 
 func (m *MinFunc) String() string {
 	return fmt.Sprintf("MIN(%s) AS %s", m.fieldName, m.aliasName)
+}
+
+func (m *MinFunc) NeedSorted() bool {
+	return true
 }
 
 type SumFunc struct {
@@ -658,4 +671,8 @@ func (s *SumFunc) Val() schema.Constant {
 
 func (s *SumFunc) String() string {
 	return fmt.Sprintf("SUM(%s) AS %s", s.fieldName, s.aliasName)
+}
+
+func (s *SumFunc) NeedSorted() bool {
+	return false
 }
