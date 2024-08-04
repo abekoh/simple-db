@@ -797,7 +797,7 @@ func (m *concurrencyManager) loop(ctx context.Context) {
 	}
 }
 
-func CleanupLockTable(t *testing.T) {
+func CleanupLockTable(t testing.TB) {
 	t.Helper()
 	t.Cleanup(func() {
 		globalLockTable = sync.Map{}
