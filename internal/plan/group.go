@@ -156,24 +156,18 @@ func NewGroupByPlan(tx *transaction.Transaction, p Plan, groupFields []schema.Fi
 	for _, fn := range groupFields {
 		s.Add(fn, *p.Schema())
 	}
-	needSorted := false
 	for _, f := range aggregationFuncs {
 		s.AddInt32Field(f.AliasName())
-		needSorted = needSorted || f.NeedSorted()
 	}
-	newP := p
-	if needSorted {
-		order := make(query.Order, len(groupFields))
-		for i, f := range groupFields {
-			order[i] = query.OrderElement{
-				Field:     f,
-				OrderType: query.Asc,
-			}
+	order := make(query.Order, len(groupFields))
+	for i, f := range groupFields {
+		order[i] = query.OrderElement{
+			Field:     f,
+			OrderType: query.Asc,
 		}
-		newP = NewSortPlan(tx, p, order)
 	}
 	return &GroupByPlan{
-		p:                newP,
+		p:                NewSortPlan(tx, p, order),
 		groupFields:      groupFields,
 		aggregationFuncs: aggregationFuncs,
 		sche:             s,
