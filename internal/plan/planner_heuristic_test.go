@@ -82,6 +82,54 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 			},
 		},
 		{
+			name:     "join two tables, no index",
+			snapshot: "tables_data",
+			query:    "SELECT student_name, department_name FROM students JOIN departments ON major_id = department_id WHERE student_id = 200588",
+			planInfo: plan.Info{
+				NodeType:      "Project",
+				Conditions:    map[string][]string{"fields": {"student_name", "department_name"}},
+				BlockAccessed: 776,
+				RecordsOutput: 0,
+				Children: []plan.Info{
+					{
+						NodeType:      "Select",
+						Conditions:    map[string][]string{"predicate": {"major_id=department_id"}},
+						BlockAccessed: 776,
+						RecordsOutput: 0,
+						Children: []plan.Info{
+							{
+								NodeType:      "MultiBufferProduct",
+								BlockAccessed: 776,
+								RecordsOutput: 200,
+								Children: []plan.Info{
+									{
+										NodeType:      "Table",
+										Conditions:    map[string][]string{"table": {"departments"}},
+										BlockAccessed: 6,
+										RecordsOutput: 100,
+									},
+									{
+										NodeType:      "Select",
+										Conditions:    map[string][]string{"predicate": {"student_id=200588"}},
+										BlockAccessed: 770,
+										RecordsOutput: 2,
+										Children: []plan.Info{
+											{
+												NodeType:      "Table",
+												Conditions:    map[string][]string{"table": {"students"}},
+												BlockAccessed: 770,
+												RecordsOutput: 10000,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:     "join two tables, use index",
 			snapshot: "tables_indexes_data",
 			query:    "SELECT student_name, department_name FROM students JOIN departments ON major_id = department_id WHERE student_id = 200588",
