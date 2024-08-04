@@ -76,7 +76,7 @@ func TestGroupByPlan(t *testing.T) {
 		tablePlan,
 		[]schema.FieldName{"department"},
 		[]query.AggregationFunc{
-			query.NewCountFunc("count_score"),
+			query.NewCountFunc("*", "count_score"),
 			query.NewMaxFunc("score", "max_score"),
 			query.NewMinFunc("score", "min_score"),
 			query.NewSumFunc("score", "sum_score"),

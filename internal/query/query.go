@@ -488,6 +488,8 @@ type AggregationFunc interface {
 	Val() schema.Constant
 }
 
+type AggregationFuncInitializer func(fieldName, aliasName schema.FieldName) AggregationFunc
+
 type CountFunc struct {
 	aliasName schema.FieldName
 	count     int
@@ -495,7 +497,7 @@ type CountFunc struct {
 
 var _ AggregationFunc = (*CountFunc)(nil)
 
-func NewCountFunc(aliasName schema.FieldName) *CountFunc {
+func NewCountFunc(_, aliasName schema.FieldName) AggregationFunc {
 	return &CountFunc{aliasName: aliasName}
 }
 
@@ -528,7 +530,7 @@ type MaxFunc struct {
 
 var _ AggregationFunc = (*MaxFunc)(nil)
 
-func NewMaxFunc(fieldName, aliasName schema.FieldName) *MaxFunc {
+func NewMaxFunc(fieldName, aliasName schema.FieldName) AggregationFunc {
 	return &MaxFunc{fieldName: fieldName, aliasName: aliasName}
 }
 
@@ -571,7 +573,7 @@ type MinFunc struct {
 
 var _ AggregationFunc = (*MinFunc)(nil)
 
-func NewMinFunc(fieldName, aliasName schema.FieldName) *MinFunc {
+func NewMinFunc(fieldName, aliasName schema.FieldName) AggregationFunc {
 	return &MinFunc{fieldName: fieldName, aliasName: aliasName}
 }
 
@@ -614,7 +616,7 @@ type SumFunc struct {
 
 var _ AggregationFunc = (*SumFunc)(nil)
 
-func NewSumFunc(fieldName, aliasName schema.FieldName) *SumFunc {
+func NewSumFunc(fieldName, aliasName schema.FieldName) AggregationFunc {
 	return &SumFunc{fieldName: fieldName, aliasName: aliasName}
 }
 
