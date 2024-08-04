@@ -33,6 +33,10 @@ const (
 	begin       tokenType = "BEGIN"
 	commit      tokenType = "COMMIT"
 	rollback    tokenType = "ROLLBACK"
+	order       tokenType = "ORDER"
+	by          tokenType = "BY"
+	asc         tokenType = "ASC"
+	desc        tokenType = "DESC"
 
 	number    tokenType = "NUMBER"
 	stringTok tokenType = "STRING"
@@ -70,6 +74,10 @@ var keywords = map[tokenType]struct{}{
 	begin:     {},
 	commit:    {},
 	rollback:  {},
+	order:     {},
+	by:        {},
+	asc:       {},
+	desc:      {},
 }
 
 func lookupToken(ident string) tokenType {

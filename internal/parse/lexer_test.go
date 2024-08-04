@@ -41,6 +41,34 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			input: `SELECT a FROM mytable ORDER BY a ASC`,
+			want: []token{
+				{typ: selectTok, literal: "SELECT"},
+				{typ: identifier, literal: "a"},
+				{typ: from, literal: "FROM"},
+				{typ: identifier, literal: "mytable"},
+				{typ: order, literal: "ORDER"},
+				{typ: by, literal: "BY"},
+				{typ: identifier, literal: "a"},
+				{typ: asc, literal: "ASC"},
+				{typ: eof, literal: ""},
+			},
+		},
+		{
+			input: `SELECT a FROM mytable ORDER BY a DESC`,
+			want: []token{
+				{typ: selectTok, literal: "SELECT"},
+				{typ: identifier, literal: "a"},
+				{typ: from, literal: "FROM"},
+				{typ: identifier, literal: "mytable"},
+				{typ: order, literal: "ORDER"},
+				{typ: by, literal: "BY"},
+				{typ: identifier, literal: "a"},
+				{typ: desc, literal: "DESC"},
+				{typ: eof, literal: ""},
+			},
+		},
+		{
 			input: `SELECT a, b FROM mytable1 JOIN mytable2 ON mytable1.a = mytable2.b`,
 			want: []token{
 				{typ: selectTok, literal: "SELECT"},
