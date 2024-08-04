@@ -18,6 +18,15 @@ const (
 	fieldCatalogTableName = "field_catalog"
 	viewCatalogTableName  = "view_catalog"
 	indexCatalogTableName = "index_catalog"
+	tableNameField        = "table_name"
+	slotSizeField         = "slot_size"
+	fieldNameField        = "field_name"
+	typeField             = "type"
+	lengthField           = "length"
+	offsetField           = "offset"
+	indexNameField        = "index_name"
+	viewNameField         = "view_name"
+	viewDefField          = "view_def"
 )
 
 type TableManager struct {
@@ -29,16 +38,16 @@ func NewTableManager(isNew bool, tx *transaction.Transaction) (*TableManager, er
 	m := &TableManager{}
 
 	tableCatalogSchema := schema.NewSchema()
-	tableCatalogSchema.AddStrField("table_name", maxTableNameLength)
-	tableCatalogSchema.AddInt32Field("slot_size")
+	tableCatalogSchema.AddStrField(tableNameField, maxTableNameLength)
+	tableCatalogSchema.AddInt32Field(slotSizeField)
 	m.tableCatalogLayout = record.NewLayoutSchema(tableCatalogSchema)
 
 	fieldCatalogSchema := schema.NewSchema()
-	fieldCatalogSchema.AddStrField("table_name", maxTableNameLength)
-	fieldCatalogSchema.AddStrField("field_name", maxTableNameLength)
-	fieldCatalogSchema.AddInt32Field("type")
-	fieldCatalogSchema.AddInt32Field("length")
-	fieldCatalogSchema.AddInt32Field("offset")
+	fieldCatalogSchema.AddStrField(tableNameField, maxTableNameLength)
+	fieldCatalogSchema.AddStrField(fieldNameField, maxTableNameLength)
+	fieldCatalogSchema.AddInt32Field(typeField)
+	fieldCatalogSchema.AddInt32Field(lengthField)
+	fieldCatalogSchema.AddInt32Field(offsetField)
 	m.fieldCatalogLayout = record.NewLayoutSchema(fieldCatalogSchema)
 
 	if isNew {
@@ -62,10 +71,10 @@ func (m *TableManager) CreateTable(tableName string, schema schema.Schema, tx *t
 	if err := tableCatalog.Insert(); err != nil {
 		return fmt.Errorf("table catalog insert error: %w", err)
 	}
-	if err := tableCatalog.SetStr("table_name", tableName); err != nil {
+	if err := tableCatalog.SetStr(tableNameField, tableName); err != nil {
 		return fmt.Errorf("table catalog set string error: %w", err)
 	}
-	if err := tableCatalog.SetInt32("slot_size", layout.SlotSize()); err != nil {
+	if err := tableCatalog.SetInt32(slotSizeField, layout.SlotSize()); err != nil {
 		return fmt.Errorf("table catalog set int32 error: %w", err)
 	}
 	if err := tableCatalog.Close(); err != nil {
@@ -80,23 +89,23 @@ func (m *TableManager) CreateTable(tableName string, schema schema.Schema, tx *t
 		if err := fieldCatalog.Insert(); err != nil {
 			return fmt.Errorf("field catalog insert error: %w", err)
 		}
-		if err := fieldCatalog.SetStr("table_name", tableName); err != nil {
+		if err := fieldCatalog.SetStr(tableNameField, tableName); err != nil {
 			return fmt.Errorf("field catalog set string error: %w", err)
 		}
-		if err := fieldCatalog.SetStr("field_name", string(fieldName)); err != nil {
+		if err := fieldCatalog.SetStr(fieldNameField, string(fieldName)); err != nil {
 			return fmt.Errorf("field catalog set string error: %w", err)
 		}
-		if err := fieldCatalog.SetInt32("type", int32(schema.Typ(fieldName))); err != nil {
+		if err := fieldCatalog.SetInt32(typeField, int32(schema.Typ(fieldName))); err != nil {
 			return fmt.Errorf("field catalog set int32 error: %w", err)
 		}
-		if err := fieldCatalog.SetInt32("length", schema.Length(fieldName)); err != nil {
+		if err := fieldCatalog.SetInt32(lengthField, schema.Length(fieldName)); err != nil {
 			return fmt.Errorf("field catalog set int32 error: %w", err)
 		}
 		offset, ok := layout.Offset(fieldName)
 		if !ok {
 			return fmt.Errorf("offset not found for %s", fieldName)
 		}
-		if err := fieldCatalog.SetInt32("offset", offset); err != nil {
+		if err := fieldCatalog.SetInt32(offsetField, offset); err != nil {
 			return fmt.Errorf("field catalog set int32 error: %w", err)
 		}
 	}
@@ -120,10 +129,10 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 		if !ok {
 			break
 		}
-		if name, err := tableCatalog.Str("table_name"); err != nil {
+		if name, err := tableCatalog.Str(tableNameField); err != nil {
 			return nil, fmt.Errorf("table catalog get string error: %w", err)
 		} else if name == tableName {
-			s, err := tableCatalog.Int32("slot_size")
+			s, err := tableCatalog.Int32(slotSizeField)
 			if err != nil {
 				return nil, fmt.Errorf("table catalog get int32 error: %w", err)
 			}
@@ -147,22 +156,22 @@ func (m *TableManager) Layout(tableName string, tx *transaction.Transaction) (*r
 		} else if !ok {
 			break
 		}
-		if name, err := fieldCatalog.Str("table_name"); err != nil {
+		if name, err := fieldCatalog.Str(tableNameField); err != nil {
 			return nil, fmt.Errorf("field catalog get string error: %w", err)
 		} else if name == tableName {
-			fieldName, err := fieldCatalog.Str("field_name")
+			fieldName, err := fieldCatalog.Str(fieldNameField)
 			if err != nil {
 				return nil, fmt.Errorf("field catalog get string error: %w", err)
 			}
-			fieldType, err := fieldCatalog.Int32("type")
+			fieldType, err := fieldCatalog.Int32(typeField)
 			if err != nil {
 				return nil, fmt.Errorf("field catalog get int32 error: %w", err)
 			}
-			fieldLength, err := fieldCatalog.Int32("length")
+			fieldLength, err := fieldCatalog.Int32(lengthField)
 			if err != nil {
 				return nil, fmt.Errorf("field catalog get int32 error: %w", err)
 			}
-			fieldOffset, err := fieldCatalog.Int32("offset")
+			fieldOffset, err := fieldCatalog.Int32(offsetField)
 			if err != nil {
 				return nil, fmt.Errorf("field catalog get int32 error: %w", err)
 			}
@@ -227,7 +236,7 @@ func (m *StatManager) refresh(tx *transaction.Transaction) error {
 		} else if !ok {
 			break
 		}
-		name, err := tableCatalog.Str("table_name")
+		name, err := tableCatalog.Str(tableNameField)
 		if err != nil {
 			return fmt.Errorf("table catalog get string error: %w", err)
 		}
@@ -303,8 +312,8 @@ type ViewManager struct {
 func NewViewManager(isNew bool, tableManager *TableManager, tx *transaction.Transaction) (*ViewManager, error) {
 	if isNew {
 		s := schema.NewSchema()
-		s.AddStrField("view_name", maxTableNameLength)
-		s.AddStrField("view_def", maxViewDef)
+		s.AddStrField(viewNameField, maxTableNameLength)
+		s.AddStrField(viewDefField, maxViewDef)
 		if err := tableManager.CreateTable(viewCatalogTableName, s, tx); err != nil {
 			return nil, fmt.Errorf("create view catalog error: %w", err)
 		}
@@ -324,10 +333,10 @@ func (m *ViewManager) CreateView(viewName, viewDef string, tx *transaction.Trans
 	if err := scan.Insert(); err != nil {
 		return fmt.Errorf("insert error: %w", err)
 	}
-	if err := scan.SetStr("view_name", viewName); err != nil {
+	if err := scan.SetStr(viewNameField, viewName); err != nil {
 		return fmt.Errorf("set string error: %w", err)
 	}
-	if err := scan.SetStr("view_def", viewDef); err != nil {
+	if err := scan.SetStr(viewDefField, viewDef); err != nil {
 		return fmt.Errorf("set string error: %w", err)
 	}
 	if err := scan.Close(); err != nil {
@@ -355,12 +364,12 @@ func (m *ViewManager) ViewDef(viewName string, tx *transaction.Transaction) (str
 		} else if !ok {
 			break
 		}
-		name, err := scan.Str("view_name")
+		name, err := scan.Str(viewNameField)
 		if err != nil {
 			return "", false, fmt.Errorf("get string error: %w", err)
 		}
 		if name == viewName {
-			res, err = scan.Str("view_def")
+			res, err = scan.Str(viewDefField)
 			if err != nil {
 				return "", false, fmt.Errorf("get string error: %w", err)
 			}
@@ -447,9 +456,9 @@ type IndexManager struct {
 func NewIndexManager(isNew bool, tableManager *TableManager, statManager *StatManager, tx *transaction.Transaction, cfg *Config) (*IndexManager, error) {
 	if isNew {
 		s := schema.NewSchema()
-		s.AddStrField("index_name", maxTableNameLength)
-		s.AddStrField("table_name", maxTableNameLength)
-		s.AddStrField("field_name", maxTableNameLength)
+		s.AddStrField(indexNameField, maxTableNameLength)
+		s.AddStrField(tableNameField, maxTableNameLength)
+		s.AddStrField(fieldNameField, maxTableNameLength)
 		if err := tableManager.CreateTable(indexCatalogTableName, s, tx); err != nil {
 			return nil, fmt.Errorf("create index catalog error: %w", err)
 		}
@@ -473,13 +482,13 @@ func (m *IndexManager) CreateIndex(indexName, tableName string, fieldName schema
 	if err := scan.Insert(); err != nil {
 		return fmt.Errorf("insert error: %w", err)
 	}
-	if err := scan.SetStr("index_name", indexName); err != nil {
+	if err := scan.SetStr(indexNameField, indexName); err != nil {
 		return fmt.Errorf("set string error: %w", err)
 	}
-	if err := scan.SetStr("table_name", tableName); err != nil {
+	if err := scan.SetStr(tableNameField, tableName); err != nil {
 		return fmt.Errorf("set string error: %w", err)
 	}
-	if err := scan.SetStr("field_name", string(fieldName)); err != nil {
+	if err := scan.SetStr(fieldNameField, string(fieldName)); err != nil {
 		return fmt.Errorf("set string error: %w", err)
 	}
 	if err := scan.Close(); err != nil {
@@ -500,11 +509,11 @@ func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) 
 		} else if !ok {
 			break
 		}
-		indexName, err := scan.Str("index_name")
+		indexName, err := scan.Str(indexNameField)
 		if err != nil {
 			return nil, fmt.Errorf("get string error: %w", err)
 		}
-		fieldName, err := scan.Str("field_name")
+		fieldName, err := scan.Str(fieldNameField)
 		if err != nil {
 			return nil, fmt.Errorf("get string error: %w", err)
 		}
