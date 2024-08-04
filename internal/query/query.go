@@ -438,3 +438,40 @@ func (s *ProjectScan) HasField(fieldName schema.FieldName) bool {
 	_, ok := s.fieldNameSet[fieldName]
 	return ok
 }
+
+type OrderType int
+
+const (
+	Asc OrderType = iota
+	Desc
+)
+
+type Comparator struct {
+	fields    []schema.FieldName
+	orderType OrderType
+}
+
+func NewComparator(fields []schema.FieldName) *Comparator {
+	return &Comparator{fields: fields, orderType: Asc}
+}
+
+func (c Comparator) Compare(s1, s2 Scan) (int, error) {
+	for _, fld := range c.fields {
+		val1, err := s1.Val(fld)
+		if err != nil {
+			return 0, fmt.Errorf("s1.Val error: %w", err)
+		}
+		val2, err := s2.Val(fld)
+		if err != nil {
+			return 0, fmt.Errorf("s2.Val error: %w", err)
+		}
+		cmp := val1.Compare(val2)
+		if cmp != 0 {
+			if c.orderType == Desc {
+				cmp = -cmp
+			}
+			return cmp, nil
+		}
+	}
+	return 0, nil
+}

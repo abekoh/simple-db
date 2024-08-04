@@ -9,55 +9,18 @@ import (
 	"github.com/abekoh/simple-db/internal/transaction"
 )
 
-type OrderType int
-
-const (
-	Asc OrderType = iota
-	Desc
-)
-
-type Comparator struct {
-	fields    []schema.FieldName
-	orderType OrderType
-}
-
-func NewComparator(fields []schema.FieldName) *Comparator {
-	return &Comparator{fields: fields, orderType: Asc}
-}
-
-func (c Comparator) Compare(s1, s2 query.Scan) (int, error) {
-	for _, fld := range c.fields {
-		val1, err := s1.Val(fld)
-		if err != nil {
-			return 0, fmt.Errorf("s1.Val error: %w", err)
-		}
-		val2, err := s2.Val(fld)
-		if err != nil {
-			return 0, fmt.Errorf("s2.Val error: %w", err)
-		}
-		cmp := val1.Compare(val2)
-		if cmp != 0 {
-			if c.orderType == Desc {
-				cmp = -cmp
-			}
-			return cmp, nil
-		}
-	}
-	return 0, nil
-}
-
 type SortPlan struct {
 	tx         *transaction.Transaction
 	p          Plan
 	sche       schema.Schema
 	sortFields []schema.FieldName
-	comparator *Comparator
+	comparator *query.Comparator
 }
 
 var _ Plan = (*SortPlan)(nil)
 
 func NewSortPlan(tx *transaction.Transaction, p Plan, sortFields []schema.FieldName) *SortPlan {
-	return &SortPlan{tx: tx, p: p, sche: *p.Schema(), sortFields: sortFields, comparator: NewComparator(sortFields)}
+	return &SortPlan{tx: tx, p: p, sche: *p.Schema(), sortFields: sortFields, comparator: query.NewComparator(sortFields)}
 }
 
 func (s SortPlan) Result() {}
@@ -227,7 +190,7 @@ func (s SortPlan) Open() (query.Scan, error) {
 		}
 		runs = newRuns
 	}
-	newScan, err := NewSortScan(runs, NewComparator(s.sortFields))
+	newScan, err := NewSortScan(runs, query.NewComparator(s.sortFields))
 	if err != nil {
 		return nil, fmt.Errorf("NewSortScan error: %w", err)
 	}
@@ -272,14 +235,14 @@ func (s SortPlan) copy(src query.Scan, dest query.UpdateScan) (bool, error) {
 
 type SortScan struct {
 	s1, s2, currentScan            query.UpdateScan
-	comparator                     *Comparator
+	comparator                     *query.Comparator
 	hasMore1, hasMore2             bool
 	savedPosition1, savedPosition2 *schema.RID
 }
 
 var _ query.Scan = (*SortScan)(nil)
 
-func NewSortScan(runs []TempTable, comperator *Comparator) (*SortScan, error) {
+func NewSortScan(runs []TempTable, comperator *query.Comparator) (*SortScan, error) {
 	if len(runs) == 0 || len(runs) > 2 {
 		return nil, fmt.Errorf("runs length error")
 	}
