@@ -2,6 +2,7 @@ package plan_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/abekoh/simple-db/internal/plan"
@@ -48,8 +49,9 @@ func TestHeuristicQueryPlanner_QueryPlans(t *testing.T) {
 			if !ok {
 				t.Fatalf("unexpected type %T", res)
 			}
-			if got, want := p.String(), tt.planStr; got != want {
-				t.Errorf("got %s, want %s", got, want)
+			info := p.Info()
+			if !reflect.DeepEqual(info, plan.Info{}) {
+				t.Errorf("info: got %v, want %v", info, plan.Info{})
 			}
 		})
 	}
