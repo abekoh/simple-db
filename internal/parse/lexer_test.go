@@ -107,6 +107,26 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			input: `SELECT a, COUNT(*) AS max_b FROM mytable GROUP BY a`,
+			want: []token{
+				{typ: selectTok, literal: "SELECT"},
+				{typ: identifier, literal: "a"},
+				{typ: comma, literal: ","},
+				{typ: count, literal: "COUNT"},
+				{typ: lparen, literal: "("},
+				{typ: asterisk, literal: "*"},
+				{typ: rparen, literal: ")"},
+				{typ: as, literal: "AS"},
+				{typ: identifier, literal: "max_b"},
+				{typ: from, literal: "FROM"},
+				{typ: identifier, literal: "mytable"},
+				{typ: group, literal: "GROUP"},
+				{typ: by, literal: "BY"},
+				{typ: identifier, literal: "a"},
+				{typ: eof, literal: ""},
+			},
+		},
+		{
 			input: `INSERT INTO mytable (a, b) VALUES (1, 'foo', $1)`,
 			want: []token{
 				{typ: insert, literal: "INSERT"},

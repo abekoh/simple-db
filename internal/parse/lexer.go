@@ -54,6 +54,8 @@ const (
 	sum   tokenType = "SUM"
 	count tokenType = "COUNT"
 
+	asterisk tokenType = "*"
+
 	eof tokenType = "EOF"
 )
 
@@ -89,6 +91,7 @@ var keywords = map[tokenType]struct{}{
 	min:       {},
 	sum:       {},
 	count:     {},
+	asterisk:  {},
 }
 
 func lookupToken(ident string) tokenType {
@@ -123,6 +126,9 @@ func (l *Lexer) NextToken() token {
 	}
 
 	switch l.char {
+	case '*':
+		l.readChar()
+		return token{typ: asterisk, literal: "*"}
 	case '=':
 		l.readChar()
 		return token{typ: equal, literal: "="}
