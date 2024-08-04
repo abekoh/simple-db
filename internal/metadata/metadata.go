@@ -512,6 +512,13 @@ func (m *IndexManager) IndexInfo(tableName string, tx *transaction.Transaction) 
 		} else if !ok {
 			break
 		}
+		gotTableName, err := scan.Str(tableNameField)
+		if err != nil {
+			return nil, fmt.Errorf("get string error: %w", err)
+		}
+		if gotTableName != tableName {
+			continue
+		}
 		indexName, err := scan.Str(indexNameField)
 		if err != nil {
 			return nil, fmt.Errorf("get string error: %w", err)
