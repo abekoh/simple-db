@@ -3,6 +3,7 @@ package plan
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/abekoh/simple-db/internal/index"
 	"github.com/abekoh/simple-db/internal/metadata"
@@ -51,9 +52,42 @@ type Info struct {
 	Children      []Info              `json:"children,omitempty"`
 }
 
-func (i Info) JSON() json.RawMessage {
-	b, _ := json.Marshal(i)
+func (f Info) JSON() json.RawMessage {
+	b, _ := json.Marshal(f)
 	return b
+}
+
+func (f Info) String() string {
+	var rows []string
+	for rowText := range f.stringRow(0) {
+		rows = append(rows, rowText)
+	}
+	return strings.Join(rows, "\n")
+}
+
+func (f Info) stringRow(indent int) func(func(string) bool) {
+	return func(yield func(string) bool) {
+		conds := make([]string, 0, len(f.Conditions))
+		for k, v := range f.Conditions {
+			condEls := make([]string, len(v))
+			for i, condEl := range v {
+				condEls[i] = condEl
+			}
+			conds = append(conds, fmt.Sprintf("%s=%s", k, strings.Join(condEls, ",")))
+		}
+		row := fmt.Sprintf("%s%s %s (ba=%d, ro=%d)",
+			strings.Repeat(" ", indent),
+			f.NodeType,
+			strings.Join(conds, ","),
+			f.BlockAccessed,
+			f.RecordsOutput)
+		if !yield(row) {
+			return
+		}
+		for _, child := range f.Children {
+			child.stringRow(indent + 2)(yield)
+		}
+	}
 }
 
 type Plan interface {
@@ -404,6 +438,14 @@ type ExplainPlan struct {
 }
 
 var _ Plan = (*ExplainPlan)(nil)
+
+func (ep ExplainPlan) SwapParams(params map[int]schema.Constant) (statement.Bound, error) {
+	b, err := ep.Plan.SwapParams(params)
+	if err != nil {
+		return nil, fmt.Errorf("ep.Plan.SwapParams error: %w", err)
+	}
+	return &BoundPlan{Plan: &ExplainPlan{Plan: b.(Plan)}}, nil
+}
 
 type IndexSelectPlan struct {
 	p         Plan

@@ -281,78 +281,104 @@ func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (pla
 
 	switch r := res.(type) {
 	case plan.Plan:
-		sche := r.Schema()
-		fieldNames := sche.FieldNames()
-		fields := make([]pgproto3.FieldDescription, len(fieldNames))
-		for i, fieldName := range fieldNames {
-			var dataTypeOID uint32
-			var dataTypeSize int16
-			switch sche.Typ(fieldName) {
-			case schema.Integer32:
-				dataTypeOID = pgtype.Int4OID
-				dataTypeSize = 4
-			case schema.Varchar:
-				dataTypeOID = pgtype.TextOID
-				dataTypeSize = -1
-			default:
-				return nil, nil, fmt.Errorf("unsupported field type: %v", sche.Typ(fieldName))
-			}
-			fields[i] = pgproto3.FieldDescription{
-				Name:                 []byte(fieldName),
-				TableOID:             0,
-				TableAttributeNumber: 0,
-				DataTypeOID:          dataTypeOID,
-				DataTypeSize:         dataTypeSize,
-				TypeModifier:         -1,
-				Format:               0,
-			}
+		if bp, ok := r.(*plan.BoundPlan); ok {
+			r = bp.Plan
 		}
-		buf, err = (&pgproto3.RowDescription{Fields: fields}).Encode(buf)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error encoding row description: %w", err)
-		}
-		if _, ok := r.(*plan.ExplainPlan); ok {
-			panic("not implemented")
-		}
-
-		scan, err := r.Open()
-		if err != nil {
-			return nil, nil, fmt.Errorf("error opening plan: %w", err)
-		}
-		defer scan.Close()
-		count := 0
-		for {
-			ok, err := scan.Next()
+		if false {
+			buf, err = (&pgproto3.RowDescription{Fields: []pgproto3.FieldDescription{
+				{
+					Name:                 []byte("QUERY PLAN"),
+					TableOID:             0,
+					TableAttributeNumber: 0,
+					DataTypeOID:          pgtype.TextOID,
+					DataTypeSize:         -1,
+					TypeModifier:         -1,
+					Format:               0,
+				},
+			}}).Encode(buf)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error scanning: %w", err)
+				return nil, nil, fmt.Errorf("error encoding row description: %w", err)
 			}
-			if !ok {
-				break
-			}
-			values := make([][]byte, len(fieldNames))
-			for i, fieldName := range fieldNames {
-				val, err := scan.Val(fieldName)
-				if err != nil {
-					return nil, nil, fmt.Errorf("error getting value: %w", err)
-				}
-				var row []byte
-				switch v := val.(type) {
-				case schema.ConstantInt32:
-					row = []byte(strconv.Itoa(int(v)))
-				case schema.ConstantStr:
-					row = []byte(v)
-				}
-				values[i] = row
-			}
-			buf, err = (&pgproto3.DataRow{Values: values}).Encode(buf)
+			infoText := r.Info().String()
+			buf, err = (&pgproto3.DataRow{Values: [][]byte{[]byte(infoText)}}).Encode(buf)
 			if err != nil {
 				return nil, nil, fmt.Errorf("error encoding data row: %w", err)
 			}
-			count++
-		}
-		buf, err = (&pgproto3.CommandComplete{CommandTag: []byte(fmt.Sprintf("SELECT %d", count))}).Encode(buf)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error encoding command complete: %w", err)
+			buf, err = (&pgproto3.CommandComplete{CommandTag: []byte("EXPLAIN")}).Encode(buf)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error encoding command complete: %w", err)
+			}
+		} else {
+			sche := r.Schema()
+			fieldNames := sche.FieldNames()
+			fields := make([]pgproto3.FieldDescription, len(fieldNames))
+			for i, fieldName := range fieldNames {
+				var dataTypeOID uint32
+				var dataTypeSize int16
+				switch sche.Typ(fieldName) {
+				case schema.Integer32:
+					dataTypeOID = pgtype.Int4OID
+					dataTypeSize = 4
+				case schema.Varchar:
+					dataTypeOID = pgtype.TextOID
+					dataTypeSize = -1
+				default:
+					return nil, nil, fmt.Errorf("unsupported field type: %v", sche.Typ(fieldName))
+				}
+				fields[i] = pgproto3.FieldDescription{
+					Name:                 []byte(fieldName),
+					TableOID:             0,
+					TableAttributeNumber: 0,
+					DataTypeOID:          dataTypeOID,
+					DataTypeSize:         dataTypeSize,
+					TypeModifier:         -1,
+					Format:               0,
+				}
+			}
+			buf, err = (&pgproto3.RowDescription{Fields: fields}).Encode(buf)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error encoding row description: %w", err)
+			}
+
+			scan, err := r.Open()
+			if err != nil {
+				return nil, nil, fmt.Errorf("error opening plan: %w", err)
+			}
+			defer scan.Close()
+			count := 0
+			for {
+				ok, err := scan.Next()
+				if err != nil {
+					return nil, nil, fmt.Errorf("error scanning: %w", err)
+				}
+				if !ok {
+					break
+				}
+				values := make([][]byte, len(fieldNames))
+				for i, fieldName := range fieldNames {
+					val, err := scan.Val(fieldName)
+					if err != nil {
+						return nil, nil, fmt.Errorf("error getting value: %w", err)
+					}
+					var row []byte
+					switch v := val.(type) {
+					case schema.ConstantInt32:
+						row = []byte(strconv.Itoa(int(v)))
+					case schema.ConstantStr:
+						row = []byte(v)
+					}
+					values[i] = row
+				}
+				buf, err = (&pgproto3.DataRow{Values: values}).Encode(buf)
+				if err != nil {
+					return nil, nil, fmt.Errorf("error encoding data row: %w", err)
+				}
+				count++
+				buf, err = (&pgproto3.CommandComplete{CommandTag: []byte(fmt.Sprintf("SELECT %d", count))}).Encode(buf)
+				if err != nil {
+					return nil, nil, fmt.Errorf("error encoding command complete: %w", err)
+				}
+			}
 		}
 	case plan.CommandResult:
 		var commandTag []byte

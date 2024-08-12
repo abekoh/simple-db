@@ -980,7 +980,11 @@ func (p *Parser) ToData() (Data, error) {
 		p.lexer.Reset()
 		return p.Query()
 	case explain:
-		return p.Query()
+		qd, err := p.Query()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse query: %w", err)
+		}
+		return &ExplainQueryData{QueryData: qd}, nil
 	case insert:
 		p.lexer.Reset()
 		return p.Insert()

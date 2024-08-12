@@ -94,6 +94,12 @@ func (p *Planner) Prepare(q string, tx *transaction.Transaction) (statement.Prep
 	case *parse.QueryData:
 		r, err := p.qp.CreatePlan(c, tx)
 		return r, err
+	case *parse.ExplainQueryData:
+		p, err := p.qp.CreatePlan(c.QueryData, tx)
+		if err != nil {
+			return nil, fmt.Errorf("create plan error: %w", err)
+		}
+		return &ExplainPlan{Plan: p}, nil
 	case *parse.InsertData:
 		return c, nil
 	case *parse.ModifyData:
