@@ -399,6 +399,12 @@ var _ Plan = (*BoundPlan)(nil)
 
 func (BoundPlan) Bound() {}
 
+type ExplainPlan struct {
+	Plan
+}
+
+var _ Plan = (*ExplainPlan)(nil)
+
 type IndexSelectPlan struct {
 	p         Plan
 	indexInfo *metadata.IndexInfo

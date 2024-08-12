@@ -607,6 +607,12 @@ func (p *Parser) Query() (*QueryData, error) {
 	return q, nil
 }
 
+type ExplainQueryData struct {
+	QueryData *QueryData
+}
+
+func (d ExplainQueryData) Data() {}
+
 type ModifyData struct {
 	table string
 	field schema.FieldName
@@ -972,6 +978,8 @@ func (p *Parser) ToData() (Data, error) {
 		return &CommitData{}, nil
 	case selectTok:
 		p.lexer.Reset()
+		return p.Query()
+	case explain:
 		return p.Query()
 	case insert:
 		p.lexer.Reset()

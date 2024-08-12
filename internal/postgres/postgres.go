@@ -311,6 +311,9 @@ func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (pla
 		if err != nil {
 			return nil, nil, fmt.Errorf("error encoding row description: %w", err)
 		}
+		if _, ok := r.(*plan.ExplainPlan); ok {
+			panic("not implemented")
+		}
 
 		scan, err := r.Open()
 		if err != nil {
