@@ -75,7 +75,7 @@ func (f Info) stringRow(indent int) func(func(string) bool) {
 			}
 			conds = append(conds, fmt.Sprintf("%s=%s", k, strings.Join(condEls, ",")))
 		}
-		row := fmt.Sprintf("%s%s %s (ba=%d, ro=%d)",
+		row := fmt.Sprintf("%s%s %s (ba=%d,ro=%d)",
 			strings.Repeat(" ", indent),
 			f.NodeType,
 			strings.Join(conds, ","),
