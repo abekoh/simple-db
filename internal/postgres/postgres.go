@@ -284,7 +284,8 @@ func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (pla
 		if bp, ok := r.(*plan.BoundPlan); ok {
 			r = bp.Plan
 		}
-		if false {
+
+		if _, ok := r.(*plan.ExplainPlan); ok {
 			buf, err = (&pgproto3.RowDescription{Fields: []pgproto3.FieldDescription{
 				{
 					Name:                 []byte("QUERY PLAN"),
@@ -374,10 +375,10 @@ func (b *Backend) execute(buf []byte, exec func(t *transaction.Transaction) (pla
 					return nil, nil, fmt.Errorf("error encoding data row: %w", err)
 				}
 				count++
-				buf, err = (&pgproto3.CommandComplete{CommandTag: []byte(fmt.Sprintf("SELECT %d", count))}).Encode(buf)
-				if err != nil {
-					return nil, nil, fmt.Errorf("error encoding command complete: %w", err)
-				}
+			}
+			buf, err = (&pgproto3.CommandComplete{CommandTag: []byte(fmt.Sprintf("SELECT %d", count))}).Encode(buf)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error encoding command complete: %w", err)
 			}
 		}
 	case plan.CommandResult:

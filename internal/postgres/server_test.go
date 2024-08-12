@@ -67,29 +67,30 @@ func TestPostgres(t *testing.T) {
 	if tag.String() != "DELETE 1" {
 		t.Errorf("unexpected tag: %s", tag)
 	}
-	//
-	//explainRows, err := conn.Query(ctx, "EXPLAIN SELECT id, name FROM mytable")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//defer explainRows.Close()
-	//type ExplainRow struct {
-	//	QueryPlan string
-	//}
-	//resExplainRows := make([]ExplainRow, 0)
-	//for explainRows.Next() {
-	//	var row ExplainRow
-	//	if err := explainRows.Scan(&row.QueryPlan); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//	resExplainRows = append(resExplainRows, row)
-	//}
-	//if len(resExplainRows) != 1 {
-	//	t.Fatalf("unexpected rows: %v", resExplainRows)
-	//}
-	//if resExplainRows[0].QueryPlan != "Seq Scan on mytable" {
-	//	t.Errorf("unexpected rows: %v", resExplainRows)
-	//}
+
+	explainRows, err := conn.Query(ctx, "EXPLAIN SELECT id, name FROM mytable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer explainRows.Close()
+	type ExplainRow struct {
+		QueryPlan string
+	}
+	resExplainRows := make([]ExplainRow, 0)
+	for explainRows.Next() {
+		var row ExplainRow
+		if err := explainRows.Scan(&row.QueryPlan); err != nil {
+			t.Fatal(err)
+		}
+		resExplainRows = append(resExplainRows, row)
+	}
+	if len(resExplainRows) != 1 {
+		t.Fatalf("unexpected rows: %v", resExplainRows)
+	}
+	if resExplainRows[0].QueryPlan != `Project fields=id,name (ba=0, ro=0)
+  Table table=mytable (ba=0, ro=0)` {
+		t.Errorf("unexpected rows: %v", resExplainRows)
+	}
 
 	rows, err := conn.Query(ctx, "SELECT id, name FROM mytable")
 	if err != nil {
