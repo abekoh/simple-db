@@ -127,6 +127,27 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
+			input: `EXPLAIN SELECT a, b FROM mytable WHERE a = 1 AND b = 'foo'`,
+			want: []token{
+				{typ: explain, literal: "EXPLAIN"},
+				{typ: selectTok, literal: "SELECT"},
+				{typ: identifier, literal: "a"},
+				{typ: comma, literal: ","},
+				{typ: identifier, literal: "b"},
+				{typ: from, literal: "FROM"},
+				{typ: identifier, literal: "mytable"},
+				{typ: where, literal: "WHERE"},
+				{typ: identifier, literal: "a"},
+				{typ: equal, literal: "="},
+				{typ: number, literal: "1"},
+				{typ: and, literal: "AND"},
+				{typ: identifier, literal: "b"},
+				{typ: equal, literal: "="},
+				{typ: stringTok, literal: "foo"},
+				{typ: eof, literal: ""},
+			},
+		},
+		{
 			input: `INSERT INTO mytable (a, b) VALUES (1, 'foo', $1)`,
 			want: []token{
 				{typ: insert, literal: "INSERT"},

@@ -38,6 +38,7 @@ const (
 	by          tokenType = "BY"
 	asc         tokenType = "ASC"
 	desc        tokenType = "DESC"
+	explain     tokenType = "EXPLAIN"
 
 	number    tokenType = "NUMBER"
 	stringTok tokenType = "STRING"
@@ -92,6 +93,7 @@ var keywords = map[tokenType]struct{}{
 	sum:       {},
 	count:     {},
 	asterisk:  {},
+	explain:   {},
 }
 
 func lookupToken(ident string) tokenType {
