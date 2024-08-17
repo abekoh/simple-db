@@ -1,7 +1,6 @@
 package plan
 
 import (
-	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -39,7 +38,7 @@ func (g *GroupByScan) Val(fieldName schema.FieldName) (schema.Constant, error) {
 			return f.Val(), nil
 		}
 	}
-	return nil, errors.New("field not found")
+	return nil, ErrFieldNotFound
 }
 
 func (g *GroupByScan) BeforeFirst() error {
@@ -185,12 +184,8 @@ func (g GroupByPlan) SwapParams(params map[int]schema.Constant) (statement.Bound
 	if err != nil {
 		return nil, fmt.Errorf("g.p.SwapParams error: %w", err)
 	}
-	bp, ok := newP.(*BoundPlan)
-	if !ok {
-		return nil, errors.New("type assertion failed")
-	}
 	return &BoundPlan{
-		Plan: bp,
+		Plan: newP.(Plan),
 	}, nil
 }
 

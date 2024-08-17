@@ -2,6 +2,7 @@ package schema
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 )
 
@@ -251,4 +252,4 @@ func (p Placeholder) AppliesTo(_ *Schema) bool {
 	return true
 }
 
-var ErrTypeAssertionFailed = fmt.Errorf("type assertion failed")
+var ErrTypeAssertionFailed = errors.New("type assertion failed")
