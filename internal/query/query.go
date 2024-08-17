@@ -1,7 +1,6 @@
 package query
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -629,7 +628,7 @@ func (s *SumFunc) First(scan Scan) error {
 	case schema.ConstantInt32:
 		s.sum = int32(val.(schema.ConstantInt32))
 	default:
-		return errors.New("type assertion failed")
+		return schema.ErrTypeAssertionFailed
 	}
 	return nil
 }
@@ -643,7 +642,7 @@ func (s *SumFunc) Next(scan Scan) error {
 	case schema.ConstantInt32:
 		s.sum += int32(val.(schema.ConstantInt32))
 	default:
-		return errors.New("type assertion failed")
+		return schema.ErrTypeAssertionFailed
 	}
 	return nil
 }

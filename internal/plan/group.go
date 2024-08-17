@@ -106,7 +106,7 @@ func (g *GroupByScan) Int32(fieldName schema.FieldName) (int32, error) {
 	}
 	intV, ok := v.(schema.ConstantInt32)
 	if !ok {
-		return 0, errors.New("type assertion failed")
+		return 0, schema.ErrTypeAssertionFailed
 	}
 	return int32(intV), nil
 }
@@ -118,7 +118,7 @@ func (g *GroupByScan) Str(fieldName schema.FieldName) (string, error) {
 	}
 	strV, ok := v.(schema.ConstantStr)
 	if !ok {
-		return "", errors.New("type assertion failed")
+		return "", schema.ErrTypeAssertionFailed
 	}
 	return string(strV), nil
 }

@@ -250,3 +250,5 @@ func (p Placeholder) Compare(Constant) int {
 func (p Placeholder) AppliesTo(_ *Schema) bool {
 	return true
 }
+
+var ErrTypeAssertionFailed = fmt.Errorf("type assertion failed")
