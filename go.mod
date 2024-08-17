@@ -1,6 +1,6 @@
 module github.com/abekoh/simple-db
 
-go 1.22.0
+go 1.23.0
 
 require (
 	github.com/brianvoe/gofakeit/v7 v7.0.4
