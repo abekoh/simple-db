@@ -87,8 +87,8 @@ func TestPostgres(t *testing.T) {
 	if len(resExplainRows) != 1 {
 		t.Fatalf("unexpected rows: %v", resExplainRows)
 	}
-	if resExplainRows[0].QueryPlan != `Project fields=id,name (ba=0, ro=0)
-  Table table=mytable (ba=0, ro=0)` {
+	if resExplainRows[0].QueryPlan != `Project fields=id,name (ba=0,ro=0)
+  Table table=mytable (ba=0,ro=0)` {
 		t.Errorf("unexpected rows: %v", resExplainRows)
 	}
 
