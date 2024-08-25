@@ -479,6 +479,20 @@ func (o Order) Compare(s1, s2 Scan) (int, error) {
 	return 0, nil
 }
 
+func (o Order) String() string {
+	var sb strings.Builder
+	for i, el := range o {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(string(el.Field))
+		if el.OrderType == Desc {
+			sb.WriteString(" DESC")
+		}
+	}
+	return sb.String()
+}
+
 type AggregationFunc interface {
 	fmt.Stringer
 	First(s Scan) error

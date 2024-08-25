@@ -525,28 +525,42 @@ func (d QueryData) Order() query.Order {
 }
 
 func (d QueryData) String() string {
-	var b strings.Builder
-	b.WriteString("Field:            ")
-	b.WriteString(fmt.Sprintf("%v\n", d.fields))
-	if len(d.aggregationFuncs) > 0 {
-		b.WriteString("AggregationFuncs: ")
-		b.WriteString(fmt.Sprintf("%v\n", d.aggregationFuncs))
+	var sb strings.Builder
+
+	sb.WriteString("SELECT ")
+	fields := make([]string, 0, len(d.fields)+len(d.aggregationFuncs))
+	for _, f := range d.fields {
+		fields = append(fields, string(f))
 	}
-	b.WriteString("Tables:           ")
-	b.WriteString(fmt.Sprintf("%v\n", d.tables))
+	for _, f := range d.aggregationFuncs {
+		fields = append(fields, f.String())
+	}
+	sb.WriteString(fmt.Sprintf("%s", strings.Join(fields, ", ")))
+
+	sb.WriteString("\nFROM ")
+	tables := make([]string, 0, len(d.tables))
+	for _, t := range d.tables {
+		tables = append(tables, t)
+	}
+	sb.WriteString(fmt.Sprintf("%s", strings.Join(tables, ", ")))
+
 	if len(d.pred) > 0 {
-		b.WriteString("Predicate:        ")
-		b.WriteString(fmt.Sprintf("%v\n", d.pred))
+		sb.WriteString("\nWHERE ")
+		sb.WriteString(fmt.Sprintf("%s", d.pred))
 	}
 	if len(d.groupFields) > 0 {
-		b.WriteString("GroupFields:      ")
-		b.WriteString(fmt.Sprintf("%v\n", d.groupFields))
+		sb.WriteString("\nGROUP BY ")
+		groupFields := make([]string, 0, len(d.groupFields))
+		for _, f := range d.groupFields {
+			groupFields = append(groupFields, string(f))
+		}
+		sb.WriteString(fmt.Sprintf("%s", strings.Join(groupFields, ", ")))
 	}
 	if len(d.order) > 0 {
-		b.WriteString("Order:            ")
-		b.WriteString(fmt.Sprintf("%v\n", d.order))
+		sb.WriteString("\nORDER BY ")
+		sb.WriteString(fmt.Sprintf("%s", d.order))
 	}
-	return b.String()
+	return sb.String()
 }
 
 func (p *Parser) Query() (*QueryData, error) {
