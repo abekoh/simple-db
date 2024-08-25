@@ -208,6 +208,9 @@ func TestPostgres_Transaction(t *testing.T) {
 		t.Fatal(err)
 	}
 	tx2, err := conn2.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	tag, err = tx2.Exec(ctx, "UPDATE mytable SET name = 'HOGE' WHERE id = $1", 1)
 	if err != nil {
 		t.Fatal(err)

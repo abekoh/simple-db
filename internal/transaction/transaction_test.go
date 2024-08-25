@@ -51,6 +51,7 @@ func TestTransaction(t *testing.T) {
 		tx2, err := NewTransaction(ctx, bm, fm, lm)
 		must(t, err)
 		_, err = tx2.Pin(blockID)
+		must(t, err)
 		beforeTx2IntVal, err := tx2.Int32(blockID, 80)
 		must(t, err)
 		beforeTx2StrVal, err := tx2.Str(blockID, 40)
