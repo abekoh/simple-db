@@ -201,7 +201,6 @@ func (b *Backend) Run() error {
 			return fmt.Errorf("error writing parse complete: %w", err)
 		}
 	}
-	return nil
 }
 
 func (b *Backend) Close() error {

@@ -135,16 +135,15 @@ func NewManager(
 	for i := range pool {
 		pool[i] = NewBuffer(fm, lm)
 	}
-	availableNum := atomic.Int32{}
-	availableNum.Store(int32(buffNum))
 	m := &Manager{
 		pool:         pool,
-		availableNum: availableNum,
+		availableNum: atomic.Int32{},
 		pinRequestCh: make(chan pinRequest),
 		unpinCh:      make(chan unpinRequest),
 		flushAllCh:   make(chan flushAllRequest),
 		maxWaitTime:  defaultMaxWaitTime,
 	}
+	m.availableNum.Store(int32(buffNum))
 	for _, opt := range opts {
 		opt(m)
 	}
