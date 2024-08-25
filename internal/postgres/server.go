@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"os"
@@ -34,7 +36,7 @@ func RunServer(ctx context.Context, cfg Config) error {
 	if dir == "" {
 		dir, err = os.MkdirTemp(os.TempDir(), "simpledb")
 		if err != nil {
-			fmt.Errorf("could not create temp dir: %w", err)
+			return fmt.Errorf("could not create temp dir: %w", err)
 		}
 	}
 
@@ -55,7 +57,9 @@ func RunServer(ctx context.Context, cfg Config) error {
 		go func() {
 			err := b.Run()
 			if err != nil {
-				fmt.Errorf("error running backend: %w", err)
+				if !errors.Is(err, io.EOF) {
+					panic(err)
+				}
 			}
 			slog.InfoContext(ctx, "Closed connection", "remote_addr", conn.RemoteAddr())
 		}()

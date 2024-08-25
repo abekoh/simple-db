@@ -180,7 +180,6 @@ func (b *Backend) Run() error {
 			case *pgproto3.Terminate:
 			default:
 				queryErr = fmt.Errorf("received not supported message: %#v", m)
-				break
 			}
 		}
 
