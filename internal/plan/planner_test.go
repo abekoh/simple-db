@@ -194,7 +194,8 @@ func TestBasicUpdatePlanner_ExecuteCreateView(t *testing.T) {
 	if !ok {
 		t.Fatal("view not found")
 	}
-	if viewDef != "SELECT a FROM mytable" {
+	if viewDef != `SELECT a
+FROM mytable` {
 		t.Errorf("unexpected view def: %s", viewDef)
 	}
 }
@@ -674,7 +675,8 @@ func TestIndexUpdatePlanner_ExecuteCreateView(t *testing.T) {
 	if !ok {
 		t.Fatal("view not found")
 	}
-	if viewDef != "SELECT a FROM mytable" {
+	if viewDef != `SELECT a
+FROM mytable` {
 		t.Errorf("unexpected view def: %s", viewDef)
 	}
 }
