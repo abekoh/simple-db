@@ -171,7 +171,6 @@ func (m *Manager) loop(ctx context.Context) {
 					continue
 				}
 				if err := b.flush(); err != nil {
-					err = fmt.Errorf("could not flush: %w", err)
 					break
 				}
 			}
