@@ -33,160 +33,159 @@ func NewBackend(db *simpledb.DB, conn net.Conn) *Backend {
 func (b *Backend) Run() error {
 	defer b.Close()
 
-	err := b.handleStartup()
-	if err != nil {
+	if err := b.handleStartup(); err != nil {
 		return fmt.Errorf("error handling startup: %w", err)
 	}
 
 	var (
-		bound statement.Bound
-		tx    *transaction.Transaction
+		bound    statement.Bound
+		tx       *transaction.Transaction
+		queryErr error
 	)
 	for {
+		var buf []byte
 		readyForQuery := false
+
 		msg, err := b.backend.Receive()
 		if err != nil {
-			err = fmt.Errorf("error receiving message: %w", err)
-			break
-		}
-
-		var buf []byte
-		switch m := msg.(type) {
-		case *pgproto3.Query:
-			buf, tx, err = b.handleQuery(buf, m.String, tx)
-			if err != nil {
-				err = fmt.Errorf("error handling query: %w", err)
-				break
-			}
-			readyForQuery = true
-		case *pgproto3.Parse:
-			if len(m.Name) == 0 {
-				err = fmt.Errorf("empty statement name")
-				break
-			}
-			tx, err := b.db.NewTx(context.Background())
-			if err != nil {
-				err = fmt.Errorf("error creating new transaction: %w", err)
-				break
-			}
-			prepared, err := b.db.Planner().Prepare(m.Query, tx)
-			if err != nil {
-				err = fmt.Errorf("error preparing statement: %w", err)
-				break
-			}
-			b.db.StmtMgr().Add(m.Name, prepared)
-			buf, err = (&pgproto3.ParseComplete{}).Encode(buf)
-			if err != nil {
-				err = fmt.Errorf("error encoding parse complete: %w", err)
-				break
-			}
-		case *pgproto3.Bind:
-			if len(m.PreparedStatement) == 0 {
-				err = fmt.Errorf("empty prepared statement name")
-				break
-			}
-			prepared, err := b.db.StmtMgr().Get(m.PreparedStatement)
-			if err != nil {
-				err = fmt.Errorf("error getting statement: %w", err)
-				break
-			}
-			params := make(map[int]schema.Constant)
-			for i, v := range m.Parameters {
-				format := m.ParameterFormatCodes[i]
-				switch format {
-				case pgx.TextFormatCode:
-					params[i+1] = schema.ConstantStr(v)
-				case pgx.BinaryFormatCode:
-					if len(v) != 4 {
-						err = fmt.Errorf("invalid binary parameter length: %d", len(v))
-						break
-					}
-					n := int32(v[0])<<24 | int32(v[1])<<16 | int32(v[2])<<8 | int32(v[3])
-					params[i+1] = schema.ConstantInt32(n)
-				}
-			}
-			if err != nil {
-				break
-			}
-			bound, err = prepared.SwapParams(params)
-			if err != nil {
-				err = fmt.Errorf("error swapping params: %w", err)
-				break
-			}
-			buf, err = (&pgproto3.BindComplete{}).Encode(buf)
-			if err != nil {
-				err = fmt.Errorf("error encoding bind complete: %w", err)
-				break
-			}
-		case *pgproto3.Describe:
-			if len(m.Name) == 0 {
-				buf, err = (&pgproto3.NoData{}).Encode(buf)
+			queryErr = fmt.Errorf("error receiving message: %w", err)
+		} else {
+			switch m := msg.(type) {
+			case *pgproto3.Query:
+				buf, tx, err = b.handleQuery(buf, m.String, tx)
 				if err != nil {
-					err = fmt.Errorf("error encoding no data: %w", err)
+					queryErr = fmt.Errorf("error handling query: %w", err)
 					break
 				}
-				continue
-			}
-			prepared, err := b.db.StmtMgr().Get(m.Name)
-			if err != nil {
-				err = fmt.Errorf("error getting statement: %w", err)
-				break
-			}
-			tx, err := b.db.NewTx(context.Background())
-			if err != nil {
-				err = fmt.Errorf("error creating new transaction: %w", err)
-				break
-			}
-			placeholders := prepared.Placeholders(func(tableName string) (*schema.Schema, error) {
-				l, err := b.db.MetadataMgr().Layout(tableName, tx)
+				readyForQuery = true
+			case *pgproto3.Parse:
+				if len(m.Name) == 0 {
+					queryErr = fmt.Errorf("empty statement name")
+					break
+				}
+				tx, err := b.db.NewTx(context.Background())
 				if err != nil {
-					return nil, fmt.Errorf("layout error: %w", err)
+					queryErr = fmt.Errorf("error creating new transaction: %w", err)
+					break
 				}
-				return l.Schema(), nil
-			})
-			paramOIDs := make([]uint32, len(placeholders))
-			for i, fieldType := range placeholders {
-				switch fieldType {
-				case schema.Integer32:
-					paramOIDs[i-1] = pgtype.Int4OID
-				case schema.Varchar:
-					paramOIDs[i-1] = pgtype.TextOID
+				prepared, err := b.db.Planner().Prepare(m.Query, tx)
+				if err != nil {
+					queryErr = fmt.Errorf("error preparing statement: %w", err)
+					break
 				}
-			}
-			buf, err = (&pgproto3.ParameterDescription{
-				ParameterOIDs: paramOIDs,
-			}).Encode(buf)
-			if err != nil {
-				err = fmt.Errorf("error encoding parameter description: %w", err)
+				b.db.StmtMgr().Add(m.Name, prepared)
+				buf, queryErr = (&pgproto3.ParseComplete{}).Encode(buf)
+				if err != nil {
+					queryErr = fmt.Errorf("error encoding parse complete: %w", err)
+					break
+				}
+			case *pgproto3.Bind:
+				if len(m.PreparedStatement) == 0 {
+					queryErr = fmt.Errorf("empty prepared statement name")
+					break
+				}
+				prepared, err := b.db.StmtMgr().Get(m.PreparedStatement)
+				if err != nil {
+					queryErr = fmt.Errorf("error getting statement: %w", err)
+					break
+				}
+				params := make(map[int]schema.Constant)
+				for i, v := range m.Parameters {
+					format := m.ParameterFormatCodes[i]
+					switch format {
+					case pgx.TextFormatCode:
+						params[i+1] = schema.ConstantStr(v)
+					case pgx.BinaryFormatCode:
+						if len(v) != 4 {
+							queryErr = fmt.Errorf("invalid binary parameter length: %d", len(v))
+							break
+						}
+						n := int32(v[0])<<24 | int32(v[1])<<16 | int32(v[2])<<8 | int32(v[3])
+						params[i+1] = schema.ConstantInt32(n)
+					}
+				}
+				if err != nil {
+					break
+				}
+				bound, err = prepared.SwapParams(params)
+				if err != nil {
+					queryErr = fmt.Errorf("error swapping params: %w", err)
+					break
+				}
+				buf, err = (&pgproto3.BindComplete{}).Encode(buf)
+				if err != nil {
+					queryErr = fmt.Errorf("error encoding bind complete: %w", err)
+					break
+				}
+			case *pgproto3.Describe:
+				if len(m.Name) == 0 {
+					buf, err = (&pgproto3.NoData{}).Encode(buf)
+					if err != nil {
+						queryErr = fmt.Errorf("error encoding no data: %w", err)
+						break
+					}
+					continue
+				}
+				prepared, err := b.db.StmtMgr().Get(m.Name)
+				if err != nil {
+					queryErr = fmt.Errorf("error getting statement: %w", err)
+					break
+				}
+				tx, err := b.db.NewTx(context.Background())
+				if err != nil {
+					queryErr = fmt.Errorf("error creating new transaction: %w", err)
+					break
+				}
+				placeholders := prepared.Placeholders(func(tableName string) (*schema.Schema, error) {
+					l, err := b.db.MetadataMgr().Layout(tableName, tx)
+					if err != nil {
+						return nil, fmt.Errorf("layout error: %w", err)
+					}
+					return l.Schema(), nil
+				})
+				paramOIDs := make([]uint32, len(placeholders))
+				for i, fieldType := range placeholders {
+					switch fieldType {
+					case schema.Integer32:
+						paramOIDs[i-1] = pgtype.Int4OID
+					case schema.Varchar:
+						paramOIDs[i-1] = pgtype.TextOID
+					}
+				}
+				buf, err = (&pgproto3.ParameterDescription{
+					ParameterOIDs: paramOIDs,
+				}).Encode(buf)
+				if err != nil {
+					queryErr = fmt.Errorf("error encoding parameter description: %w", err)
+					break
+				}
+			case *pgproto3.Sync:
+				buf, err = (&pgproto3.NoData{}).Encode(buf)
+				if err != nil {
+					queryErr = fmt.Errorf("error encoding no data: %w", err)
+					break
+				}
+				readyForQuery = true
+			case *pgproto3.Execute:
+				if bound == nil {
+					queryErr = fmt.Errorf("no query to execute")
+					break
+				}
+				buf, tx, err = b.handleBound(buf, bound, tx)
+				if err != nil {
+					queryErr = fmt.Errorf("error handling query: %w", err)
+					break
+				}
+				bound = nil
+			case *pgproto3.Terminate:
+			default:
+				queryErr = fmt.Errorf("received not supported message: %#v", m)
 				break
 			}
-		case *pgproto3.Sync:
-			buf, err = (&pgproto3.NoData{}).Encode(buf)
-			if err != nil {
-				err = fmt.Errorf("error encoding no data: %w", err)
-				break
-			}
-			readyForQuery = true
-		case *pgproto3.Execute:
-			if bound == nil {
-				err = fmt.Errorf("no query to execute")
-				break
-			}
-			buf, tx, err = b.handleBound(buf, bound, tx)
-			if err != nil {
-				err = fmt.Errorf("error handling query: %w", err)
-				break
-			}
-			bound = nil
-		case *pgproto3.Terminate:
-			break
-		default:
-			err = fmt.Errorf("received not supported message: %#v", m)
-			break
 		}
 
-		if err != nil {
-			buf, err = (&pgproto3.ErrorResponse{Message: err.Error()}).Encode(nil)
+		if queryErr != nil {
+			buf, err = (&pgproto3.ErrorResponse{Message: queryErr.Error()}).Encode(nil)
 			if err != nil {
 				return fmt.Errorf("error encoding error response: %w", err)
 			}
