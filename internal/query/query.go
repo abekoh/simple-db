@@ -638,9 +638,9 @@ func (s *SumFunc) First(scan Scan) error {
 	if err != nil {
 		return fmt.Errorf("scan.Int32 error: %w", err)
 	}
-	switch val.(type) {
+	switch v := val.(type) {
 	case schema.ConstantInt32:
-		s.sum = int32(val.(schema.ConstantInt32))
+		s.sum = int32(v)
 	default:
 		return schema.ErrTypeAssertionFailed
 	}
@@ -652,9 +652,9 @@ func (s *SumFunc) Next(scan Scan) error {
 	if err != nil {
 		return fmt.Errorf("scan.Int32 error: %w", err)
 	}
-	switch val.(type) {
+	switch v := val.(type) {
 	case schema.ConstantInt32:
-		s.sum += int32(val.(schema.ConstantInt32))
+		s.sum += int32(v)
 	default:
 		return schema.ErrTypeAssertionFailed
 	}

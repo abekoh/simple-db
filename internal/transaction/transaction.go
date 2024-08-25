@@ -112,11 +112,12 @@ func (t *Transaction) Recover() error {
 		return fmt.Errorf("could not flush: %w", err)
 	}
 	finishedTxSet := make(map[int32]struct{})
+logLoop:
 	for b := range t.lm.Iterator() {
 		r := NewLogRecord(b)
 		switch r.Type() {
 		case Checkpoint:
-			break
+			break logLoop
 		case Commit, Rollback:
 			finishedTxSet[r.TxNum()] = struct{}{}
 		default:

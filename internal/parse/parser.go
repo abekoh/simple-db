@@ -535,18 +535,16 @@ func (d QueryData) String() string {
 	for _, f := range d.aggregationFuncs {
 		fields = append(fields, f.String())
 	}
-	sb.WriteString(fmt.Sprintf("%s", strings.Join(fields, ", ")))
+	sb.WriteString(strings.Join(fields, ", "))
 
 	sb.WriteString("\nFROM ")
 	tables := make([]string, 0, len(d.tables))
-	for _, t := range d.tables {
-		tables = append(tables, t)
-	}
-	sb.WriteString(fmt.Sprintf("%s", strings.Join(tables, ", ")))
+	tables = append(tables, d.tables...)
+	sb.WriteString(strings.Join(tables, ", "))
 
 	if len(d.pred) > 0 {
 		sb.WriteString("\nWHERE ")
-		sb.WriteString(fmt.Sprintf("%s", d.pred))
+		sb.WriteString(d.pred.String())
 	}
 	if len(d.groupFields) > 0 {
 		sb.WriteString("\nGROUP BY ")
@@ -554,11 +552,11 @@ func (d QueryData) String() string {
 		for _, f := range d.groupFields {
 			groupFields = append(groupFields, string(f))
 		}
-		sb.WriteString(fmt.Sprintf("%s", strings.Join(groupFields, ", ")))
+		sb.WriteString(strings.Join(groupFields, ", "))
 	}
 	if len(d.order) > 0 {
 		sb.WriteString("\nORDER BY ")
-		sb.WriteString(fmt.Sprintf("%s", d.order))
+		sb.WriteString(d.order.String())
 	}
 	return sb.String()
 }

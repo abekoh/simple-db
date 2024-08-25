@@ -310,8 +310,7 @@ func (tp *TablePlanner) addJoinPred(p Plan, currentSche *schema.Schema) Plan {
 }
 
 type HeuristicQueryPlanner struct {
-	tablePlanners []TablePlanner
-	mdm           *metadata.Manager
+	mdm *metadata.Manager
 }
 
 var _ QueryPlanner = (*HeuristicQueryPlanner)(nil)

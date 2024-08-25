@@ -70,9 +70,7 @@ func (f Info) stringRow(indent int) func(func(string) bool) {
 		conds := make([]string, 0, len(f.Conditions))
 		for k, v := range f.Conditions {
 			condEls := make([]string, len(v))
-			for i, condEl := range v {
-				condEls[i] = condEl
-			}
+			copy(condEls, v)
 			conds = append(conds, fmt.Sprintf("%s=%s", k, strings.Join(condEls, ",")))
 		}
 		row := fmt.Sprintf("%s%s %s (ba=%d,ro=%d)",
