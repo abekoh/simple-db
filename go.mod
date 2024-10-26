@@ -3,7 +3,7 @@ module github.com/abekoh/simple-db
 go 1.23.0
 
 require (
-	github.com/brianvoe/gofakeit/v7 v7.0.4
+	github.com/brianvoe/gofakeit/v7 v7.1.1
 	github.com/google/go-cmp v0.6.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/oklog/ulid/v2 v2.1.0
