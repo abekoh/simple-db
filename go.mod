@@ -6,7 +6,7 @@ require (
 	github.com/brianvoe/gofakeit/v7 v7.2.1
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.7.5
-	github.com/oklog/ulid/v2 v2.1.0
+	github.com/oklog/ulid/v2 v2.1.1
 	golang.org/x/sync v0.14.0
 )
 
