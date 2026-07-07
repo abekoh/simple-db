@@ -2,7 +2,7 @@ module github.com/abekoh/simple-db
 
 go 1.25.0
 
-toolchain go1.26.3
+toolchain go1.26.5
 
 require (
 	github.com/brianvoe/gofakeit/v7 v7.14.1
